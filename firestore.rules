@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Regras minimas para o Modulo 1 (login + perfil).
+// Aplique em Firebase Console > Firestore Database > Regras, ou via
+// `firebase deploy --only firestore:rules` depois de rodar `firebase init`.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /usuarios/{uid} {
+      // Qualquer usuario autenticado pode ler o PROPRIO documento
+      // (e o que a tela de boas-vindas usa para saber o "role").
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      // Por enquanto, a criacao/edicao de usuarios e feita manualmente
+      // pelo Firebase Console ou pelo SDK Admin (Node/Cloud Functions),
+      // nunca direto pelo app. Nenhuma escrita e permitida pelo cliente.
+      allow write: if false;
+    }
+  }
+}

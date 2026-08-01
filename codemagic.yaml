@@ -1,0 +1,41 @@
+workflows:
+  android-release:
+    name: GymExtreme - Android
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      groups:
+        # Crie esse grupo em Codemagic > Teams > Group variables se for
+        # assinar o APK/AAB de release. Sem ele, o build sai assinado com a
+        # chave de debug (suficiente para testar, nao para publicar).
+        - gymextreme_keystore
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Instalar dependencias
+        script: flutter pub get
+      - name: Analisar codigo
+        script: flutter analyze
+      - name: Rodar testes
+        script: flutter test
+      - name: Build APK (release)
+        script: |
+          flutter build apk --release
+      - name: Build App Bundle (release)
+        script: |
+          flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - jocelinoenvios@gmail.com
+        notify:
+          success: true
+          failure: true

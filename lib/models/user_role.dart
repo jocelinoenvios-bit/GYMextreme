@@ -22,7 +22,8 @@ enum UserRole {
     UserRole.aluno => 'Aluno',
   };
 
-  /// ADM e Personal cadastram e acompanham a ficha dos alunos; o proprio
-  /// aluno ainda nao tem essa area (chega em modulo futuro).
-  bool get canManageAlunos => this == UserRole.adm || this == UserRole.personal;
+  /// ADM e Personal sao a equipe da academia: cadastram/acompanham a ficha
+  /// dos alunos e acessam a biblioteca de exercicios. O proprio aluno ainda
+  /// nao tem essas areas (chega em modulo futuro de autoatendimento).
+  bool get isStaff => this == UserRole.adm || this == UserRole.personal;
 }

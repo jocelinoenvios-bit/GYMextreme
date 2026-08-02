@@ -40,11 +40,11 @@ class GymExtremeLogo extends StatelessWidget {
             ),
             children: const [
               TextSpan(
-                text: 'GYM',
+                text: 'GYM ',
                 style: TextStyle(color: AppColors.textPrimary),
               ),
               TextSpan(
-                text: 'EXTREME',
+                text: 'X-TREME',
                 style: TextStyle(color: AppColors.gold),
               ),
             ],

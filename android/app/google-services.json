@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
+    "project_number": "258628817510",
     "project_id": "gymextreme-42c98",
     "storage_bucket": "gymextreme-42c98.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:258628817510:android:6b97eb8c5b6b326ab953a7",
         "android_client_info": {
           "package_name": "com.gymextreme.gymextreme_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_WITH_REAL_ANDROID_API_KEY"
+          "current_key": "AIzaSyDGG6RU-7LOl0Q9ePfj-xSGeKRvUdOBcw0"
         }
       ],
       "services": {

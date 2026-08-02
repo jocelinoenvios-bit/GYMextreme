@@ -91,15 +91,18 @@ Depois de clonar o repositorio:
 flutter pub get
 ```
 
-## 2. Conectar ao Firebase real (gymextreme-42c98)
+## 2. Firebase (gymextreme-42c98)
 
-O `lib/firebase_options.dart` e o `android/app/google-services.json`
-deste repositorio contem **valores de placeholder** (nao apontam para
-o projeto real). Isso e proposital: gerar os valores reais exige login
-com a conta Google/Firebase do cliente, que so pode ser feito na sua
-maquina, nunca por mim.
+`lib/firebase_options.dart` e `android/app/google-services.json` ja
+tem as chaves reais do projeto `gymextreme-42c98` (apps Web e Android
+cadastrados via `flutterfire configure`). Ambos os arquivos **nao
+contem segredos** (sao chaves publicas de cliente, restritas por
+regras do Firebase), por isso ficam versionados no Git normalmente —
+o que nunca deve ir para o repositorio e o `firebase-key.json`
+(service account, usado so pelo script Node `importar-exercicios.js`),
+que ja esta no `.gitignore`.
 
-Para configurar de verdade:
+Se o projeto Firebase mudar (nova chave, novo app), regenere assim:
 
 ```bash
 # uma vez, se ainda nao tiver a Firebase CLI e a FlutterFire CLI:
@@ -109,16 +112,6 @@ dart pub global activate flutterfire_cli
 firebase login
 flutterfire configure --project=gymextreme-42c98 --platforms=android,web
 ```
-
-O comando `flutterfire configure`:
-- sobrescreve `lib/firebase_options.dart` com as chaves reais;
-- baixa/atualiza `android/app/google-services.json` com as chaves reais.
-
-Ambos os arquivos **nao contem segredos** (sao chaves publicas de
-cliente), por isso ficam versionados no Git normalmente — o que nunca
-deve ir para o repositorio e o `firebase-key.json` (service account,
-usado so pelo script Node `importar-exercicios.js`), que ja esta no
-`.gitignore`.
 
 No Firebase Console, confirme que **Authentication > Sign-in method >
 E-mail/senha** esta habilitado.

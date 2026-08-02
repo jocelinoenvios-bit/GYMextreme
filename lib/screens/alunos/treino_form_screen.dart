@@ -46,7 +46,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
   void initState() {
     super.initState();
     final treino = widget.treino;
-    _nomeController.text = treino?.nome ?? 'Treino ${_letra}';
+    _nomeController.text = treino?.nome ?? 'Treino $_letra';
     _grupoMuscularController.text = treino?.grupoMuscular ?? '';
     _letra = treino?.letra ?? _letrasDisponiveis.first;
     _exercicios = [...(treino?.exercicios ?? const [])];

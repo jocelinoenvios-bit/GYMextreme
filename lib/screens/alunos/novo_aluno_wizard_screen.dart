@@ -294,7 +294,7 @@ class _PassoDadosState extends State<_PassoDados> {
 
   Sexo? _sexo;
   DateTime? _dataNascimento;
-  DateTime _dataInicio = DateTime.now();
+  final DateTime _dataInicio = DateTime.now();
   Uint8List? _fotoBytes;
   bool _isSaving = false;
   bool _concluido = false;

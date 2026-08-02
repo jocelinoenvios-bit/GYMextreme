@@ -61,12 +61,22 @@ service cloud.firestore {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if ehStaff();
       }
+
+      // Fichas de treino: o proprio aluno le a propria (pra ver o treino
+      // do dia); staff le qualquer uma; escrever exige a permissao
+      // especifica de treino (nao basta ser staff generico).
+      match /treinos/{treinoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
+      }
     }
 
     match /exercicios/{exercicioId} {
-      // Biblioteca somente leitura pelo app; o cadastro continua fora
-      // dele (script/import direto no Firestore com credencial de admin).
-      allow read: if ehStaff();
+      // Biblioteca de referencia, sem dado sensivel — qualquer usuario
+      // autenticado pode ler (inclusive aluno, pra ver o proprio treino
+      // com nome/gif/instrucoes do exercicio). Cadastro continua fora do
+      // app (script/import direto no Firestore com credencial de admin).
+      allow read: if request.auth != null;
       allow write: if false;
     }
   }

@@ -7,13 +7,15 @@ import '../models/aluno.dart';
 import '../models/anamnese.dart';
 import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
+import '../models/endereco.dart';
 import '../models/termo_aceite.dart';
+import '../models/treino.dart';
 import '../models/user_role.dart';
 
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
 /// `alunos`), anamnese e termo de responsabilidade (campos dentro do
-/// mesmo documento) e o historico de avaliacoes fisicas (subcolecao
-/// `alunos/{uid}/avaliacoes`).
+/// mesmo documento), historico de avaliacoes fisicas e fichas de treino
+/// (subcolecoes `alunos/{uid}/avaliacoes` e `alunos/{uid}/treinos`).
 class AlunoService {
   AlunoService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -28,6 +30,9 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _avaliacoes(String uid) =>
       _alunos.doc(uid).collection('avaliacoes');
+
+  CollectionReference<Map<String, dynamic>> _treinos(String uid) =>
+      _alunos.doc(uid).collection('treinos');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
   Stream<List<AppUser>> watchAlunos() {
@@ -96,18 +101,108 @@ class AlunoService {
     return _avaliacoes(uid).add(avaliacao.toFirestore());
   }
 
+  /// Fichas de treino do aluno, mais recentes/ativas primeiro.
+  Stream<List<Treino>> watchTreinos(String uid) {
+    return _treinos(uid).orderBy('ordem').snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => Treino.fromFirestore(doc.id, doc.data()))
+          .toList(),
+    );
+  }
+
+  /// Cria (se `treino.id` for nulo) ou atualiza uma ficha de treino.
+  /// `staffUid`/`staffNome` identificam quem fez a acao — carimbados em
+  /// `criadoPor*` só na criação e em `atualizadoPor*` sempre.
+  Future<String> salvarTreino(
+    String alunoUid,
+    Treino treino, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final dados = treino.toFirestore();
+    dados['atualizadoPorUid'] = staffUid;
+    dados['atualizadoPorNome'] = staffNome;
+    if (treino.id == null) {
+      dados['criadoPorUid'] = staffUid;
+      dados['criadoPorNome'] = staffNome;
+      final ref = await _treinos(alunoUid).add(dados);
+      return ref.id;
+    }
+    await _treinos(alunoUid).doc(treino.id).set(dados, SetOptions(merge: true));
+    return treino.id!;
+  }
+
+  Future<void> excluirTreino(String alunoUid, String treinoId) {
+    return _treinos(alunoUid).doc(treinoId).delete();
+  }
+
+  /// Duplica um treino do mesmo aluno (vira um novo documento, mesma
+  /// letra/grupo/exercicios, nome com "(cópia)").
+  Future<String> duplicarTreino(
+    String alunoUid,
+    Treino treino, {
+    required String staffUid,
+    required String staffNome,
+  }) {
+    final copia = Treino(
+      nome: '${treino.nome} (cópia)',
+      letra: treino.letra,
+      grupoMuscular: treino.grupoMuscular,
+      ordem: treino.ordem,
+      exercicios: treino.exercicios,
+    );
+    return salvarTreino(alunoUid, copia, staffUid: staffUid, staffNome: staffNome);
+  }
+
+  /// Copia um treino de outro aluno pra este (usado quando o personal
+  /// reaproveita uma ficha já pronta).
+  Future<String> copiarTreinoDeOutroAluno({
+    required String origemUid,
+    required String treinoId,
+    required String destinoUid,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final doc = await _treinos(origemUid).doc(treinoId).get();
+    final data = doc.data();
+    if (data == null) {
+      throw AlunoServiceException('Treino de origem não encontrado.');
+    }
+    final original = Treino.fromFirestore(doc.id, data);
+    final copia = Treino(
+      nome: original.nome,
+      letra: original.letra,
+      grupoMuscular: original.grupoMuscular,
+      ordem: original.ordem,
+      exercicios: original.exercicios,
+    );
+    return salvarTreino(destinoUid, copia, staffUid: staffUid, staffNome: staffNome);
+  }
+
   /// Cria a conta de login (Firebase Auth) e os documentos de cadastro
   /// de um novo aluno. Usa um app Firebase secundario e temporario para
   /// que a criacao da conta do aluno nao derrube a sessao do ADM/Personal
   /// que esta cadastrando (o SDK do Firebase Auth loga automaticamente
   /// no usuario recem-criado no app em que a chamada e feita).
-  Future<void> cadastrarAluno({
+  Future<String> cadastrarAluno({
     required String nome,
     required String email,
     required String senhaInicial,
+    Sexo? sexo,
+    DateTime? dataNascimento,
     int? idade,
+    String? cpf,
+    String? rg,
+    String? telefone,
+    String? whatsapp,
+    Endereco endereco = Endereco.vazio,
+    String? contatoEmergenciaNome,
+    String? contatoEmergenciaTelefone,
+    String? observacoes,
     DateTime? dataInicio,
     int? diaVencimento,
+    required String cadastradoPorUid,
+    required String cadastradoPorNome,
   }) async {
     final secondaryApp = await Firebase.initializeApp(
       name: 'gymextreme-cadastro-${DateTime.now().microsecondsSinceEpoch}',
@@ -143,12 +238,25 @@ class AlunoService {
         _alunos.doc(uid),
         Aluno(
           uid: uid,
-          idade: idade,
+          sexo: sexo,
+          dataNascimento: dataNascimento,
+          idadeInformada: idade,
+          cpf: cpf,
+          rg: rg,
+          telefone: telefone,
+          whatsapp: whatsapp,
+          endereco: endereco,
+          contatoEmergenciaNome: contatoEmergenciaNome,
+          contatoEmergenciaTelefone: contatoEmergenciaTelefone,
+          observacoes: observacoes,
           dataInicio: dataInicio,
           diaVencimento: diaVencimento,
+          cadastradoPorUid: cadastradoPorUid,
+          cadastradoPorNome: cadastradoPorNome,
         ).toFirestore(),
       );
       await batch.commit();
+      return uid;
     } finally {
       await secondaryApp.delete();
     }

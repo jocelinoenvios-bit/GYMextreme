@@ -12,9 +12,19 @@ import 'exercicio_detail_screen.dart';
 /// direto dos dados (nao ficam presos a taxonomia de uma API
 /// especifica, ja que a fonte dos exercicios pode mudar).
 class ExerciciosListScreen extends StatefulWidget {
-  const ExerciciosListScreen({super.key, required this.exercicioService});
+  const ExerciciosListScreen({
+    super.key,
+    required this.exercicioService,
+    this.onSelecionar,
+  });
 
   final ExercicioService exercicioService;
+
+  /// Quando informado, a tela vira um seletor: tocar num exercicio chama
+  /// este callback (com a tela ja fechada) em vez de abrir o detalhe —
+  /// usado pelo `TreinoFormScreen` pra escolher exercicios sem duplicar
+  /// este browser.
+  final ValueChanged<Exercicio>? onSelecionar;
 
   @override
   State<ExerciciosListScreen> createState() => _ExerciciosListScreenState();
@@ -34,7 +44,11 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Biblioteca de exercícios')),
+      appBar: AppBar(
+        title: Text(
+          widget.onSelecionar != null ? 'Selecionar exercício' : 'Biblioteca de exercícios',
+        ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -163,11 +177,19 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                     Icons.chevron_right,
                                     color: AppColors.textSecondary,
                                   ),
-                                  onTap: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => ExercicioDetailScreen(exercicio: exercicio),
-                                    ),
-                                  ),
+                                  onTap: () {
+                                    if (widget.onSelecionar != null) {
+                                      widget.onSelecionar!(exercicio);
+                                      Navigator.of(context).pop();
+                                      return;
+                                    }
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            ExercicioDetailScreen(exercicio: exercicio),
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             ),

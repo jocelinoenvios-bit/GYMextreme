@@ -9,6 +9,7 @@ import '../services/cargo_service.dart';
 import '../services/exercicio_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/permission_service.dart';
+import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/gymextreme_logo.dart';
@@ -30,6 +31,7 @@ class WelcomeScreen extends StatelessWidget {
     required this.exercicioService,
     required this.cargoService,
     required this.funcionarioService,
+    required this.storageService,
   });
 
   final String uid;
@@ -39,6 +41,7 @@ class WelcomeScreen extends StatelessWidget {
   final ExercicioService exercicioService;
   final CargoService cargoService;
   final FuncionarioService funcionarioService;
+  final StorageService storageService;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +115,12 @@ class WelcomeScreen extends StatelessWidget {
                     ElevatedButton.icon(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => AlunosListScreen(alunoService: alunoService),
+                          builder: (_) => AlunosListScreen(
+                            alunoService: alunoService,
+                            exercicioService: exercicioService,
+                            storageService: storageService,
+                            staffAtual: user,
+                          ),
                         ),
                       ),
                       icon: const Icon(Icons.groups_outlined),

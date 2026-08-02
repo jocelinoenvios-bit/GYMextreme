@@ -2,16 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../services/aluno_service.dart';
+import '../../services/exercicio_service.dart';
+import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import 'aluno_detail_screen.dart';
-import 'aluno_form_screen.dart';
+import 'novo_aluno_wizard_screen.dart';
 
 /// Lista de alunos cadastrados, ponto de entrada do ADM/Personal para a
-/// ficha completa (dados, anamnese, termo e avaliacoes fisicas).
+/// ficha completa (dados, anamnese, termo, avaliacoes fisicas e treino).
 class AlunosListScreen extends StatefulWidget {
-  const AlunosListScreen({super.key, required this.alunoService});
+  const AlunosListScreen({
+    super.key,
+    required this.alunoService,
+    required this.exercicioService,
+    required this.storageService,
+    required this.staffAtual,
+  });
 
   final AlunoService alunoService;
+  final ExercicioService exercicioService;
+  final StorageService storageService;
+  final AppUser staffAtual;
 
   @override
   State<AlunosListScreen> createState() => _AlunosListScreenState();
@@ -34,7 +45,12 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => AlunoFormScreen(alunoService: widget.alunoService),
+            builder: (_) => NovoAlunoWizardScreen(
+              alunoService: widget.alunoService,
+              exercicioService: widget.exercicioService,
+              storageService: widget.storageService,
+              staffAtual: widget.staffAtual,
+            ),
           ),
         ),
         tooltip: 'Novo aluno',
@@ -109,6 +125,9 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                           builder: (_) => AlunoDetailScreen(
                             aluno: aluno,
                             alunoService: widget.alunoService,
+                            exercicioService: widget.exercicioService,
+                            storageService: widget.storageService,
+                            staffAtual: widget.staffAtual,
                           ),
                         ),
                       ),

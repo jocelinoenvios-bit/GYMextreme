@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/cargo_service.dart';
 import '../services/exercicio_service.dart';
 import '../services/funcionario_service.dart';
+import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
 import 'auth_gate.dart';
@@ -20,6 +21,7 @@ class GymExtremeApp extends StatelessWidget {
     final exercicioService = ExercicioService();
     final cargoService = CargoService();
     final funcionarioService = FuncionarioService();
+    final storageService = StorageService();
 
     return MaterialApp(
       title: 'GymXtreme',
@@ -32,6 +34,7 @@ class GymExtremeApp extends StatelessWidget {
         exercicioService: exercicioService,
         cargoService: cargoService,
         funcionarioService: funcionarioService,
+        storageService: storageService,
       ),
     );
   }

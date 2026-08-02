@@ -26,34 +26,44 @@ Cadastro/Ficha do aluno, e Biblioteca de exercicios**.
 - PWA configurado (`web/manifest.json`, `web/index.html`) para o
   "adicionar a tela de inicio" funcionar no Safari/iOS.
 
-### Modulo 2 — Cadastro completo de aluno
-Replica a ficha em papel "GYM XTREME" (avaliacao fisica + anamnese +
-regulamento/termo de responsabilidade) que voces ja usam. Acessivel
-pela tela de boas-vindas de ADM/Personal, botao **"Gerenciar alunos"**
-(`lib/screens/alunos/`):
+### Modulo 2 — Cadastro digital completo do aluno
+Substitui 100% a ficha em papel "GYM XTREME" (dados cadastrais +
+anamnese + regulamento/termo de responsabilidade + avaliacao fisica +
+ficha de treino). Acessivel pela tela de boas-vindas, botao
+**"Gerenciar alunos"** (`lib/screens/alunos/`):
 
-- **Cadastro** — cria o login do aluno (Firebase Auth com senha
-  inicial) + nome, idade, data de inicio e dia de vencimento
-  (`AlunoFormScreen`, aba "Dados" na ficha).
+- **Cadastro guiado (`NovoAlunoWizardScreen`)** — fluxo em etapas
+  (Dados → Anamnese → Regulamento → Avaliacao fisica → opcao de ja
+  prescrever o Treino), reaproveitando os mesmos widgets usados depois
+  na ficha do aluno ja cadastrado. Dados pessoais completos: foto
+  (Firebase Storage), sexo, data de nascimento (idade calculada
+  automaticamente), CPF/RG, telefone/WhatsApp, endereco, contato de
+  emergencia, observacoes, alem do login (Firebase Auth) e vinculo com
+  a academia (data de inicio, dia de vencimento).
 - **Anamnese** — as 13 perguntas da ficha em papel, ponto a ponto
   (`AnamneseTab`).
 - **Termo de responsabilidade** — as 15 regras do "REGULAMENTO" em
-  papel, com aceite digital (nome, data/hora e campo opcional de
-  responsavel para menores de idade) no lugar da assinatura manuscrita
-  (`TermoTab`).
-- **Avaliacao fisica** — peso, altura (com IMC calculado e
-  classificado automaticamente) e as 16 medidas de circunferencia da
-  ficha, com historico de avaliacoes ao longo do tempo
+  papel, com aceite digital (nome, data/hora, responsavel opcional pra
+  menores de idade e qual funcionario da recepcao registrou o aceite)
+  no lugar da assinatura manuscrita (`TermoTab`).
+- **Avaliacao fisica** — peso, altura (IMC calculado e classificado
+  automaticamente) e as 16 medidas de circunferencia da ficha, com
+  historico completo ao longo do tempo, nunca apagado
   (`AvaliacoesTab` + `AvaliacaoFisicaFormScreen`).
+- **Ficha de treino (`TreinosTab` + `TreinoFormScreen`)** — treinos
+  A-F, cada um com lista de exercicios (sempre referenciando a
+  biblioteca do Modulo 3, nunca digitados a mao): series, repeticoes,
+  carga, descanso, observacoes e ordem. Da pra criar, editar, excluir,
+  duplicar e copiar um treino pronto de outro aluno. Aba visivel so
+  com a permissao `prescricaoTreinos`; criar/editar exige
+  `criarTreinos`/`editarTreinos` (checado ate no Firestore, nao so na
+  UI).
 
-Quem preenche e o ADM/Personal (o fluxo hoje e em papel na recepcao —
-mantive esse mesmo padrao: o aluno ainda nao tem area propria no app,
-isso fica para um modulo futuro de auto-atendimento).
+Quem preenche e o staff (ADM/Recepcionista/Personal, conforme a
+permissao de cada um) — o aluno ainda nao tem area propria no app,
+isso fica para um modulo futuro de auto-atendimento.
 
 **Pontos que assumi e que valem uma conferencia sua:**
-- A tabela "GRUPO MUSCULAR INFERIOR" (treino de cardio/coxa/gluteo) que
-  vem na mesma folha da ficha de avaliacao **nao entrou neste modulo**
-  — e ficha de treino, escopo do modulo de sistema de treino.
 - `lib/constants/regulamento.dart` tem um `regulamentoToleranciaDias =
   5` (regra 3, "tolerancia de ___ dias") — na ficha em papel esse
   numero fica em branco pra preencher a caneta; usei 5 como placeholder
@@ -61,6 +71,13 @@ isso fica para um modulo futuro de auto-atendimento).
 - O texto do regulamento foi digitado a partir da foto; vale uma
   conferencia final antes de publicar (principalmente se ele tiver
   qualquer validade juridica formal).
+- Graficos/fotos de evolucao (peso, medidas, carga ao longo do tempo)
+  ainda nao tem tela — o banco ja esta preparado (`AvaliacaoFisica.
+  fotoUrls`, historico por data), fica pra um proximo modulo.
+- Foto do aluno exige `firebase_storage` configurado no projeto
+  (bucket ja existe, `storage.rules` novo neste commit — publique
+  manualmente no Firebase Console, mesmo processo ja usado pro
+  `firestore.rules`).
 
 ### Modulo 3 — Biblioteca de exercicios
 Tela somente leitura (`lib/screens/exercicios/`) que le a colecao

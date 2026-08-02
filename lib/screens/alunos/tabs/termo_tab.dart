@@ -9,10 +9,19 @@ import '../../../theme/app_colors.dart';
 /// Replica o "REGULAMENTO" / Termo de Responsabilidade em papel, com
 /// aceite digital no lugar da assinatura manuscrita.
 class TermoTab extends StatefulWidget {
-  const TermoTab({super.key, required this.aluno, required this.alunoService});
+  const TermoTab({
+    super.key,
+    required this.aluno,
+    required this.alunoService,
+    required this.staffAtual,
+  });
 
   final AppUser aluno;
   final AlunoService alunoService;
+
+  /// Funcionario da recepcao logado, registrado no aceite (diferente de
+  /// quem assina — aluno ou responsavel).
+  final AppUser staffAtual;
 
   @override
   State<TermoTab> createState() => _TermoTabState();
@@ -54,6 +63,8 @@ class _TermoTabState extends State<TermoTab> {
               ? null
               : _responsavelController.text.trim(),
           versaoRegulamento: regulamentoVersaoAtual,
+          registradoPorUid: widget.staffAtual.uid,
+          registradoPorNome: widget.staffAtual.nome,
         ),
       );
     } catch (_) {

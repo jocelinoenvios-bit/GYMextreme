@@ -233,8 +233,9 @@ Quando o arquivo do logo estiver disponivel:
 ## 6. Build para a Play Store (Codemagic)
 
 O `codemagic.yaml` roda `flutter analyze`, `flutter test` e gera o
-APK/AAB de release a cada push na branch `main`. Sem uma configuracao
-de assinatura (grupo `gymextreme_keystore` com as variaveis de
+APK/AAB de release a cada push na branch `claude/chave-aqui-esta-u505zg`
+(branch principal deste repositorio). Sem uma configuracao de
+assinatura (grupo `gymextreme_keystore` com as variaveis de
 keystore), o build sai assinado com a chave de debug — suficiente
 para testar internamente, mas nao para publicar na Play Store. Quando
 for publicar de verdade, configure a assinatura de release seguindo o
@@ -242,6 +243,30 @@ guia do Codemagic para Flutter/Android.
 
 Build iOS nao e necessario no Codemagic: o iOS roda como PWA pelo
 navegador, nao como app compilado nativo.
+
+## 7. APK de debug pra testar no celular (GitHub Actions)
+
+`.github/workflows/android-debug-apk.yml` builda um APK de **debug**
+(assinado com a chave de debug padrao do Android, so pra instalar e
+testar — nao serve pra Play Store) toda vez que:
+
+- alguem faz push na branch `claude/chave-aqui-esta-u505zg`, ou
+- voce dispara manualmente em **GitHub > Aba "Actions" > "Android
+  debug APK" > "Run workflow"**.
+
+O APK fica disponivel de duas formas:
+
+1. **Artefato do workflow**: na execucao (Actions > clique na run >
+   "Artifacts", embaixo) — baixa um `.zip` com o APK dentro, expira em
+   30 dias.
+2. **Release "debug-latest"**: em **GitHub > Releases > debug-latest**
+   — link fixo, sempre aponta pro build mais recente, baixa o `.apk`
+   direto (mais facil de abrir no navegador do celular e instalar).
+
+No Android, pra instalar um APK baixado fora da Play Store e preciso
+permitir "Instalar apps de fontes desconhecidas" pro navegador/gerenciador
+de arquivos usado — o proprio Android pede essa permissao na hora de
+abrir o arquivo, se ainda nao estiver liberada.
 
 ## Proximos modulos (fora do escopo deste)
 

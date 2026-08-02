@@ -14,7 +14,7 @@ workflows:
       events:
         - push
       branch_patterns:
-        - pattern: main
+        - pattern: claude/chave-aqui-esta-u505zg
           include: true
     scripts:
       - name: Instalar dependencias

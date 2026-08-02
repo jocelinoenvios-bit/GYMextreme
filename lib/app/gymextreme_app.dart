@@ -22,7 +22,7 @@ class GymExtremeApp extends StatelessWidget {
     final funcionarioService = FuncionarioService();
 
     return MaterialApp(
-      title: 'GymExtreme',
+      title: 'GymXtreme',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       home: AuthGate(

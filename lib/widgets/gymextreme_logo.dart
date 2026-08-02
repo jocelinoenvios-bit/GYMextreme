@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-
-/// Marca "GYM XTREME" em destaque, usada na tela de login e telas iniciais.
+/// Marca "GYM XTREME" completa (leao, espadas cruzadas e a palavra
+/// "GYM XTREME"), usada na tela de login e na barra superior das telas
+/// internas.
 ///
-/// O brasao (leao dourado com espadas cruzadas) e recortado a partir do
-/// logo oficial enviado pelo cliente (assets/branding/logo_leao.png).
+/// E um unico recorte em pixel do arquivo oficial do cliente
+/// (assets/branding/logo_oficial_completo.png), com a UNICA alteracao
+/// sendo a remocao do tracinho/hifen indevido entre o "X" (formado
+/// pelas espadas) e "TREME" — fonte, espessura, cores, leao, espadas e
+/// espacamento continuam exatamente como no arquivo aprovado pelo
+/// cliente, sem nenhuma recriacao.
 class GymExtremeLogo extends StatelessWidget {
   const GymExtremeLogo({super.key, this.compact = false});
 
@@ -13,36 +17,10 @@ class GymExtremeLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logoHeight = compact ? 64.0 : 104.0;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          'assets/branding/logo_leao.png',
-          height: logoHeight,
-          fit: BoxFit.contain,
-        ),
-        SizedBox(height: compact ? 8 : 16),
-        RichText(
-          text: TextSpan(
-            style: TextStyle(
-              fontSize: compact ? 22 : 32,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-            children: const [
-              TextSpan(
-                text: 'GYM ',
-                style: TextStyle(color: AppColors.textPrimary),
-              ),
-              TextSpan(
-                text: 'XTREME',
-                style: TextStyle(color: AppColors.gold),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/branding/logo_gym_xtreme.png',
+      height: compact ? 40.0 : 120.0,
+      fit: BoxFit.contain,
     );
   }
 }

@@ -5,10 +5,12 @@ atual (MEGA). Construido em Flutter para gerar, do mesmo codigo, o app
 Android nativo (Play Store) e a versao Web usada como PWA no iOS
 (o aluno acessa pelo Safari e adiciona a tela inicial).
 
-Este repositorio esta no **Modulo 1 — Base do projeto + Login**.
+Este repositorio esta nos **Modulos 1 e 2 — Base do projeto + Login, e
+Cadastro/Ficha do aluno**.
 
-## O que ja existe neste modulo
+## O que ja existe
 
+### Modulo 1 — Base + Login
 - Projeto Flutter `gymextreme_app` com suporte a Android e Web.
 - Identidade visual preto/dourado (`lib/theme`) e um icone/wordmark
   placeholder (`lib/widgets/gymextreme_logo.dart`,
@@ -17,23 +19,61 @@ Este repositorio esta no **Modulo 1 — Base do projeto + Login**.
 - Login por e-mail/senha com Firebase Authentication.
 - 3 niveis de acesso via campo `role` na colecao `usuarios` do Firestore:
   `adm`, `personal`, `aluno` (`lib/models/user_role.dart`).
-- Telas: login, esqueci minha senha, e uma tela de boas-vindas que so
+- Telas: login, esqueci minha senha, e uma tela de boas-vindas que
   prova que o `role` esta sendo lido corretamente
-  (`lib/screens/welcome_screen.dart`). As telas de verdade de cada
-  perfil vem nos proximos modulos.
+  (`lib/screens/welcome_screen.dart`).
 - `codemagic.yaml` para build automatico do Android (APK + AAB).
 - PWA configurado (`web/manifest.json`, `web/index.html`) para o
   "adicionar a tela de inicio" funcionar no Safari/iOS.
+
+### Modulo 2 — Cadastro completo de aluno
+Replica a ficha em papel "GYM X-TREME" (avaliacao fisica + anamnese +
+regulamento/termo de responsabilidade) que voces ja usam. Acessivel
+pela tela de boas-vindas de ADM/Personal, botao **"Gerenciar alunos"**
+(`lib/screens/alunos/`):
+
+- **Cadastro** — cria o login do aluno (Firebase Auth com senha
+  inicial) + nome, idade, data de inicio e dia de vencimento
+  (`AlunoFormScreen`, aba "Dados" na ficha).
+- **Anamnese** — as 13 perguntas da ficha em papel, ponto a ponto
+  (`AnamneseTab`).
+- **Termo de responsabilidade** — as 15 regras do "REGULAMENTO" em
+  papel, com aceite digital (nome, data/hora e campo opcional de
+  responsavel para menores de idade) no lugar da assinatura manuscrita
+  (`TermoTab`).
+- **Avaliacao fisica** — peso, altura (com IMC calculado e
+  classificado automaticamente) e as 16 medidas de circunferencia da
+  ficha, com historico de avaliacoes ao longo do tempo
+  (`AvaliacoesTab` + `AvaliacaoFisicaFormScreen`).
+
+Quem preenche e o ADM/Personal (o fluxo hoje e em papel na recepcao —
+mantive esse mesmo padrao: o aluno ainda nao tem area propria no app,
+isso fica para um modulo futuro de auto-atendimento).
+
+**Pontos que assumi e que valem uma conferencia sua:**
+- A tabela "GRUPO MUSCULAR INFERIOR" (treino de cardio/coxa/gluteo) que
+  vem na mesma folha da ficha de avaliacao **nao entrou neste modulo**
+  — e ficha de treino, escopo do modulo de sistema de treino.
+- `lib/constants/regulamento.dart` tem um `regulamentoToleranciaDias =
+  5` (regra 3, "tolerancia de ___ dias") — na ficha em papel esse
+  numero fica em branco pra preencher a caneta; usei 5 como placeholder
+  razoavel, mas confirme o valor oficial antes de ir pra producao.
+- O texto do regulamento foi digitado a partir da foto; vale uma
+  conferencia final antes de publicar (principalmente se ele tiver
+  qualquer validade juridica formal).
 
 ## Estrutura de pastas
 
 ```
 lib/
   app/            # widget raiz (GymExtremeApp) e AuthGate (login x logado)
-  models/         # AppUser, UserRole
+  constants/      # circunferenciaFields, texto do regulamento
+  models/         # AppUser, UserRole, Aluno, Anamnese, TermoAceite, AvaliacaoFisica
   screens/        # LoginScreen, ForgotPasswordScreen, WelcomeScreen
-  services/       # AuthService (Firebase Auth), UserService (Firestore)
+    alunos/       # lista, cadastro, ficha (abas: dados/anamnese/termo/avaliacoes)
+  services/       # AuthService, UserService, AlunoService (Firestore + Auth)
   theme/          # cores e ThemeData da marca
+  utils/          # calculo e classificacao de IMC
   widgets/        # GymExtremeLogo
   firebase_options.dart   # config do Firebase por plataforma (ver abaixo)
   main.dart
@@ -83,13 +123,13 @@ usado so pelo script Node `importar-exercicios.js`), que ja esta no
 No Firebase Console, confirme que **Authentication > Sign-in method >
 E-mail/senha** esta habilitado.
 
-## 3. Criar os 3 usuarios de teste (ADM, Personal, Aluno)
+## 3. Criar os usuarios de teste (ADM, Personal, Aluno)
 
-Ainda nao ha tela de cadastro (vem no Modulo 2). Para testar o login
-com os 3 perfis:
+O ADM e o Personal ainda sao criados manualmente (nao ha tela de
+"cadastrar funcionario" — isso e administrativo, nao autoatendimento):
 
 1. Firebase Console > Authentication > Users > **Add user** — crie um
-   usuario com e-mail/senha para cada perfil (adm, personal, aluno).
+   usuario com e-mail/senha para ADM e outro para Personal.
 2. Firebase Console > Firestore Database > colecao **usuarios** >
    crie um documento com o **ID igual ao UID** do usuario criado no
    passo 1, com os campos:
@@ -97,16 +137,20 @@ com os 3 perfis:
    {
      "nome": "Nome de teste",
      "email": "mesmo e-mail do Authentication",
-     "role": "adm",       // ou "personal" ou "aluno"
+     "role": "adm",       // ou "personal"
      "criadoEm": <timestamp atual>
    }
    ```
-3. Repita para os 3 perfis.
 
-As regras sugeridas em `firestore.rules` deixam cada usuario ler
-apenas o proprio documento (necessario para a tela de boas-vindas
-funcionar) e bloqueiam escrita pelo app — aplique-as em Firestore
-Database > Regras, ou via `firebase deploy --only firestore:rules`.
+Ja o **aluno** de teste pode ser criado direto pelo app: logue como
+ADM ou Personal, toque em "Gerenciar alunos" > botao **+** > preencha
+nome/e-mail/senha inicial — o app cria a conta e o cadastro sozinho.
+
+As regras em `firestore.rules` liberam leitura do proprio perfil pra
+qualquer usuario logado, e leitura/escrita de `usuarios` e `alunos`
+(cadastro, anamnese, termo, avaliacoes) apenas pra quem tem role `adm`
+ou `personal` — aplique-as em Firestore Database > Regras, ou via
+`firebase deploy --only firestore:rules`.
 
 ## 4. Rodar e testar
 
@@ -124,10 +168,15 @@ cd build/web && python3 -m http.server 8080
 flutter run -d <device-id>
 ```
 
-Criterio de pronto do modulo: logar com cada um dos 3 usuarios de
+Criterio de pronto do Modulo 1: logar com cada um dos 3 usuarios de
 teste, no Android e pelo navegador, e ver a mensagem "Bem-vindo,
 ADM" / "Bem-vindo, Personal" / "Bem-vindo, Aluno" correspondente, com
 a identidade visual preto/dourado.
+
+Criterio de pronto do Modulo 2: logado como ADM ou Personal, cadastrar
+um aluno novo, preencher a anamnese, aceitar o termo de
+responsabilidade e registrar uma avaliacao fisica — e tudo isso
+aparecer salvo ao reabrir a ficha do aluno.
 
 ### Testar "adicionar a tela de inicio" no iPhone
 
@@ -174,8 +223,8 @@ navegador, nao como app compilado nativo.
 
 ## Proximos modulos (fora do escopo deste)
 
-- Modulo 2: cadastro completo de aluno, ficha de avaliacao, anamnese,
-  termo de responsabilidade.
 - Modulo 3: catalogo de equipamentos e biblioteca de exercicios.
-- Modulos seguintes: sistema de treino, chat, notificacoes, auditoria,
-  painel completo do ADM.
+- Modulos seguintes: sistema de treino (inclui a tabela "GRUPO
+  MUSCULAR INFERIOR" da ficha em papel), chat, notificacoes, auditoria,
+  painel completo do ADM, area propria do aluno (hoje o cadastro e
+  todo feito pelo ADM/Personal).

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Marca "GYM X-TREME" em destaque, usada na tela de login e telas iniciais.
+/// Marca "GYM XTREME" em destaque, usada na tela de login e telas iniciais.
 ///
 /// O brasao (leao dourado com espadas cruzadas) e recortado a partir do
 /// logo oficial enviado pelo cliente (assets/branding/logo_leao.png).
@@ -36,7 +36,7 @@ class GymExtremeLogo extends StatelessWidget {
                 style: TextStyle(color: AppColors.textPrimary),
               ),
               TextSpan(
-                text: 'X-TREME',
+                text: 'XTREME',
                 style: TextStyle(color: AppColors.gold),
               ),
             ],

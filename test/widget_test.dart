@@ -24,7 +24,7 @@ void main() {
     );
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is RichText && widget.text.toPlainText() == 'GYM X-TREME',
+        (widget) => widget is RichText && widget.text.toPlainText() == 'GYM XTREME',
       ),
       findsOneWidget,
     );

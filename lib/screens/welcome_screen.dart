@@ -4,14 +4,17 @@ import '../models/app_user.dart';
 import '../models/user_role.dart';
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
+import '../services/exercicio_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
+import 'exercicios/exercicios_list_screen.dart';
 
 /// Tela minima pos-login: prova que o campo `role` do Firestore esta
-/// sendo lido corretamente, e da acesso a ficha de alunos pra ADM/Personal
-/// (Modulo 2). As demais telas de cada perfil chegam nos proximos modulos.
+/// sendo lido corretamente, e da acesso a ficha de alunos e a biblioteca
+/// de exercicios pra ADM/Personal (Modulos 2 e 3). As demais telas de
+/// cada perfil chegam nos proximos modulos.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({
     super.key,
@@ -19,12 +22,14 @@ class WelcomeScreen extends StatelessWidget {
     required this.authService,
     required this.userService,
     required this.alunoService,
+    required this.exercicioService,
   });
 
   final String uid;
   final AuthService authService;
   final UserService userService;
   final AlunoService alunoService;
+  final ExercicioService exercicioService;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +98,7 @@ class WelcomeScreen extends StatelessWidget {
                     user.email,
                     style: const TextStyle(color: AppColors.textSecondary),
                   ),
-                  if (user.role.canManageAlunos) ...[
+                  if (user.role.isStaff) ...[
                     const SizedBox(height: 28),
                     ElevatedButton.icon(
                       onPressed: () => Navigator.of(context).push(
@@ -103,6 +108,16 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.groups_outlined),
                       label: const Text('GERENCIAR ALUNOS'),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ExerciciosListScreen(exercicioService: exercicioService),
+                        ),
+                      ),
+                      icon: const Icon(Icons.fitness_center_outlined),
+                      label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
                     ),
                   ],
                 ],

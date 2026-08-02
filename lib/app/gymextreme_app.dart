@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
+import '../services/exercicio_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
 import 'auth_gate.dart';
@@ -14,6 +15,7 @@ class GymExtremeApp extends StatelessWidget {
     final authService = AuthService();
     final userService = UserService();
     final alunoService = AlunoService();
+    final exercicioService = ExercicioService();
 
     return MaterialApp(
       title: 'GymExtreme',
@@ -23,6 +25,7 @@ class GymExtremeApp extends StatelessWidget {
         authService: authService,
         userService: userService,
         alunoService: alunoService,
+        exercicioService: exercicioService,
       ),
     );
   }

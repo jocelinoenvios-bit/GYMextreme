@@ -5,8 +5,8 @@ atual (MEGA). Construido em Flutter para gerar, do mesmo codigo, o app
 Android nativo (Play Store) e a versao Web usada como PWA no iOS
 (o aluno acessa pelo Safari e adiciona a tela inicial).
 
-Este repositorio esta nos **Modulos 1 e 2 — Base do projeto + Login, e
-Cadastro/Ficha do aluno**.
+Este repositorio esta nos **Modulos 1, 2 e 3 — Base do projeto + Login,
+Cadastro/Ficha do aluno, e Biblioteca de exercicios**.
 
 ## O que ja existe
 
@@ -62,16 +62,39 @@ isso fica para um modulo futuro de auto-atendimento).
   conferencia final antes de publicar (principalmente se ele tiver
   qualquer validade juridica formal).
 
+### Modulo 3 — Biblioteca de exercicios
+Tela somente leitura (`lib/screens/exercicios/`) que le a colecao
+`exercicios` do Firestore, com busca por nome e filtro por grupo
+muscular. Acessivel pela tela de boas-vindas de ADM/Personal, botao
+**"Biblioteca de exercicios"**.
+
+O filtro de grupo muscular e **montado dinamicamente** a partir dos
+valores que existirem nos dados (nao fica preso a taxonomia de
+nenhuma API especifica) — `lib/constants/grupos_musculares.dart` so
+traduz pra portugues os valores conhecidos da fonte atual
+(`back`/`chest`/`upper legs`/etc.), e mostra o valor original quando
+nao reconhece. Isso porque a fonte dos exercicios deve trocar em
+breve (API paga, ainda a definir) — quando isso acontecer, so o
+script/import que popula a colecao `exercicios` precisa mudar; a tela
+continua funcionando sem alteracao, desde que os documentos guardem
+os campos `nome`, `grupoMuscular`, `alvo`, `equipamento`, `nivel`
+(opcional), `instrucoes` (lista de strings) e `gifUrl`.
+
+Cadastro/edicao de exercicios continua fora do app (script com
+credencial de admin) — as regras do Firestore bloqueiam qualquer
+escrita de `exercicios` pelo cliente.
+
 ## Estrutura de pastas
 
 ```
 lib/
   app/            # widget raiz (GymExtremeApp) e AuthGate (login x logado)
-  constants/      # circunferenciaFields, texto do regulamento
-  models/         # AppUser, UserRole, Aluno, Anamnese, TermoAceite, AvaliacaoFisica
+  constants/      # circunferenciaFields, texto do regulamento, grupos musculares
+  models/         # AppUser, UserRole, Aluno, Anamnese, TermoAceite, AvaliacaoFisica, Exercicio
   screens/        # LoginScreen, ForgotPasswordScreen, WelcomeScreen
     alunos/       # lista, cadastro, ficha (abas: dados/anamnese/termo/avaliacoes)
-  services/       # AuthService, UserService, AlunoService (Firestore + Auth)
+    exercicios/   # biblioteca de exercicios (lista + detalhe)
+  services/       # AuthService, UserService, AlunoService, ExercicioService
   theme/          # cores e ThemeData da marca
   utils/          # calculo e classificacao de IMC
   widgets/        # GymExtremeLogo
@@ -171,6 +194,12 @@ um aluno novo, preencher a anamnese, aceitar o termo de
 responsabilidade e registrar uma avaliacao fisica — e tudo isso
 aparecer salvo ao reabrir a ficha do aluno.
 
+Criterio de pronto do Modulo 3: com a colecao `exercicios` populada
+(veja `importar-exercicios.js`, ou o novo script/import quando a API
+trocar), logado como ADM ou Personal, abrir "Biblioteca de
+exercicios", buscar por nome, filtrar por grupo muscular e abrir o
+detalhe de um exercicio (gif, instrucoes).
+
 ### Testar "adicionar a tela de inicio" no iPhone
 
 1. Rode `flutter build web --release` e publique `build/web` em
@@ -216,8 +245,14 @@ navegador, nao como app compilado nativo.
 
 ## Proximos modulos (fora do escopo deste)
 
-- Modulo 3: catalogo de equipamentos e biblioteca de exercicios.
-- Modulos seguintes: sistema de treino (inclui a tabela "GRUPO
-  MUSCULAR INFERIOR" da ficha em papel), chat, notificacoes, auditoria,
-  painel completo do ADM, area propria do aluno (hoje o cadastro e
-  todo feito pelo ADM/Personal).
+- Sistema de treino (inclui a tabela "GRUPO MUSCULAR INFERIOR" da
+  ficha em papel), chat, notificacoes, auditoria, painel completo do
+  ADM, area propria do aluno (hoje o cadastro e todo feito pelo
+  ADM/Personal).
+- Catalogo de equipamentos fisicos da academia (esteiras, maquinas
+  etc.) como algo separado do exercicio em si — nao entrou neste
+  modulo; hoje o "equipamento" e so um campo dentro de cada exercicio.
+- Trocar a fonte dos exercicios pela API que sera comprada (a
+  WorkoutX usada em `importar-exercicios.js` era so um ponto de
+  partida) — a tela em si (`lib/screens/exercicios/`) nao deve
+  precisar mudar, so o script/import.

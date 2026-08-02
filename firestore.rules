@@ -34,5 +34,12 @@ service cloud.firestore {
         allow write: if ehStaff();
       }
     }
+
+    match /exercicios/{exercicioId} {
+      // Biblioteca somente leitura pelo app; o cadastro continua fora
+      // dele (script/import direto no Firestore com credencial de admin).
+      allow read: if ehStaff();
+      allow write: if false;
+    }
   }
 }

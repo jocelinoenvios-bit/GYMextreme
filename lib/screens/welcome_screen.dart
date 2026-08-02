@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
+import '../models/permission.dart';
 import '../models/user_role.dart';
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
+import '../services/cargo_service.dart';
 import '../services/exercicio_service.dart';
+import '../services/funcionario_service.dart';
+import '../services/permission_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'exercicios/exercicios_list_screen.dart';
+import 'funcionarios/funcionarios_list_screen.dart';
 
-/// Tela minima pos-login: prova que o campo `role` do Firestore esta
-/// sendo lido corretamente, e da acesso a ficha de alunos e a biblioteca
-/// de exercicios pra ADM/Personal (Modulos 2 e 3). As demais telas de
-/// cada perfil chegam nos proximos modulos.
+/// Tela pos-login: cada botao aparece de acordo com as permissoes
+/// individuais do usuario logado (ver `PermissionService`), nao mais um
+/// unico bloco "staff vs aluno". As demais telas de cada perfil chegam nos
+/// proximos modulos.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({
     super.key,
@@ -23,6 +28,8 @@ class WelcomeScreen extends StatelessWidget {
     required this.userService,
     required this.alunoService,
     required this.exercicioService,
+    required this.cargoService,
+    required this.funcionarioService,
   });
 
   final String uid;
@@ -30,6 +37,8 @@ class WelcomeScreen extends StatelessWidget {
   final UserService userService;
   final AlunoService alunoService;
   final ExercicioService exercicioService;
+  final CargoService cargoService;
+  final FuncionarioService funcionarioService;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +107,7 @@ class WelcomeScreen extends StatelessWidget {
                     user.email,
                     style: const TextStyle(color: AppColors.textSecondary),
                   ),
-                  if (user.role.isStaff) ...[
+                  if (PermissionService.has(user, Permission.gerenciarAlunos)) ...[
                     const SizedBox(height: 28),
                     ElevatedButton.icon(
                       onPressed: () => Navigator.of(context).push(
@@ -109,6 +118,8 @@ class WelcomeScreen extends StatelessWidget {
                       icon: const Icon(Icons.groups_outlined),
                       label: const Text('GERENCIAR ALUNOS'),
                     ),
+                  ],
+                  if (PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).push(
@@ -118,6 +129,21 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.fitness_center_outlined),
                       label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
+                    ),
+                  ],
+                  if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => FuncionariosListScreen(
+                            funcionarioService: funcionarioService,
+                            cargoService: cargoService,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.badge_outlined),
+                      label: const Text('GERENCIAR FUNCIONÁRIOS'),
                     ),
                   ],
                 ],
@@ -135,6 +161,8 @@ class WelcomeScreen extends StatelessWidget {
         return Icons.admin_panel_settings_outlined;
       case UserRole.personal:
         return Icons.sports_gymnastics_outlined;
+      case UserRole.funcionario:
+        return Icons.badge_outlined;
       case UserRole.aluno:
         return Icons.fitness_center_outlined;
     }

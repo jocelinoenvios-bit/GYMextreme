@@ -1,0 +1,86 @@
+/// Categorias usadas para agrupar as permissoes na tela de gestao de
+/// funcionarios (uma secao de checkboxes por categoria).
+enum PermissaoCategoria {
+  alunos('Alunos e Atendimento'),
+  treino('Treino'),
+  financeiro('Financeiro'),
+  sistema('Sistema');
+
+  const PermissaoCategoria(this.label);
+
+  final String label;
+}
+
+/// Catalogo completo de permissoes do GymExtreme.
+///
+/// Cobre tanto os modulos que ja existem no app (gerenciarAlunos,
+/// bibliotecaExercicios, avaliacoesFisicas) quanto os que ainda serao
+/// construidos (financeiro, turmas, catraca etc.) — assim, quando um modulo
+/// novo for implementado, basta usar [PermissionService.has] com o valor
+/// correspondente, sem precisar mexer nesta arquitetura de novo.
+///
+/// O valor gravado no Firestore (campo `permissoes` da colecao `usuarios`)
+/// e sempre o de [Permission.firestoreValue] (o nome do enum).
+enum Permission {
+  // Alunos e atendimento
+  gerenciarAlunos(PermissaoCategoria.alunos, 'Gerenciar alunos'),
+  cadastrarAlunos(PermissaoCategoria.alunos, 'Cadastrar alunos'),
+  editarAlunos(PermissaoCategoria.alunos, 'Editar alunos'),
+  excluirAlunos(PermissaoCategoria.alunos, 'Excluir alunos'),
+  matriculas(PermissaoCategoria.alunos, 'Matrículas'),
+  planos(PermissaoCategoria.alunos, 'Planos'),
+  frequencia(PermissaoCategoria.alunos, 'Controle de frequência'),
+  turmas(PermissaoCategoria.alunos, 'Turmas'),
+  visitantes(PermissaoCategoria.alunos, 'Visitantes'),
+
+  // Treino
+  bibliotecaExercicios(PermissaoCategoria.treino, 'Biblioteca de exercícios'),
+  avaliacoesFisicas(PermissaoCategoria.treino, 'Avaliações físicas'),
+  prescricaoTreinos(PermissaoCategoria.treino, 'Prescrição de treinos'),
+  criarTreinos(PermissaoCategoria.treino, 'Criar treinos'),
+  editarTreinos(PermissaoCategoria.treino, 'Editar treinos'),
+  chat(PermissaoCategoria.treino, 'Chat'),
+
+  // Financeiro
+  financeiro(PermissaoCategoria.financeiro, 'Financeiro'),
+  contasPagar(PermissaoCategoria.financeiro, 'Contas a pagar'),
+  contasReceber(PermissaoCategoria.financeiro, 'Contas a receber'),
+  produtos(PermissaoCategoria.financeiro, 'Produtos'),
+  caixa(PermissaoCategoria.financeiro, 'Caixa'),
+  abrirCaixa(PermissaoCategoria.financeiro, 'Abrir caixa'),
+  fecharCaixa(PermissaoCategoria.financeiro, 'Fechar caixa'),
+  receberMensalidades(PermissaoCategoria.financeiro, 'Receber mensalidades'),
+  historicoPagamentos(PermissaoCategoria.financeiro, 'Histórico de pagamentos'),
+  emitirComprovantes(PermissaoCategoria.financeiro, 'Emitir comprovantes'),
+
+  // Sistema
+  relatorios(PermissaoCategoria.sistema, 'Relatórios'),
+  configuracoes(PermissaoCategoria.sistema, 'Configurações da academia'),
+  gerenciarFuncionarios(PermissaoCategoria.sistema, 'Gerenciar funcionários'),
+  controleCatraca(PermissaoCategoria.sistema, 'Controle da catraca');
+
+  const Permission(this.categoria, this.label);
+
+  final PermissaoCategoria categoria;
+  final String label;
+
+  String get firestoreValue => name;
+
+  static Permission? fromFirestoreValue(String? value) {
+    for (final permission in Permission.values) {
+      if (permission.firestoreValue == value) return permission;
+    }
+    return null;
+  }
+
+  /// Converte uma lista bruta vinda do Firestore (`List<dynamic>` de
+  /// strings), ignorando silenciosamente valores desconhecidos/legados —
+  /// mesma postura defensiva usada nos outros models do app.
+  static Set<Permission> setFromFirestoreValues(List<dynamic>? values) {
+    if (values == null) return const {};
+    return values
+        .map((value) => Permission.fromFirestoreValue(value as String?))
+        .whereType<Permission>()
+        .toSet();
+  }
+}

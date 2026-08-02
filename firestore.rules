@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// Regras para os Modulos 1 (login + perfil) e 2 (cadastro/ficha do aluno).
+// Regras para os Modulos 1 (login + perfil), 2 (cadastro/ficha do aluno) e
+// o sistema de cargos/permissoes (gestao de funcionarios).
 // Aplique em Firebase Console > Firestore Database > Regras, ou via
 // `firebase deploy --only firestore:rules` depois de rodar `firebase init`.
 service cloud.firestore {
@@ -8,19 +9,46 @@ service cloud.firestore {
 
     function ehStaff() {
       return request.auth != null &&
-        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['adm', 'personal'];
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['adm', 'personal', 'funcionario'];
+    }
+
+    function ehAdm() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'adm';
+    }
+
+    // ADM sempre tem a permissao; funcionario/personal so se `perm` estiver
+    // na lista `permissoes` do proprio documento (`.get(..., [])` evita erro
+    // em contas legadas que ainda nao tem esse campo).
+    function temPermissao(perm) {
+      return ehAdm() || (
+        request.auth != null &&
+        perm in get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('permissoes', [])
+      );
     }
 
     match /usuarios/{uid} {
       // Qualquer usuario autenticado pode ler o PROPRIO documento
       // (e o que a tela de boas-vindas usa para saber o "role").
-      // ADM/Personal tambem podem ler a lista de alunos.
+      // Staff tambem pode ler a lista de alunos/funcionarios.
       allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
 
-      // So ADM/Personal cadastram usuarios pelo app (fluxo de "novo
-      // aluno" no Modulo 2). Criar um ADM/Personal continua manual, via
-      // Firebase Console ou SDK Admin.
-      allow write: if ehStaff();
+      // Cadastrar um aluno continua liberado pra qualquer staff (fluxo de
+      // "novo aluno" do Modulo 2). Cadastrar outro membro da equipe
+      // (ADM/funcionario) exige a permissao "gerenciarFuncionarios".
+      allow create: if ehStaff() &&
+        (request.resource.data.role == 'aluno' || temPermissao('gerenciarFuncionarios'));
+
+      // Editar/apagar o documento de outra pessoa (ex.: ajustar permissoes
+      // de um funcionario) exige "gerenciarFuncionarios".
+      allow update, delete: if temPermissao('gerenciarFuncionarios');
+    }
+
+    match /cargos/{cargoId} {
+      // Qualquer staff pode ver os cargos customizados (ex.: dropdown na
+      // tela de novo funcionario). So quem gerencia funcionarios cria/edita.
+      allow read: if ehStaff();
+      allow write: if temPermissao('gerenciarFuncionarios');
     }
 
     match /alunos/{uid} {

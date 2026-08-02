@@ -1,0 +1,60 @@
+name: Android debug APK
+
+# Builda um APK de debug do GymExtreme e disponibiliza pra download —
+# como artefato do workflow (Actions > essa execucao > Artifacts) e
+# tambem como asset de uma Release fixa "debug-latest" (link estavel,
+# mais facil de abrir e instalar direto no celular).
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/chave-aqui-esta-u505zg
+
+permissions:
+  contents: write
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Analisar codigo
+        run: flutter analyze
+
+      - name: Rodar testes
+        run: flutter test
+
+      - name: Build APK (debug)
+        run: flutter build apk --debug
+
+      - name: Publicar como artefato do workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: gymextreme-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+
+      - name: Publicar como asset da Release "debug-latest"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug-latest
+          name: GymExtreme — build de debug mais recente
+          body: |
+            APK de debug gerado automaticamente a partir do commit
+            ${{ github.sha }} (branch `${{ github.ref_name }}`).
+
+            Assinado com a chave de debug padrao do Android — serve
+            pra instalar e testar no celular, nao para publicar na
+            Play Store.
+          prerelease: true
+          make_latest: false
+          files: build/app/outputs/flutter-apk/app-debug.apk

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Marca "GymExtreme" em destaque, usada na tela de login e telas iniciais.
+/// Marca "GYM X-TREME" em destaque, usada na tela de login e telas iniciais.
 ///
-/// Provisoria ate o logo oficial do cliente (leao dourado) ser aplicado
-/// como asset de imagem no lugar do icone generico abaixo.
+/// O brasao (leao dourado com espadas cruzadas) e recortado a partir do
+/// logo oficial enviado pelo cliente (assets/branding/logo_leao.png).
 class GymExtremeLogo extends StatelessWidget {
   const GymExtremeLogo({super.key, this.compact = false});
 
@@ -13,22 +13,14 @@ class GymExtremeLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = compact ? 40.0 : 64.0;
+    final logoHeight = compact ? 64.0 : 104.0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: iconSize + 24,
-          height: iconSize + 24,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.gold, width: 2),
-          ),
-          child: Icon(
-            Icons.fitness_center,
-            color: AppColors.gold,
-            size: iconSize,
-          ),
+        Image.asset(
+          'assets/branding/logo_leao.png',
+          height: logoHeight,
+          fit: BoxFit.contain,
         ),
         SizedBox(height: compact ? 8 : 16),
         RichText(
@@ -40,11 +32,11 @@ class GymExtremeLogo extends StatelessWidget {
             ),
             children: const [
               TextSpan(
-                text: 'GYM',
+                text: 'GYM ',
                 style: TextStyle(color: AppColors.textPrimary),
               ),
               TextSpan(
-                text: 'EXTREME',
+                text: 'X-TREME',
                 style: TextStyle(color: AppColors.gold),
               ),
             ],

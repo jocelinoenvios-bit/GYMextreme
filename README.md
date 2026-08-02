@@ -27,7 +27,7 @@ Cadastro/Ficha do aluno, e Biblioteca de exercicios**.
   "adicionar a tela de inicio" funcionar no Safari/iOS.
 
 ### Modulo 2 — Cadastro completo de aluno
-Replica a ficha em papel "GYM X-TREME" (avaliacao fisica + anamnese +
+Replica a ficha em papel "GYM XTREME" (avaliacao fisica + anamnese +
 regulamento/termo de responsabilidade) que voces ja usam. Acessivel
 pela tela de boas-vindas de ADM/Personal, botao **"Gerenciar alunos"**
 (`lib/screens/alunos/`):

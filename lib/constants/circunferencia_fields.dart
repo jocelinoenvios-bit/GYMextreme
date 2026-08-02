@@ -7,7 +7,7 @@ class CircunferenciaField {
   final String label;
 }
 
-/// Mesma ordem e nomenclatura da ficha "GYM X-TREME" em papel (secao
+/// Mesma ordem e nomenclatura da ficha "GYM XTREME" em papel (secao
 /// CIRCUNFERENCIAS), pra quem preenche reconhecer o formulario de cara.
 const List<CircunferenciaField> circunferenciaFields = [
   CircunferenciaField('pescoco', 'Pescoço'),

@@ -12,10 +12,19 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.fitness_center), findsOneWidget);
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is RichText && widget.text.toPlainText() == 'GYMEXTREME',
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/branding/logo_leao.png',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is RichText && widget.text.toPlainText() == 'GYM X-TREME',
       ),
       findsOneWidget,
     );

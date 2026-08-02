@@ -1,20 +1,38 @@
 rules_version = '2';
 
-// Regras minimas para o Modulo 1 (login + perfil).
+// Regras para os Modulos 1 (login + perfil) e 2 (cadastro/ficha do aluno).
 // Aplique em Firebase Console > Firestore Database > Regras, ou via
 // `firebase deploy --only firestore:rules` depois de rodar `firebase init`.
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function ehStaff() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['adm', 'personal'];
+    }
+
     match /usuarios/{uid} {
       // Qualquer usuario autenticado pode ler o PROPRIO documento
       // (e o que a tela de boas-vindas usa para saber o "role").
-      allow read: if request.auth != null && request.auth.uid == uid;
+      // ADM/Personal tambem podem ler a lista de alunos.
+      allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
 
-      // Por enquanto, a criacao/edicao de usuarios e feita manualmente
-      // pelo Firebase Console ou pelo SDK Admin (Node/Cloud Functions),
-      // nunca direto pelo app. Nenhuma escrita e permitida pelo cliente.
-      allow write: if false;
+      // So ADM/Personal cadastram usuarios pelo app (fluxo de "novo
+      // aluno" no Modulo 2). Criar um ADM/Personal continua manual, via
+      // Firebase Console ou SDK Admin.
+      allow write: if ehStaff();
+    }
+
+    match /alunos/{uid} {
+      // O proprio aluno pode ler a propria ficha; ADM/Personal leem e
+      // escrevem a ficha de qualquer aluno (cadastro, anamnese, termo).
+      allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+      allow write: if ehStaff();
+
+      match /avaliacoes/{avaliacaoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if ehStaff();
+      }
     }
   }
 }

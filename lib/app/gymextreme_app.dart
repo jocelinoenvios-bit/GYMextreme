@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
@@ -12,12 +13,17 @@ class GymExtremeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = AuthService();
     final userService = UserService();
+    final alunoService = AlunoService();
 
     return MaterialApp(
       title: 'GymExtreme',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: AuthGate(authService: authService, userService: userService),
+      home: AuthGate(
+        authService: authService,
+        userService: userService,
+        alunoService: alunoService,
+      ),
     );
   }
 }

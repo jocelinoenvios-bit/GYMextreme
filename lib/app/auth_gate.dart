@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/login_screen.dart';
 import '../screens/welcome_screen.dart';
+import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
@@ -14,10 +15,12 @@ class AuthGate extends StatelessWidget {
     super.key,
     required this.authService,
     required this.userService,
+    required this.alunoService,
   });
 
   final AuthService authService;
   final UserService userService;
+  final AlunoService alunoService;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +44,7 @@ class AuthGate extends StatelessWidget {
           uid: user.uid,
           authService: authService,
           userService: userService,
+          alunoService: alunoService,
         );
       },
     );

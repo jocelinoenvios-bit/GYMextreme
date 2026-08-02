@@ -21,4 +21,8 @@ enum UserRole {
     UserRole.personal => 'Personal',
     UserRole.aluno => 'Aluno',
   };
+
+  /// ADM e Personal cadastram e acompanham a ficha dos alunos; o proprio
+  /// aluno ainda nao tem essa area (chega em modulo futuro).
+  bool get canManageAlunos => this == UserRole.adm || this == UserRole.personal;
 }

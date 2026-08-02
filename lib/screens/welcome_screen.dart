@@ -2,25 +2,29 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../models/user_role.dart';
+import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/gymextreme_logo.dart';
+import 'alunos/alunos_list_screen.dart';
 
-/// Tela minima pos-login: so prova que o campo `role` do Firestore esta
-/// sendo lido corretamente e determinando a mensagem exibida.
-/// As telas reais de cada perfil chegam nos proximos modulos.
+/// Tela minima pos-login: prova que o campo `role` do Firestore esta
+/// sendo lido corretamente, e da acesso a ficha de alunos pra ADM/Personal
+/// (Modulo 2). As demais telas de cada perfil chegam nos proximos modulos.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({
     super.key,
     required this.uid,
     required this.authService,
     required this.userService,
+    required this.alunoService,
   });
 
   final String uid;
   final AuthService authService;
   final UserService userService;
+  final AlunoService alunoService;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +93,18 @@ class WelcomeScreen extends StatelessWidget {
                     user.email,
                     style: const TextStyle(color: AppColors.textSecondary),
                   ),
+                  if (user.role.canManageAlunos) ...[
+                    const SizedBox(height: 28),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AlunosListScreen(alunoService: alunoService),
+                        ),
+                      ),
+                      icon: const Icon(Icons.groups_outlined),
+                      label: const Text('GERENCIAR ALUNOS'),
+                    ),
+                  ],
                 ],
               ),
             ),

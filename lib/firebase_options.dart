@@ -1,14 +1,9 @@
-// ATENCAO: este arquivo contem valores de PLACEHOLDER.
-//
-// Normalmente ele e gerado automaticamente pela FlutterFire CLI com:
-//   dart pub global activate flutterfire_cli
+// Configuracao real do Firebase (projeto gymextreme-42c98), gerada com a
+// FlutterFire CLI:
 //   flutterfire configure --project=gymextreme-42c98 --platforms=android,web
 //
-// Isso exige login com a conta Google/Firebase do cliente, algo que so
-// pode ser feito na sua maquina. Antes do build final, rode o comando
-// acima na raiz do projeto para sobrescrever este arquivo com as chaves
-// reais do projeto gymextreme-42c98 (Android + Web). Veja o README.md
-// para o passo a passo completo.
+// Se o projeto Firebase mudar (novo app Web/Android, rotacao de chave),
+// rode o comando acima de novo pra atualizar este arquivo.
 //
 // ignore_for_file: type=lint
 
@@ -36,25 +31,19 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // TODO(flutterfire-configure): substituir pelos valores reais do app Web
-  // cadastrado no projeto gymextreme-42c98 (Firebase Console > Configuracoes
-  // do projeto > Seus apps > Web).
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_REAL_WEB_API_KEY',
-    appId: 'REPLACE_WITH_REAL_WEB_APP_ID',
-    messagingSenderId: 'REPLACE_WITH_REAL_SENDER_ID',
+    apiKey: 'AIzaSyAAARv_nA7OOLtJla6D0taHmXLd5KQ_1m0',
+    appId: '1:258628817510:web:3b21a84833d90a6fb953a7',
+    messagingSenderId: '258628817510',
     projectId: 'gymextreme-42c98',
     authDomain: 'gymextreme-42c98.firebaseapp.com',
     storageBucket: 'gymextreme-42c98.firebasestorage.app',
   );
 
-  // TODO(flutterfire-configure): substituir pelos valores reais do app
-  // Android cadastrado no projeto gymextreme-42c98 (mesmos valores do
-  // android/app/google-services.json real, baixado do Firebase Console).
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_REAL_ANDROID_API_KEY',
-    appId: 'REPLACE_WITH_REAL_ANDROID_APP_ID',
-    messagingSenderId: 'REPLACE_WITH_REAL_SENDER_ID',
+    apiKey: 'AIzaSyDGG6RU-7LOl0Q9ePfj-xSGeKRvUdOBcw0',
+    appId: '1:258628817510:android:6b97eb8c5b6b326ab953a7',
+    messagingSenderId: '258628817510',
     projectId: 'gymextreme-42c98',
     storageBucket: 'gymextreme-42c98.firebasestorage.app',
   );

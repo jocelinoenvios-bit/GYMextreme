@@ -25,7 +25,11 @@ void main() {
             isNotNull,
             reason: '${exercicio.id}: sem gif360Url — todo exercício deveria ter a variante 360',
           );
-          expect(exercicio.temAnguloAlternativo, isTrue, reason: '${exercicio.id}: variante 360 não sinalizada');
+          expect(
+            exercicio.temVarianteAltaResolucao,
+            isTrue,
+            reason: '${exercicio.id}: variante 360 não sinalizada',
+          );
 
           await _expectGifCarrega(exercicio.gif180Url);
           await _expectGifCarrega(gif360!);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gif/gif.dart';
 
 import '../../../models/exercise_model.dart';
 import '../../../theme/app_colors.dart';
@@ -8,6 +9,11 @@ import 'exercicio_media_controls.dart';
 /// quer estudar o movimento com calma antes de começar a série. Mesmo
 /// palco claro e mesmos controles da tela de execução, sem nenhuma
 /// distração ao redor.
+///
+/// Usa `ExerciseModel.gif360Url` (em vez do `gif180Url` do palco
+/// principal) — a variante de maior resolução fica reservada
+/// automaticamente pra cá, onde o zoom (até 4x) mais se beneficia dela.
+/// A troca nunca é uma escolha exposta ao aluno.
 class ExercicioFullscreenScreen extends StatefulWidget {
   const ExercicioFullscreenScreen({super.key, required this.exercise});
 
@@ -19,17 +25,14 @@ class ExercicioFullscreenScreen extends StatefulWidget {
 
 class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _loopController;
-  bool _tocando = true;
-  bool _anguloLateral = false;
+  late final GifController _loopController;
+  late bool _tocando;
 
   @override
   void initState() {
     super.initState();
-    _loopController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
+    _loopController = GifController(vsync: this);
+    _tocando = !WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
   }
 
   @override
@@ -41,13 +44,13 @@ class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen>
   void _alternarReproducao() {
     setState(() {
       _tocando = !_tocando;
-      _tocando ? _loopController.repeat(reverse: true) : _loopController.stop();
+      _tocando ? _loopController.repeat() : _loopController.stop();
     });
   }
 
   void _reiniciar() {
     _loopController.reset();
-    if (_tocando) _loopController.repeat(reverse: true);
+    if (_tocando) _loopController.repeat();
   }
 
   @override
@@ -63,10 +66,12 @@ class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen>
                 minScale: 1,
                 maxScale: 4,
                 child: Center(
-                  child: MuscleLoopPlaceholder(
-                    animation: _loopController,
-                    reduceMotion: reduceMotion,
-                    grupoMuscular: widget.exercise.grupoMuscular,
+                  child: Gif(
+                    image: AssetImage(widget.exercise.gif360Url ?? widget.exercise.gif180Url),
+                    controller: _loopController,
+                    autostart: reduceMotion ? Autostart.no : Autostart.loop,
+                    fit: BoxFit.contain,
+                    placeholder: (_) => const Center(child: CircularProgressIndicator()),
                   ),
                 ),
               ),
@@ -88,18 +93,6 @@ class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen>
                 ),
               ),
             ),
-            if (widget.exercise.temAnguloAlternativo)
-              Positioned(
-                bottom: 100,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: AnguloSelector(
-                    lateral: _anguloLateral,
-                    onChanged: (lateral) => setState(() => _anguloLateral = lateral),
-                  ),
-                ),
-              ),
             Positioned(
               bottom: 36,
               left: 0,

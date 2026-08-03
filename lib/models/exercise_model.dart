@@ -143,14 +143,17 @@ class ExerciseModel {
   /// renomeação.
   final String gif180Url;
 
-  /// Variante alternativa do loop, quando existir.
+  /// Mesmo loop em resolução maior — usado automaticamente em telas com
+  /// mais zoom (tela cheia), nunca como escolha exposta ao aluno. Não é
+  /// um ângulo de câmera diferente, é o mesmo conteúdo do [gif180Url]
+  /// em qualidade maior.
   final String? gif360Url;
 
   /// Vídeo completo — reservado pra API V2 (não implementada ainda).
   /// Nulo enquanto só a biblioteca local estiver em uso.
   final String? videoUrl;
 
-  bool get temAnguloAlternativo => gif360Url != null;
+  bool get temVarianteAltaResolucao => gif360Url != null;
   bool get temVideoComplementar => videoUrl != null;
 
   final List<ExercicioRelacionado> similares;
@@ -213,8 +216,9 @@ class ExerciseModel {
   /// mudar no futuro.
   static String gif180PathPara(String id) => 'assets/exercicios/gifs/$id.gif';
 
-  /// Mesma convenção, para a variante 360° — usada em telas de alta
-  /// resolução (ex.: fullscreen) via `ExerciseModel.temAnguloAlternativo`.
+  /// Mesma convenção, para a variante 360° — usada automaticamente em
+  /// telas de alta resolução (ex.: fullscreen) via
+  /// `ExerciseModel.temVarianteAltaResolucao`.
   static String gif360PathPara(String id) => 'assets/exercicios/gifs_360/$id.gif';
 }
 

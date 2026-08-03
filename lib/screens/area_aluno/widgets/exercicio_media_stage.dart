@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gif/gif.dart';
 
 import '../../../models/exercise_model.dart';
 import '../../../theme/app_colors.dart';
@@ -10,12 +11,12 @@ import 'exercicio_media_controls.dart';
 /// fundo dos ativos 3D reais da Biblioteca de Exercícios, então um card
 /// escuro por trás pareceria um recorte quebrado, não uma escolha.
 ///
-/// Hoje ainda renderiza [MuscleLoopPlaceholder]: os GIFs reais
-/// (`ExerciseModel.gif180Url`/`gif360Url`) já estão integrados como
-/// asset (ver `LocalExerciseRepository`), mas a troca do placeholder por
-/// um player de verdade (ex.: pacote `gif`, que dá play/pause de
-/// verdade) é uma mudança de UI própria, a ser apresentada antes de
-/// implementar — sem mexer no resto da tela quando isso acontecer.
+/// Renderiza o GIF oficial (`ExerciseModel.gif180Url`) via
+/// `AssetImage` — resolvido/decodificado sob demanda pelo próprio
+/// Flutter só quando este widget entra em tela (nenhum carregamento em
+/// lote). A variante 360° (`gif360Url`) fica reservada para a tela
+/// cheia, onde o zoom é maior — a troca é automática e nunca aparece
+/// como opção pro aluno.
 class ExercicioMediaStage extends StatefulWidget {
   const ExercicioMediaStage({super.key, required this.exercise});
 
@@ -27,28 +28,29 @@ class ExercicioMediaStage extends StatefulWidget {
 
 class _ExercicioMediaStageState extends State<ExercicioMediaStage>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _loopController;
-  bool _tocando = true;
-  bool _anguloLateral = false;
+  late final GifController _loopController;
+  late bool _tocando;
 
   @override
   void initState() {
     super.initState();
-    _loopController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
+    _loopController = GifController(vsync: this);
+    // Mesma fonte que MediaQuery.of(context).disableAnimations usa por
+    // baixo — segura de ler aqui porque não depende de um BuildContext
+    // já anexado à árvore (ao contrário de MediaQuery.of, que não pode
+    // ser chamado dentro de initState).
+    _tocando = !WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
   }
 
   @override
   void didUpdateWidget(covariant ExercicioMediaStage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.exercise.id != widget.exercise.id) {
-      _anguloLateral = false;
-      _tocando = true;
-      _loopController
-        ..reset()
-        ..repeat(reverse: true);
+      // A troca de `key` no Gif (ver build) já força um widget novo pro
+      // próximo exercício — reseta o controller pra não herdar posição
+      // de quadro do gif anterior.
+      _tocando = !WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+      _loopController.reset();
     }
   }
 
@@ -61,13 +63,13 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage>
   void _alternarReproducao() {
     setState(() {
       _tocando = !_tocando;
-      _tocando ? _loopController.repeat(reverse: true) : _loopController.stop();
+      _tocando ? _loopController.repeat() : _loopController.stop();
     });
   }
 
   void _reiniciar() {
     _loopController.reset();
-    if (_tocando) _loopController.repeat(reverse: true);
+    if (_tocando) _loopController.repeat();
   }
 
   void _abrirFullscreen() {
@@ -93,27 +95,18 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage>
               minScale: 1,
               maxScale: 3,
               child: Center(
-                child: MuscleLoopPlaceholder(
-                  animation: _loopController,
-                  reduceMotion: reduceMotion,
-                  grupoMuscular: widget.exercise.grupoMuscular,
+                child: Gif(
+                  key: ValueKey(widget.exercise.id),
+                  image: AssetImage(widget.exercise.gif180Url),
+                  controller: _loopController,
+                  autostart: reduceMotion ? Autostart.no : Autostart.loop,
+                  fit: BoxFit.contain,
+                  placeholder: (_) => const Center(child: CircularProgressIndicator()),
                 ),
               ),
             ),
           ),
           const Positioned(top: 14, left: 14, child: LoopBadge()),
-          if (widget.exercise.temAnguloAlternativo)
-            Positioned(
-              bottom: 66,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: AnguloSelector(
-                  lateral: _anguloLateral,
-                  onChanged: (lateral) => setState(() => _anguloLateral = lateral),
-                ),
-              ),
-            ),
           Positioned(
             bottom: 12,
             left: 0,

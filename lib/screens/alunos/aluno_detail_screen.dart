@@ -57,6 +57,7 @@ class AlunoDetailScreen extends StatelessWidget {
               aluno: aluno,
               alunoService: alunoService,
               storageService: storageService,
+              staffAtual: staffAtual,
             ),
             AnamneseTab(uid: aluno.uid, alunoService: alunoService),
             TermoTab(aluno: aluno, alunoService: alunoService, staffAtual: staffAtual),

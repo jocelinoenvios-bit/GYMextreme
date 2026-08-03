@@ -10,6 +10,7 @@ import '../../../services/aluno_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/idade.dart';
+import 'mensalidade_section.dart';
 
 class DadosTab extends StatefulWidget {
   const DadosTab({
@@ -17,11 +18,13 @@ class DadosTab extends StatefulWidget {
     required this.aluno,
     required this.alunoService,
     required this.storageService,
+    required this.staffAtual,
   });
 
   final AppUser aluno;
   final AlunoService alunoService;
   final StorageService storageService;
+  final AppUser staffAtual;
 
   @override
   State<DadosTab> createState() => _DadosTabState();
@@ -468,6 +471,14 @@ class _DadosTabState extends State<DadosTab> {
                 ),
                 child: Text(_formatarData(_dataInicio)),
               ),
+            ),
+            const SizedBox(height: 20),
+            const _SecaoTitulo('Mensalidade'),
+            MensalidadeSection(
+              alunoUid: widget.aluno.uid,
+              proximoVencimento: snapshot.data?.proximoVencimento,
+              alunoService: widget.alunoService,
+              staffAtual: widget.staffAtual,
             ),
             const SizedBox(height: 14),
             TextField(

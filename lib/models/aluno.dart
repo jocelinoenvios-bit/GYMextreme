@@ -44,6 +44,8 @@ class Aluno {
     this.observacoes,
     this.dataInicio,
     this.diaVencimento,
+    this.proximoVencimento,
+    this.ativo = true,
     this.cadastradoPorUid,
     this.cadastradoPorNome,
   });
@@ -68,8 +70,23 @@ class Aluno {
 
   final DateTime? dataInicio;
 
-  /// Dia do mes (1-31) em que a mensalidade vence ("DIA PAGO" na ficha).
+  /// Dia do mes (1-31) em que a mensalidade vence ("DIA PAGO" na ficha) —
+  /// so texto de referencia; quem controla acesso/bloqueio de verdade e
+  /// [proximoVencimento].
   final int? diaVencimento;
+
+  /// Data do proximo vencimento da mensalidade. Nulo ate a recepcao
+  /// configurar a cobranca pela primeira vez — enquanto nulo,
+  /// `calcularStatusAcesso` considera o aluno liberado (nunca bloqueia por
+  /// falta de configuracao). Avanca a cada `AlunoService.marcarPagamentoRecebido`.
+  final DateTime? proximoVencimento;
+
+  /// Matrícula ativa — usado pela validação de autorização de acesso
+  /// (catraca/app). `false` marca uma matrícula encerrada sem apagar o
+  /// histórico do aluno (fica pronto pra virar a exclusão/inativação de
+  /// aluno já mapeada como pendência; ainda não tem tela pra alternar,
+  /// só o campo).
+  final bool ativo;
 
   /// Auditoria: qual funcionario cadastrou este aluno.
   final String? cadastradoPorUid;
@@ -84,6 +101,7 @@ class Aluno {
     final inicio = data['dataInicio'];
     final nascimento = data['dataNascimento'];
     final enderecoData = data['endereco'];
+    final proximoVencimento = data['proximoVencimento'];
     return Aluno(
       uid: uid,
       sexo: _sexoOrNull(data['sexo']),
@@ -102,6 +120,8 @@ class Aluno {
       observacoes: data['observacoes'] as String?,
       dataInicio: inicio is Timestamp ? inicio.toDate() : null,
       diaVencimento: (data['diaVencimento'] as num?)?.toInt(),
+      proximoVencimento: proximoVencimento is Timestamp ? proximoVencimento.toDate() : null,
+      ativo: data['ativo'] as bool? ?? true,
       cadastradoPorUid: data['cadastradoPorUid'] as String?,
       cadastradoPorNome: data['cadastradoPorNome'] as String?,
     );
@@ -125,6 +145,10 @@ class Aluno {
       'observacoes': observacoes,
       'dataInicio': dataInicio != null ? Timestamp.fromDate(dataInicio!) : null,
       'diaVencimento': diaVencimento,
+      'proximoVencimento': proximoVencimento != null
+          ? Timestamp.fromDate(proximoVencimento!)
+          : null,
+      'ativo': ativo,
       if (cadastradoPorUid != null) 'cadastradoPorUid': cadastradoPorUid,
       if (cadastradoPorNome != null) 'cadastradoPorNome': cadastradoPorNome,
     };
@@ -145,6 +169,8 @@ class Aluno {
     String? observacoes,
     DateTime? dataInicio,
     int? diaVencimento,
+    DateTime? proximoVencimento,
+    bool? ativo,
     String? cadastradoPorUid,
     String? cadastradoPorNome,
   }) {
@@ -165,6 +191,8 @@ class Aluno {
       observacoes: observacoes ?? this.observacoes,
       dataInicio: dataInicio ?? this.dataInicio,
       diaVencimento: diaVencimento ?? this.diaVencimento,
+      proximoVencimento: proximoVencimento ?? this.proximoVencimento,
+      ativo: ativo ?? this.ativo,
       cadastradoPorUid: cadastradoPorUid ?? this.cadastradoPorUid,
       cadastradoPorNome: cadastradoPorNome ?? this.cadastradoPorNome,
     );

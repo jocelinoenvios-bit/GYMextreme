@@ -65,12 +65,48 @@ service cloud.firestore {
         allow write: if ehStaff();
       }
 
+      // Historico de pagamentos de mensalidade — so quem tem a permissao
+      // especifica de receber mensalidade pode registrar (nao basta ser
+      // staff generico); o proprio aluno so le, nunca escreve.
+      match /pagamentos/{pagamentoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if temPermissao('receberMensalidades');
+      }
+
       // Fichas de treino: o proprio aluno le a propria (pra ver o treino
       // do dia); staff le qualquer uma; escrever exige a permissao
       // especifica de treino (nao basta ser staff generico).
       match /treinos/{treinoId} {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
+      }
+    }
+
+    // Controle de acesso da catraca (identificacao, autorizacao e
+    // acionamento desacoplados — ver functions/README.md). Estas colecoes
+    // so sao criadas pela Cloud Function `solicitarAutorizacaoAcesso`, via
+    // Admin SDK (que ignora estas regras) — o app cliente nunca escreve.
+    match /credenciais/{credencialId} {
+      allow read: if ehStaff();
+      allow write: if false;
+    }
+
+    match /academias/{academiaId} {
+      allow read: if ehStaff();
+      allow write: if false;
+
+      // O servico local (rodando no computador da academia) le esta fila
+      // autenticado como uma conta de staff dedicada, sem permissoes de
+      // tela nenhuma — so precisa passar em `ehStaff()`. So pode marcar
+      // uma autorizacao como consumida depois de acionar (ou nao) o
+      // solenoide — nunca cria uma autorizacao nem altera se foi
+      // aprovada, isso e responsabilidade exclusiva da Cloud Function.
+      match /autorizacoesAcesso/{autorizacaoId} {
+        allow read: if ehStaff();
+        allow create: if false;
+        allow update: if ehStaff() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['consumida', 'processadoEm']);
+        allow delete: if false;
       }
     }
 

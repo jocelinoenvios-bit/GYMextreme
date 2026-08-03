@@ -8,6 +8,7 @@ import '../models/anamnese.dart';
 import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
 import '../models/endereco.dart';
+import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
 import '../models/user_role.dart';
@@ -33,6 +34,9 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _treinos(String uid) =>
       _alunos.doc(uid).collection('treinos');
+
+  CollectionReference<Map<String, dynamic>> _pagamentos(String uid) =>
+      _alunos.doc(uid).collection('pagamentos');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
   Stream<List<AppUser>> watchAlunos() {
@@ -99,6 +103,61 @@ class AlunoService {
 
   Future<void> adicionarAvaliacao(String uid, AvaliacaoFisica avaliacao) {
     return _avaliacoes(uid).add(avaliacao.toFirestore());
+  }
+
+  /// Historico de pagamentos registrados pela recepcao, mais recente
+  /// primeiro.
+  Stream<List<Pagamento>> watchPagamentos(String uid) {
+    return _pagamentos(uid).orderBy('registradoEm', descending: true).snapshots().map(
+      (snapshot) =>
+          snapshot.docs.map((doc) => Pagamento.fromFirestore(doc.id, doc.data())).toList(),
+    );
+  }
+
+  /// Registra que a recepcao recebeu o pagamento (dinheiro, PIX, cartao ou
+  /// transferencia — fora do app nesta primeira versao, sem gateway) e
+  /// avanca `proximoVencimento` em 1 mes a partir do vencimento atual
+  /// (ou de hoje, se ainda nao havia nenhum configurado).
+  Future<void> marcarPagamentoRecebido(
+    String uid, {
+    required DateTime? vencimentoAtual,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final base = vencimentoAtual ?? DateTime.now();
+    final novoVencimento = _adicionarUmMes(base);
+
+    await _alunos.doc(uid).set({
+      'proximoVencimento': Timestamp.fromDate(novoVencimento),
+    }, SetOptions(merge: true));
+
+    await _pagamentos(uid).add(
+      Pagamento(
+        registradoEm: DateTime.now(),
+        vencimentoAnterior: vencimentoAtual,
+        novoVencimento: novoVencimento,
+        registradoPorUid: staffUid,
+        registradoPorNome: staffNome,
+      ).toFirestore(),
+    );
+  }
+
+  /// Define o primeiro vencimento de um aluno que ainda nao tem nenhum
+  /// configurado, sem que isso conte como um pagamento recebido.
+  Future<void> definirVencimentoInicial(String uid, DateTime vencimento) {
+    return _alunos.doc(uid).set({
+      'proximoVencimento': Timestamp.fromDate(vencimento),
+    }, SetOptions(merge: true));
+  }
+
+  /// Mesmo dia do mes, um mes a frente — com fallback pro ultimo dia do
+  /// mes de destino quando ele for mais curto (ex.: 31/01 -> 28 ou 29/02).
+  DateTime _adicionarUmMes(DateTime data) {
+    final novoMes = data.month == 12 ? 1 : data.month + 1;
+    final novoAno = data.month == 12 ? data.year + 1 : data.year;
+    final ultimoDiaDoNovoMes = DateTime(novoAno, novoMes + 1, 0).day;
+    final dia = data.day > ultimoDiaDoNovoMes ? ultimoDiaDoNovoMes : data.day;
+    return DateTime(novoAno, novoMes, dia);
   }
 
   /// Fichas de treino do aluno, mais recentes/ativas primeiro.

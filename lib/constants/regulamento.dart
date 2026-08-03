@@ -1,20 +1,18 @@
+import 'mensalidade.dart';
+
 /// Texto do "REGULAMENTO" da ficha em papel — e o TERMO DE
 /// RESPONSABILIDADE citado na propria regra 07. Versionado porque, se o
 /// texto mudar no futuro, aceites antigos devem continuar validos para a
 /// versao que a pessoa realmente leu.
-const String regulamentoVersaoAtual = '2026-08';
-
-/// Tolerancia (em dias) apos o vencimento antes da renovacao — na ficha
-/// em papel esse numero fica em branco pra cada academia preencher a
-/// caneta. TODO: confirmar o valor oficial com o cliente antes de usar
-/// em producao; 5 e apenas um placeholder razoavel.
-const int regulamentoToleranciaDias = 5;
+const String regulamentoVersaoAtual = '2026-08-03';
 
 List<String> get regulamentoRegras => [
   'A mensalidade é pessoal e intransferível.',
   'Não haverá devolução de mensalidade.',
   'Após o vencimento, daremos uma tolerância de '
-      '$regulamentoToleranciaDias dias para a renovação da mensalidade.',
+      '$toleranciaMensalidadeDias dias para a renovação da mensalidade. '
+      'Depois desse prazo, o acesso ao aplicativo e à academia fica '
+      'suspenso até a regularização do pagamento.',
   'Caso o aluno não renove sua mensalidade, terá que comunicar a direção '
       'da academia.',
   'Caso o aluno queira mudar seu vencimento, terá que pagar a diferença '

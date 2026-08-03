@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/aluno.dart';
 import '../models/app_user.dart';
 import '../models/permission.dart';
 import '../models/user_role.dart';
@@ -12,6 +13,7 @@ import '../services/permission_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/status_acesso.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'exercicios/exercicios_list_screen.dart';
@@ -88,77 +90,93 @@ class WelcomeScreen extends StatelessWidget {
             );
           }
 
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_iconFor(user.role), color: AppColors.gold, size: 56),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Bem-vindo, ${user.role.welcomeLabel}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user.nome,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
-                  ),
-                  Text(
-                    user.email,
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
-                  if (PermissionService.has(user, Permission.gerenciarAlunos)) ...[
-                    const SizedBox(height: 28),
-                    ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => AlunosListScreen(
-                            alunoService: alunoService,
-                            exercicioService: exercicioService,
-                            storageService: storageService,
-                            staffAtual: user,
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.groups_outlined),
-                      label: const Text('GERENCIAR ALUNOS'),
-                    ),
-                  ],
-                  if (PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ExerciciosListScreen(exercicioService: exercicioService),
-                        ),
-                      ),
-                      icon: const Icon(Icons.fitness_center_outlined),
-                      label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
-                    ),
-                  ],
-                  if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => FuncionariosListScreen(
-                            funcionarioService: funcionarioService,
-                            cargoService: cargoService,
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.badge_outlined),
-                      label: const Text('GERENCIAR FUNCIONÁRIOS'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
+          if (user.role == UserRole.aluno) {
+            return StreamBuilder<Aluno?>(
+              stream: alunoService.watchAluno(uid),
+              builder: (context, alunoSnapshot) {
+                final status = calcularStatusAcesso(
+                  proximoVencimento: alunoSnapshot.data?.proximoVencimento,
+                );
+                if (status.status == StatusMensalidade.bloqueado) {
+                  return const _AcessoSuspenso();
+                }
+                return _buildConteudoPadrao(context, user);
+              },
+            );
+          }
+
+          return _buildConteudoPadrao(context, user);
         },
+      ),
+    );
+  }
+
+  Widget _buildConteudoPadrao(BuildContext context, AppUser user) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_iconFor(user.role), color: AppColors.gold, size: 56),
+            const SizedBox(height: 16),
+            Text(
+              'Bem-vindo, ${user.role.welcomeLabel}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              user.nome,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
+            Text(user.email, style: const TextStyle(color: AppColors.textSecondary)),
+            if (PermissionService.has(user, Permission.gerenciarAlunos)) ...[
+              const SizedBox(height: 28),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AlunosListScreen(
+                      alunoService: alunoService,
+                      exercicioService: exercicioService,
+                      storageService: storageService,
+                      staffAtual: user,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('GERENCIAR ALUNOS'),
+              ),
+            ],
+            if (PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ExerciciosListScreen(exercicioService: exercicioService),
+                  ),
+                ),
+                icon: const Icon(Icons.fitness_center_outlined),
+                label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
+              ),
+            ],
+            if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => FuncionariosListScreen(
+                      funcionarioService: funcionarioService,
+                      cargoService: cargoService,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.badge_outlined),
+                label: const Text('GERENCIAR FUNCIONÁRIOS'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -174,5 +192,50 @@ class WelcomeScreen extends StatelessWidget {
       case UserRole.aluno:
         return Icons.fitness_center_outlined;
     }
+  }
+}
+
+/// Tela mostrada no lugar do conteudo normal quando a mensalidade do aluno
+/// passou dos dias de tolerancia — mesmo texto usado na notificacao
+/// (`mensagemNotificacaoMensalidade`), sempre visivel enquanto bloqueado
+/// (nao so no primeiro dia).
+class _AcessoSuspenso extends StatelessWidget {
+  const _AcessoSuspenso();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, color: AppColors.error, size: 56),
+            const SizedBox(height: 16),
+            Text(
+              'Acesso suspenso',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(color: AppColors.error),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Sua mensalidade permanece em atraso. Seu acesso ao '
+              'aplicativo e à academia foi bloqueado até a regularização '
+              'do pagamento.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textPrimary, height: 1.5),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Procure a recepção para regularizar.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/aluno.dart';
 import 'package:gymextreme_app/models/endereco.dart';
+import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/treino.dart';
 import 'package:gymextreme_app/utils/idade.dart';
 
@@ -62,6 +64,52 @@ void main() {
       final aluno = Aluno(uid: 'uid1', idadeInformada: 42);
       expect(aluno.dataNascimento, isNull);
       expect(aluno.idade, 42);
+    });
+
+    test('proximoVencimento faz round-trip por fromFirestore/toFirestore', () {
+      final vencimento = DateTime(2026, 9, 10);
+      final aluno = Aluno(uid: 'uid1', proximoVencimento: vencimento);
+
+      final dados = aluno.toFirestore();
+      expect(dados['proximoVencimento'], Timestamp.fromDate(vencimento));
+
+      final reconstruido = Aluno.fromFirestore('uid1', dados);
+      expect(reconstruido.proximoVencimento, vencimento);
+    });
+
+    test('proximoVencimento nulo nao quebra o round-trip', () {
+      final aluno = Aluno.fromFirestore('uid1', const {});
+      expect(aluno.proximoVencimento, isNull);
+    });
+  });
+
+  group('Pagamento', () {
+    test('fromFirestore/toFirestore preservam vencimento anterior e novo', () {
+      final anterior = DateTime(2026, 7, 10);
+      final novo = DateTime(2026, 8, 10);
+
+      final pagamento = Pagamento.fromFirestore('pg1', {
+        'registradoEm': Timestamp.fromDate(DateTime(2026, 8, 12)),
+        'vencimentoAnterior': Timestamp.fromDate(anterior),
+        'novoVencimento': Timestamp.fromDate(novo),
+        'registradoPorUid': 'staff1',
+        'registradoPorNome': 'Recepção Ana',
+      });
+
+      expect(pagamento.vencimentoAnterior, anterior);
+      expect(pagamento.novoVencimento, novo);
+      expect(pagamento.registradoPorNome, 'Recepção Ana');
+
+      final dados = pagamento.toFirestore();
+      expect(dados['novoVencimento'], Timestamp.fromDate(novo));
+    });
+
+    test('primeiro pagamento nao tem vencimento anterior', () {
+      final pagamento = Pagamento.fromFirestore('pg2', {
+        'registradoEm': Timestamp.fromDate(DateTime(2026, 8, 12)),
+        'novoVencimento': Timestamp.fromDate(DateTime(2026, 9, 12)),
+      });
+      expect(pagamento.vencimentoAnterior, isNull);
     });
   });
 

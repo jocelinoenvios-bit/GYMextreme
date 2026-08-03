@@ -10,11 +10,12 @@ import 'exercicio_media_controls.dart';
 /// fundo dos ativos 3D reais da Biblioteca de Exercícios, então um card
 /// escuro por trás pareceria um recorte quebrado, não uma escolha.
 ///
-/// Hoje renderiza [MuscleLoopPlaceholder] porque os arquivos de GIF
-/// reais (`ExerciseModel.gif180Url`) ainda não existem no projeto — só
-/// o caminho está resolvido. Quando os arquivos forem adicionados,
-/// troca-se aqui por um player de verdade (ex.: pacote `gif`, que dá
-/// play/pause de verdade), sem mexer no resto da tela.
+/// Hoje ainda renderiza [MuscleLoopPlaceholder]: os GIFs reais
+/// (`ExerciseModel.gif180Url`/`gif360Url`) já estão integrados como
+/// asset (ver `LocalExerciseRepository`), mas a troca do placeholder por
+/// um player de verdade (ex.: pacote `gif`, que dá play/pause de
+/// verdade) é uma mudança de UI própria, a ser apresentada antes de
+/// implementar — sem mexer no resto da tela quando isso acontecer.
 class ExercicioMediaStage extends StatefulWidget {
   const ExercicioMediaStage({super.key, required this.exercise});
 

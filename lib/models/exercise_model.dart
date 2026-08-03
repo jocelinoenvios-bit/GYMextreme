@@ -199,7 +199,7 @@ class ExerciseModel {
       passoAPasso: (json['instructions'] as List<dynamic>?)?.cast<String>() ?? const [],
       descricao: json['description'] as String?,
       gif180Url: gif180PathPara(id),
-      gif360Url: null, // nenhuma variante 360 confirmada ainda — ver LocalExerciseRepository
+      gif360Url: gif360PathPara(id),
       similares: relacionados('similarExercises'),
       substituicoes: relacionados('substitutions'),
       progressoes: relacionados('progressions'),
@@ -209,10 +209,13 @@ class ExerciseModel {
 
   /// Convenção de caminho dos GIFs — nomenclatura oficial da ExerciseDB
   /// (o próprio `id`), sem renomeação, como definido. Centralizado aqui
-  /// de propósito: é o único lugar a ajustar quando os arquivos de mídia
-  /// reais confirmarem a convenção exata (pasta, extensão, variante de
-  /// resolução).
+  /// de propósito: é o único lugar a ajustar se a convenção de pasta
+  /// mudar no futuro.
   static String gif180PathPara(String id) => 'assets/exercicios/gifs/$id.gif';
+
+  /// Mesma convenção, para a variante 360° — usada em telas de alta
+  /// resolução (ex.: fullscreen) via `ExerciseModel.temAnguloAlternativo`.
+  static String gif360PathPara(String id) => 'assets/exercicios/gifs_360/$id.gif';
 }
 
 /// Um exercício prescrito dentro de uma sessão de execução — o par

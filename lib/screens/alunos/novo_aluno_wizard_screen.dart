@@ -660,8 +660,8 @@ class _PassoDadosState extends State<_PassoDados> {
             controller: _diaVencimentoController,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
-              labelText: 'Dia pago',
-              helperText: 'Dia do mês (1-31)',
+              labelText: 'Dia de vencimento',
+              helperText: 'Dia do mês em que a mensalidade vence (1-31), não uma data',
             ),
           ),
           const SizedBox(height: 14),

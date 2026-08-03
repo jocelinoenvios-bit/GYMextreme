@@ -31,6 +31,10 @@ class PermissionService {
   ///   motivo) nao tem nenhuma permissao de staff.
   static Set<Permission> effectivePermissions(AppUser user) {
     if (user.role == UserRole.adm) return Permission.values.toSet();
+    // Blindagem: aluno nunca tem permissao de staff, mesmo se o campo
+    // `permissoes` do documento estiver preenchido por engano/corrupcao de
+    // dados — a checagem de role vem antes de olhar pra esse campo.
+    if (user.role == UserRole.aluno) return const {};
     if (user.permissoes.isNotEmpty) return user.permissoes;
     if (user.role == UserRole.personal) return _personalLegadoFallback;
     return const {};

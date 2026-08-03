@@ -101,7 +101,7 @@ void main() {
       expect(PermissionService.has(personalLegado, Permission.financeiro), isFalse);
     });
 
-    test('aluno nao tem nenhuma permissao de staff', () {
+    test('aluno nao tem nenhuma permissao de staff, em todo o catalogo', () {
       final aluno = AppUser(
         uid: 'aluno1',
         nome: 'Aluno Teste',
@@ -110,7 +110,47 @@ void main() {
       );
 
       expect(PermissionService.effectivePermissions(aluno), isEmpty);
-      expect(PermissionService.has(aluno, Permission.gerenciarAlunos), isFalse);
+      for (final permissao in Permission.values) {
+        expect(
+          PermissionService.has(aluno, permissao),
+          isFalse,
+          reason: 'Aluno nao deveria ter a permissao $permissao',
+        );
+      }
     });
+
+    test(
+      'aluno com campo "permissoes" corrompido/preenchido por engano '
+      'continua sem nenhum acesso (blindagem por role, nao so pelo campo)',
+      () {
+        final alunoComPermissoesIndevidas = AppUser(
+          uid: 'aluno2',
+          nome: 'Aluno Teste',
+          email: 'aluno2.teste@gymextreme.com.br',
+          role: UserRole.aluno,
+          // Simula um documento corrompido — nunca deveria acontecer pelo
+          // fluxo normal do app, mas a blindagem tem que segurar mesmo
+          // assim, ja que os dados no Firestore nao sao imutaveis.
+          permissoes: Permission.values.toSet(),
+        );
+
+        expect(
+          PermissionService.effectivePermissions(alunoComPermissoesIndevidas),
+          isEmpty,
+        );
+        expect(
+          PermissionService.has(alunoComPermissoesIndevidas, Permission.gerenciarFuncionarios),
+          isFalse,
+        );
+        expect(
+          PermissionService.has(alunoComPermissoesIndevidas, Permission.financeiro),
+          isFalse,
+        );
+        expect(
+          PermissionService.has(alunoComPermissoesIndevidas, Permission.configuracoes),
+          isFalse,
+        );
+      },
+    );
   });
 }

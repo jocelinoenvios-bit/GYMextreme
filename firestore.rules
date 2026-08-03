@@ -19,10 +19,13 @@ service cloud.firestore {
 
     // ADM sempre tem a permissao; funcionario/personal so se `perm` estiver
     // na lista `permissoes` do proprio documento (`.get(..., [])` evita erro
-    // em contas legadas que ainda nao tem esse campo).
+    // em contas legadas que ainda nao tem esse campo). Exige `ehStaff()`
+    // além de checar a lista — blindagem pra um aluno nunca conseguir
+    // acesso mesmo que o campo `permissoes` do documento dele seja
+    // corrompido/preenchido por engano.
     function temPermissao(perm) {
       return ehAdm() || (
-        request.auth != null &&
+        ehStaff() &&
         perm in get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('permissoes', [])
       );
     }

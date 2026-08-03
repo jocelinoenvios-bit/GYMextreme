@@ -88,7 +88,7 @@ class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen>
                 ),
               ),
             ),
-            if (widget.exercise.temAnguloLateral)
+            if (widget.exercise.temAnguloAlternativo)
               Positioned(
                 bottom: 100,
                 left: 0,

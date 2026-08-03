@@ -7,17 +7,26 @@ Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
 const _tela = TreinoExecucaoScreen(treinoId: 'preview-mock', treinoNome: 'Treino B');
 
+/// A tela carrega de verdade da Biblioteca Oficial (JSON real + isolate
+/// via compute()) — nunca usar pumpAndSettle() aqui, porque o pulso da
+/// demonstração (AnimationController em loop infinito) nunca "assenta".
+/// Em vez disso, espera em passos curtos até o spinner de carregamento
+/// sumir, com um teto de tentativas.
 Future<void> _carregar(WidgetTester tester) async {
   await tester.pumpWidget(_wrap(_tela));
-  await tester.pump(); // primeiro frame (carregando)
-  await tester.pump(const Duration(milliseconds: 500)); // resolve o delay mock
+  for (var i = 0; i < 60; i++) {
+    if (find.byType(CircularProgressIndicator).evaluate().isEmpty) return;
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 void main() {
-  testWidgets('carrega e mostra o primeiro exercicio prescrito', (tester) async {
+  testWidgets('carrega da Biblioteca Oficial e mostra o primeiro exercicio prescrito', (
+    tester,
+  ) async {
     await _carregar(tester);
 
-    expect(find.text('Voador na Máquina'), findsWidgets);
+    expect(find.text('lever chest press'), findsWidgets);
     expect(find.text('CONCLUIR SÉRIE 1'), findsOneWidget);
     expect(find.text('Exercício 1 de 3'), findsOneWidget);
   });

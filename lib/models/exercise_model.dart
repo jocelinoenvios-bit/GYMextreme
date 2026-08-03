@@ -1,26 +1,74 @@
+/// Um exercício relacionado (similar, substituição, progressão ou
+/// regressão) — a ExerciseDB já vem com o relacionamento calculado
+/// (`score`/`confianca`), a app só precisa exibir, nunca recalcular.
+class ExercicioRelacionado {
+  const ExercicioRelacionado({
+    required this.id,
+    required this.nome,
+    required this.score,
+    required this.confianca,
+    this.tipos = const [],
+  });
+
+  final String id;
+  final String nome;
+
+  /// Relevância do relacionamento (0–100), já calculada pelo fornecedor —
+  /// usar pra ordenar, não pra recalcular.
+  final double score;
+
+  /// "high" ou "medium" — dá pra esconder relações de confiança baixa se
+  /// a lista ficar longa demais.
+  final String confianca;
+
+  /// Vazio em "similares"; populado em substituição/progressão/regressão
+  /// (ex.: "same_equipment_alternative", "higher_difficulty",
+  /// "more_assisted").
+  final List<String> tipos;
+
+  factory ExercicioRelacionado.fromExerciseDbJson(Map<String, dynamic> json) {
+    return ExercicioRelacionado(
+      id: json['id'] as String,
+      nome: json['name'] as String,
+      score: (json['score'] as num).toDouble(),
+      confianca: json['confidence'] as String,
+      tipos: (json['types'] as List<dynamic>?)?.cast<String>() ?? const [],
+    );
+  }
+}
+
 /// Tudo que a tela de execução do exercício (Área do Aluno) precisa pra
-/// ensinar o movimento — desacoplado de propósito da fonte real de dados.
+/// ensinar o movimento — desacoplado da fonte de dados por design (ver
+/// `ExerciseRepository`).
 ///
-/// Hoje a Biblioteca de Exercícios do app é `Exercicio`
-/// (`lib/models/exercicio.dart`, alimentada por `exercicios` no
-/// Firestore), mas ela não tem ainda a maior parte destes campos
-/// (respiração, amplitude, erros comuns, cuidados, ajuste de máquina,
-/// ângulo alternativo). Em vez de forçar a tela a ler `Exercicio`
-/// incompleto agora, ela consome só `ExerciseModel` — quando a Biblioteca
-/// oficial (ou uma API externa) tiver esses dados, basta uma nova
-/// implementação de [ExerciseRepository] (ver exercise_repository.dart)
-/// que converte a fonte real pra este mesmo modelo. A interface não muda.
+/// Mapeia campo a campo a Biblioteca Oficial de Exercícios (ExerciseDB
+/// Mobile) licenciada, que passou a ser a fonte principal do catálogo de
+/// exercícios do GymExtreme. Preserva o `id` original do fornecedor (não
+/// gera um novo) — é o que mantém intactos os 18 mil relacionamentos
+/// (similares/substituições/progressões/regressões) que já vêm prontos
+/// no arquivo.
 class ExerciseModel {
   const ExerciseModel({
     required this.id,
     required this.nome,
-    required this.grupoMuscular,
-    required this.gifUrl,
-    this.gifUrlLateral,
-    this.videoUrl,
+    this.nomeLocalizado,
+    required this.bodyPart,
+    required this.equipmentCategory,
+    required this.equipamentoTexto,
+    required this.dificuldade,
+    required this.categoria,
+    required this.movementFamily,
     this.musculosPrincipais = const [],
     this.musculosAuxiliares = const [],
     this.passoAPasso = const [],
+    this.descricao,
+    required this.gif180Url,
+    this.gif360Url,
+    this.videoUrl,
+    this.similares = const [],
+    this.substituicoes = const [],
+    this.progressoes = const [],
+    this.regressoes = const [],
     this.respiracao,
     this.amplitude,
     this.errosComuns = const [],
@@ -28,46 +76,144 @@ class ExerciseModel {
     this.ajusteMaquina,
   });
 
+  /// Id original da Biblioteca Oficial (ex.: "0001") — nunca gerado pelo
+  /// GymExtreme. É o valor que `TreinoExercicio.exercicioId` vai
+  /// referenciar no Firestore.
   final String id;
+
   final String nome;
-  final String grupoMuscular;
 
-  /// Loop 3D em destaque (ângulo padrão/frontal) — o elemento dominante
-  /// da tela. Nos dados mock, aponta pra um asset que não existe de
-  /// verdade; a UI trata qualquer carregamento como "pré-visualização".
-  final String gifUrl;
+  /// Tradução pra português — nula até a tradução acontecer (ver Plano
+  /// Mestre da Biblioteca). A UI cai pro nome original em inglês
+  /// enquanto isso.
+  final String? nomeLocalizado;
+  String get nomeExibicao => nomeLocalizado ?? nome;
 
-  /// Ângulo alternativo (lateral), quando a biblioteca tiver mais de um.
-  /// Nulo = a tela simplesmente não mostra o seletor de ângulo.
-  final String? gifUrlLateral;
+  /// Parte do corpo, ampla (10 valores: "waist", "chest", "back"...) —
+  /// vira o badge/filtro amplo que a tela já mostra.
+  final String bodyPart;
+  String get grupoMuscular => bodyPart;
 
-  /// Vídeo completo, só como conteúdo complementar — nunca substitui o
-  /// loop como demonstração principal.
+  /// Categoria de equipamento limpa (6 valores: bodyweight, cable,
+  /// machine, accessory, free_weight, band) — usar pra filtro; mais
+  /// confiável que o texto livre de [equipamentoTexto].
+  final String equipmentCategory;
+
+  /// Texto de exibição do equipamento (ex.: "dumbbell, exercise ball") —
+  /// pode ser composto, só pra leitura.
+  final String equipamentoTexto;
+
+  /// "beginner" | "intermediate" | "advanced".
+  final String dificuldade;
+
+  /// "strength" | "stretching" | "cardio" | "mobility" | "plyometrics" |
+  /// "rehabilitation" | "balance".
+  final String categoria;
+
+  /// Família de movimento (ex.: "biceps curl", "squat") — motor interno
+  /// do "exercícios parecidos"; não precisa ser traduzido pra exibição.
+  final String movementFamily;
+
+  /// = `target` no arquivo original — músculo principal trabalhado.
+  final List<String> musculosPrincipais;
+
+  /// = `secondaryMuscles` no arquivo original.
+  final List<String> musculosAuxiliares;
+
+  /// = `instructions` no arquivo original — passo a passo da execução.
+  final List<String> passoAPasso;
+
+  /// = `description` no arquivo original — reservado; não faz parte da
+  /// tela de execução aprovada hoje.
+  final String? descricao;
+
+  /// Loop em destaque — caminho resolvido a partir do [id] (ver
+  /// `LocalExerciseRepository`), nomenclatura oficial da ExerciseDB, sem
+  /// renomeação.
+  final String gif180Url;
+
+  /// Variante alternativa do loop, quando existir.
+  final String? gif360Url;
+
+  /// Vídeo completo — reservado pra API V2 (não implementada ainda).
+  /// Nulo enquanto só a biblioteca local estiver em uso.
   final String? videoUrl;
 
-  final List<String> musculosPrincipais;
-  final List<String> musculosAuxiliares;
-  final List<String> passoAPasso;
+  bool get temAnguloAlternativo => gif360Url != null;
+  bool get temVideoComplementar => videoUrl != null;
+
+  final List<ExercicioRelacionado> similares;
+  final List<ExercicioRelacionado> substituicoes;
+  final List<ExercicioRelacionado> progressoes;
+  final List<ExercicioRelacionado> regressoes;
+
+  /// Curadoria opcional — a ExerciseDB não fornece estes campos. Ficam
+  /// nulos/vazios até uma curadoria manual futura (armazenada à parte,
+  /// nunca dentro do arquivo local da biblioteca). A tela de execução já
+  /// esconde a seção correspondente quando o valor é nulo.
   final String? respiracao;
   final String? amplitude;
   final List<String> errosComuns;
   final String? cuidados;
-
-  /// Como ajustar banco/altura/apoio antes de começar — nulo em
-  /// exercícios sem máquina (ex.: peso livre no chão).
   final String? ajusteMaquina;
 
-  bool get temAnguloLateral => gifUrlLateral != null;
-  bool get temVideoComplementar => videoUrl != null;
+  /// Constrói a partir de um registro bruto da Biblioteca Oficial
+  /// (ExerciseDB Mobile) — nomes de campo iguais ao arquivo original
+  /// (`bodyPart`, `target`, `secondaryMuscles`, `taxonomy.*` etc.). Sem
+  /// dependências externas (só transforma dados), pra poder rodar dentro
+  /// de um isolate via `compute()`.
+  factory ExerciseModel.fromExerciseDbJson(Map<String, dynamic> json) {
+    final id = json['id'] as String;
+    final taxonomy = json['taxonomy'] as Map<String, dynamic>? ?? const {};
+
+    List<ExercicioRelacionado> relacionados(String campo) {
+      final lista = json[campo] as List<dynamic>? ?? const [];
+      return lista
+          .map((item) => ExercicioRelacionado.fromExerciseDbJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    return ExerciseModel(
+      id: id,
+      nome: json['name'] as String,
+      bodyPart: json['bodyPart'] as String,
+      equipmentCategory: taxonomy['equipmentCategory'] as String? ?? 'unknown',
+      equipamentoTexto: json['equipment'] as String,
+      dificuldade: json['difficulty'] as String,
+      categoria: json['category'] as String,
+      movementFamily: taxonomy['movementFamily'] as String? ?? '',
+      musculosPrincipais: [json['target'] as String],
+      musculosAuxiliares: (json['secondaryMuscles'] as List<dynamic>?)?.cast<String>() ?? const [],
+      passoAPasso: (json['instructions'] as List<dynamic>?)?.cast<String>() ?? const [],
+      descricao: json['description'] as String?,
+      gif180Url: gif180PathPara(id),
+      gif360Url: null, // nenhuma variante 360 confirmada ainda — ver LocalExerciseRepository
+      similares: relacionados('similarExercises'),
+      substituicoes: relacionados('substitutions'),
+      progressoes: relacionados('progressions'),
+      regressoes: relacionados('regressions'),
+    );
+  }
+
+  /// Convenção de caminho dos GIFs — nomenclatura oficial da ExerciseDB
+  /// (o próprio `id`), sem renomeação, como definido. Centralizado aqui
+  /// de propósito: é o único lugar a ajustar quando os arquivos de mídia
+  /// reais confirmarem a convenção exata (pasta, extensão, variante de
+  /// resolução).
+  static String gif180PathPara(String id) => 'assets/exercicios/gifs/$id.gif';
 }
 
 /// Um exercício prescrito dentro de uma sessão de execução — o par
-/// "conteúdo didático" ([exercise], vem da Biblioteca) + "prescrição"
-/// (séries/repetições/carga/descanso, vem do treino do personal,
-/// `TreinoExercicio` no domínio real).
+/// "conteúdo didático" ([exercise], vem da Biblioteca Oficial) +
+/// "prescrição" (séries/repetições/carga/descanso/observações, vem do
+/// treino do personal — mesmo formato de `TreinoExercicio`, o domínio
+/// real).
 ///
-/// Assim como [ExerciseModel], é preenchido com dados mock por enquanto;
-/// a tela nunca lê `Treino`/`TreinoExercicio` diretamente.
+/// A tela de execução só conhece esta classe; quem a monta (resolvendo
+/// `TreinoExercicio.exercicioId` via `ExerciseRepository.buscarPorId`)
+/// fica fora da tela, o que preserva a separação entre onde a
+/// prescrição é guardada (Firestore, por treino) e onde o conteúdo do
+/// exercício vive (biblioteca local, por id).
 class ExercisePrescription {
   const ExercisePrescription({
     required this.exercise,

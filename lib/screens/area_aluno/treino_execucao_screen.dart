@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/exercise_model.dart';
+import '../../models/treino.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
 import 'widgets/exercicio_info_cards.dart';
@@ -13,18 +14,23 @@ import 'widgets/treino_progress_bar.dart';
 /// Tela de execução do treino (Área do Aluno) — guia o aluno exercício
 /// por exercício, com a demonstração visual como elemento dominante.
 ///
-/// Consome só [ExerciseRepository]/[ExercisePrescription]/[ExerciseModel]
-/// — nunca `Treino`/`TreinoExercicio`/`Exercicio` (o domínio real) nem
-/// Firestore diretamente. Quando a Biblioteca de Exercícios oficial (ou
-/// uma API externa) for integrada, basta passar uma implementação real
-/// de [ExerciseRepository] no lugar de [MockExerciseRepository] — nada
-/// aqui muda.
+/// Duas fontes de dados, deliberadamente separadas:
+/// - **Prescrição** (séries/repetições/carga/descanso/observações) —
+///   mesmo formato de [TreinoExercicio], o domínio real; ainda mockada
+///   nesta etapa (a integração com o treino de verdade do Firestore é
+///   uma etapa própria, futura).
+/// - **Conteúdo do exercício** (nome, instruções, mídia, taxonomia) —
+///   resolvido via [ExerciseRepository.buscarPorId] a partir do
+///   `exercicioId` de cada prescrição. Consome só a interface — nunca
+///   `LocalExerciseRepository` diretamente, nem o arquivo da Biblioteca
+///   Oficial, nem uma API. Trocar por `RemoteExerciseRepository` ou
+///   `HybridExerciseRepository` no futuro não muda esta tela.
 class TreinoExecucaoScreen extends StatefulWidget {
   const TreinoExecucaoScreen({
     super.key,
     required this.treinoId,
     required this.treinoNome,
-    this.repository = const MockExerciseRepository(),
+    this.repository = const LocalExerciseRepository(),
   });
 
   final String treinoId;
@@ -55,13 +61,60 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
     _carregar();
   }
 
+  /// Prescrição mockada — mesma forma de `TreinoExercicio` (o domínio
+  /// real), só que ainda não lida do Firestore. Ids reais da Biblioteca
+  /// Oficial de Exercícios: 0577 (lever chest press), 0180 (cable low
+  /// seated row), 0043 (barbell full squat).
+  static const _prescricoesMock = [
+    TreinoExercicio(
+      exercicioId: '0577',
+      series: 3,
+      repeticoes: '12',
+      cargaKg: 18,
+      descansoSegundos: 60,
+      observacoes: 'Foco na fase excêntrica — desça em 3 segundos.',
+      ordem: 0,
+    ),
+    TreinoExercicio(
+      exercicioId: '0180',
+      series: 3,
+      repeticoes: '10-12',
+      cargaKg: 40,
+      descansoSegundos: 60,
+      ordem: 1,
+    ),
+    TreinoExercicio(
+      exercicioId: '0043',
+      series: 4,
+      repeticoes: '8',
+      cargaKg: 50,
+      descansoSegundos: 90,
+      observacoes: 'Sem pressa — controle a descida.',
+      ordem: 2,
+    ),
+  ];
+
   Future<void> _carregar() async {
-    final exercicios = await widget.repository.buscarExerciciosDoTreino(widget.treinoId);
+    final resolvidos = <ExercisePrescription>[];
+    for (final prescricao in _prescricoesMock) {
+      final exercicio = await widget.repository.buscarPorId(prescricao.exercicioId);
+      if (exercicio == null) continue;
+      resolvidos.add(
+        ExercisePrescription(
+          exercise: exercicio,
+          series: prescricao.series ?? 3,
+          repeticoes: prescricao.repeticoes ?? '',
+          cargaKg: prescricao.cargaKg,
+          descansoSegundos: prescricao.descansoSegundos ?? 60,
+          observacoesPersonal: prescricao.observacoes,
+        ),
+      );
+    }
     if (!mounted) return;
     setState(() {
-      _exercicios = exercicios;
-      if (exercicios.isNotEmpty) {
-        _cargaController.text = _formatarCarga(exercicios.first.cargaKg);
+      _exercicios = resolvidos;
+      if (resolvidos.isNotEmpty) {
+        _cargaController.text = _formatarCarga(resolvidos.first.cargaKg);
       }
     });
   }

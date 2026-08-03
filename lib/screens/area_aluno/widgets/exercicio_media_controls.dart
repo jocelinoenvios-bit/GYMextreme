@@ -125,7 +125,7 @@ class LoopBadge extends StatelessWidget {
 }
 
 /// Seletor "Frontal / Lateral" sobreposto ao palco — só aparece quando
-/// `ExerciseModel.temAnguloLateral` é verdadeiro.
+/// `ExerciseModel.temAnguloAlternativo` é verdadeiro.
 class AnguloSelector extends StatelessWidget {
   const AnguloSelector({super.key, required this.lateral, required this.onChanged});
 
@@ -174,11 +174,11 @@ class AnguloSelector extends StatelessWidget {
 }
 
 /// Representação abstrata do grupo muscular trabalhado, no lugar do GIF
-/// real (que ainda não existe — `ExerciseModel.gifUrl` é só um valor
-/// mock). Deliberadamente não tenta imitar uma figura anatômica de
-/// verdade; é só um espaço reservado honesto, com o mesmo destaque em
-/// vermelho que os ativos reais da Biblioteca usam pro músculo
-/// trabalhado.
+/// real (o caminho já é resolvido via `ExerciseModel.gif180Url`, mas o
+/// arquivo em si ainda não foi adicionado ao projeto). Deliberadamente
+/// não tenta imitar uma figura anatômica de verdade; é só um espaço
+/// reservado honesto, com o mesmo destaque em vermelho que os ativos
+/// reais da Biblioteca usam pro músculo trabalhado.
 class MuscleLoopPlaceholder extends StatelessWidget {
   const MuscleLoopPlaceholder({
     super.key,

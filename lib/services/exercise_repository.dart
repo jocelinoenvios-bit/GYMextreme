@@ -1,118 +1,89 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/services.dart' show rootBundle;
+
 import '../models/exercise_model.dart';
 
-/// Fonte de dados da tela de execução do exercício. A UI depende só
-/// disto — nunca de Firestore, nem de uma API, diretamente.
+/// Fonte de dados da Biblioteca de Exercícios. Toda a aplicação
+/// consome só esta interface — nunca o Firestore, nem um arquivo local,
+/// nem uma API, diretamente.
 ///
-/// Quando a Biblioteca de Exercícios oficial (ou uma API externa) for
-/// integrada, criar uma nova implementação (ex.: `FirestoreExerciseRepository`
-/// ou `BibliotecaApiExerciseRepository`) que busca da fonte real e monta
-/// `ExercisePrescription`/`ExerciseModel` — a tela não muda uma linha.
+/// Implementações previstas:
+/// - [LocalExerciseRepository] (esta etapa) — lê a Biblioteca Oficial
+///   (ExerciseDB Mobile) empacotada como asset, 100% offline.
+/// - `RemoteExerciseRepository` (futuro, não implementada ainda) — API
+///   V2, vídeos MP4 e conteúdo adicional, só quando houver internet.
+/// - `HybridExerciseRepository` (futuro, não implementada ainda) — usa
+///   [LocalExerciseRepository] como fonte principal (funciona sempre,
+///   mesmo offline) e enriquece o resultado com dados da API remota
+///   quando disponível (ex.: preencher `ExerciseModel.videoUrl`) sem
+///   nunca depender dela pra funcionar.
+///
+/// Trocar de implementação nunca exige mudar uma tela — é só decidir,
+/// no lugar onde o repositório é construído, qual instância injetar.
 abstract class ExerciseRepository {
-  /// Exercícios prescritos pra uma sessão de execução, na ordem em que
-  /// devem ser executados.
-  Future<List<ExercisePrescription>> buscarExerciciosDoTreino(String treinoId);
+  /// Um exercício pelo id da Biblioteca Oficial (o mesmo id que
+  /// `TreinoExercicio.exercicioId` referencia no Firestore). `null` se
+  /// não existir.
+  Future<ExerciseModel?> buscarPorId(String id);
+
+  /// Todo o catálogo — usado pelas telas de busca/navegação
+  /// (Biblioteca de Exercícios, seletor ao montar treino).
+  Future<List<ExerciseModel>> buscarTodos();
 }
 
-/// Implementação com dados mock/placeholder — usada até a fonte real
-/// existir. `treinoId` é ignorado de propósito (mesma lista pra
-/// qualquer id), já que o objetivo aqui é só validar a interface.
-class MockExerciseRepository implements ExerciseRepository {
-  const MockExerciseRepository();
+/// Lê a Biblioteca Oficial de Exercícios (ExerciseDB Mobile) empacotada
+/// como asset do app — funciona 100% offline, como decidido.
+///
+/// O parse do arquivo (13 MB, ~1.400 exercícios) roda uma única vez por
+/// processo, num isolate separado (via `compute()`, pra não travar a
+/// UI), e fica memoizado a **nível de classe** — não de instância.
+/// Assim, mesmo que várias telas construam `LocalExerciseRepository()`
+/// por conveniência (é o valor padrão), todas compartilham o mesmo
+/// índice em memória em vez de reparsear o arquivo inteiro de novo.
+class LocalExerciseRepository implements ExerciseRepository {
+  const LocalExerciseRepository({
+    this.assetPath = _assetPadrao,
+  });
+
+  static const _assetPadrao = 'assets/exercicios/biblioteca_exercicios.json';
+
+  final String assetPath;
+
+  static Future<Map<String, ExerciseModel>>? _indicePorId;
+
+  Future<Map<String, ExerciseModel>> _indice() {
+    return _indicePorId ??= _carregarEIndexar();
+  }
+
+  Future<Map<String, ExerciseModel>> _carregarEIndexar() async {
+    final jsonString = await rootBundle.loadString(assetPath);
+    // O decode do JSON (a parte cara, ~13 MB de texto) roda num isolate
+    // separado — só objetos "transferíveis" (Map/List/primitivos)
+    // atravessam essa fronteira; montar os ExerciseModel a partir deles
+    // é rápido o bastante pra rodar na isolate principal sem travar UI.
+    final bruto = await compute(_decodificarJson, jsonString);
+    return {
+      for (final item in bruto)
+        (item['id'] as String): ExerciseModel.fromExerciseDbJson(item),
+    };
+  }
 
   @override
-  Future<List<ExercisePrescription>> buscarExerciciosDoTreino(String treinoId) async {
-    // Simula a latência de uma leitura real, pra tela já nascer
-    // preparada pra um estado de carregamento.
-    await Future.delayed(const Duration(milliseconds: 400));
-    return _exerciciosMock;
+  Future<ExerciseModel?> buscarPorId(String id) async {
+    final indice = await _indice();
+    return indice[id];
+  }
+
+  @override
+  Future<List<ExerciseModel>> buscarTodos() async {
+    final indice = await _indice();
+    return indice.values.toList(growable: false);
   }
 }
 
-const _voadorMaquina = ExerciseModel(
-  id: 'peck-deck',
-  nome: 'Voador na Máquina',
-  grupoMuscular: 'Peito',
-  gifUrl: 'placeholder://exercicios/peck-deck-frontal.gif',
-  gifUrlLateral: 'placeholder://exercicios/peck-deck-lateral.gif',
-  musculosPrincipais: ['Peitoral maior'],
-  musculosAuxiliares: ['Deltoide anterior'],
-  passoAPasso: [
-    'Ajuste o banco: punhos na altura dos ombros',
-    'Segure as alças com os cotovelos levemente flexionados',
-    'Leve os braços à frente até se tocarem na linha do peito',
-    'Retorne controladamente até sentir o alongamento do peitoral',
-  ],
-  respiracao: 'Expire ao fechar os braços (fase concêntrica); inspire ao abrir (fase excêntrica).',
-  amplitude: 'Abra até sentir alongamento leve no peito, sem forçar o ombro para trás.',
-  errosComuns: [
-    'Usar impulso do tronco',
-    'Abrir demais os braços forçando os ombros',
-    'Carga excessiva que impede o controle do movimento',
-  ],
-  cuidados: 'Evite hiperextensão do ombro. Pare se sentir dor articular, não muscular.',
-  ajusteMaquina: 'Altura do banco = punhos alinhados aos ombros.',
-);
-
-const _remadaBaixa = ExerciseModel(
-  id: 'remada-baixa',
-  nome: 'Remada Baixa',
-  grupoMuscular: 'Costas',
-  gifUrl: 'placeholder://exercicios/remada-baixa-frontal.gif',
-  musculosPrincipais: ['Latíssimo do dorso', 'Trapézio médio'],
-  musculosAuxiliares: ['Bíceps'],
-  passoAPasso: [
-    'Sente-se com os pés apoiados e os joelhos levemente flexionados',
-    'Puxe a barra até o abdômen, cotovelos próximos ao corpo',
-    'Controle a volta até o braço estender por completo',
-  ],
-  respiracao: 'Expire ao puxar; inspire ao voltar.',
-  amplitude: 'Puxe até o abdômen, sem inclinar o tronco pra trás pra "ajudar".',
-  errosComuns: ['Balançar o tronco pra ganhar impulso', 'Encolher os ombros durante a puxada'],
-  cuidados: 'Mantenha a coluna neutra — evite arredondar as costas no retorno.',
-  ajusteMaquina: 'Apoio dos pés na altura confortável pros joelhos ficarem levemente flexionados.',
-);
-
-const _agachamentoLivre = ExerciseModel(
-  id: 'agachamento-livre',
-  nome: 'Agachamento Livre',
-  grupoMuscular: 'Pernas',
-  gifUrl: 'placeholder://exercicios/agachamento-livre-frontal.gif',
-  musculosPrincipais: ['Quadríceps', 'Glúteos'],
-  musculosAuxiliares: ['Posterior de coxa', 'Core'],
-  passoAPasso: [
-    'Pés na largura dos ombros, barra apoiada no trapézio',
-    'Desça flexionando quadril e joelhos ao mesmo tempo',
-    'Desça até a coxa ficar paralela ao chão (ou seu limite de mobilidade)',
-    'Suba empurrando o chão com os pés',
-  ],
-  respiracao: 'Inspire e prenda o ar levemente na descida; expire na subida.',
-  amplitude: 'Desça o quanto sua mobilidade permitir sem tirar o calcanhar do chão.',
-  errosComuns: ['Joelhos "caindo" pra dentro', 'Tirar o calcanhar do chão', 'Arredondar a lombar'],
-  cuidados: 'Se sentir dor no joelho (não desconforto muscular), pare e ajuste a amplitude.',
-);
-
-final List<ExercisePrescription> _exerciciosMock = [
-  const ExercisePrescription(
-    exercise: _voadorMaquina,
-    series: 3,
-    repeticoes: '12',
-    cargaKg: 18,
-    descansoSegundos: 60,
-    observacoesPersonal: 'Foco na fase excêntrica — desça em 3 segundos.',
-  ),
-  const ExercisePrescription(
-    exercise: _remadaBaixa,
-    series: 3,
-    repeticoes: '10-12',
-    cargaKg: 40,
-    descansoSegundos: 60,
-  ),
-  const ExercisePrescription(
-    exercise: _agachamentoLivre,
-    series: 4,
-    repeticoes: '8',
-    cargaKg: 50,
-    descansoSegundos: 90,
-    observacoesPersonal: 'Sem pressa — controle a descida.',
-  ),
-];
+List<Map<String, dynamic>> _decodificarJson(String jsonString) {
+  final lista = json.decode(jsonString) as List<dynamic>;
+  return lista.cast<Map<String, dynamic>>();
+}

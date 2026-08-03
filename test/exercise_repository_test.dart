@@ -2,43 +2,53 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/services/exercise_repository.dart';
 
 void main() {
-  group('MockExerciseRepository', () {
-    test('retorna os exercicios prescritos, na ordem de execucao', () async {
-      const repo = MockExerciseRepository();
-      final exercicios = await repo.buscarExerciciosDoTreino('qualquer-treino-id');
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-      expect(exercicios.length, 3);
-      expect(exercicios[0].exercise.nome, 'Voador na Máquina');
-      expect(exercicios[1].exercise.nome, 'Remada Baixa');
-      expect(exercicios[2].exercise.nome, 'Agachamento Livre');
+  group('LocalExerciseRepository', () {
+    const repo = LocalExerciseRepository();
+
+    test('carrega o catálogo completo da Biblioteca Oficial', () async {
+      final todos = await repo.buscarTodos();
+      expect(todos.length, greaterThan(1000));
     });
 
-    test('cada exercicio traz a prescricao completa', () async {
-      const repo = MockExerciseRepository();
-      final exercicios = await repo.buscarExerciciosDoTreino('qualquer-treino-id');
+    test('busca um exercício real por id, com todos os campos mapeados', () async {
+      final exercicio = await repo.buscarPorId('0001');
 
-      final voador = exercicios.first;
-      expect(voador.series, 3);
-      expect(voador.repeticoes, '12');
-      expect(voador.cargaKg, 18);
-      expect(voador.observacoesPersonal, isNotNull);
+      expect(exercicio, isNotNull);
+      expect(exercicio!.nome, '3/4 sit-up');
+      expect(exercicio.nomeExibicao, exercicio.nome, reason: 'sem tradução ainda, cai pro nome original');
+      expect(exercicio.bodyPart, 'waist');
+      expect(exercicio.musculosPrincipais, ['abs']);
+      expect(exercicio.musculosAuxiliares, isNotEmpty);
+      expect(exercicio.passoAPasso, isNotEmpty);
+      expect(exercicio.equipmentCategory, isNotEmpty);
+      expect(exercicio.dificuldade, isNotEmpty);
     });
 
-    test('exercicios sem ajuste de maquina nao quebram (campo opcional)', () async {
-      const repo = MockExerciseRepository();
-      final exercicios = await repo.buscarExerciciosDoTreino('qualquer-treino-id');
-
-      final agachamento = exercicios.last;
-      expect(agachamento.exercise.ajusteMaquina, isNull);
+    test('resolve o caminho do gif pela nomenclatura oficial (id, sem renomeação)', () async {
+      final exercicio = await repo.buscarPorId('0001');
+      expect(exercicio!.gif180Url, contains('0001'));
     });
 
-    test('ignora o treinoId — mesma prescricao pra qualquer id (placeholder)', () async {
-      const repo = MockExerciseRepository();
-      final a = await repo.buscarExerciciosDoTreino('id-a');
-      final b = await repo.buscarExerciciosDoTreino('id-b-completamente-diferente');
+    test('resolve relacionamentos com tipos e score', () async {
+      final exercicio = await repo.buscarPorId('0013');
 
-      expect(a.length, b.length);
-      expect(a.first.exercise.id, b.first.exercise.id);
+      expect(exercicio, isNotNull);
+      expect(exercicio!.substituicoes, isNotEmpty);
+      expect(exercicio.substituicoes.first.tipos, isNotEmpty);
+      expect(exercicio.substituicoes.first.score, greaterThan(0));
+    });
+
+    test('retorna null pra id inexistente', () async {
+      final exercicio = await repo.buscarPorId('id-que-nao-existe');
+      expect(exercicio, isNull);
+    });
+
+    test('memoiza o índice — chamadas repetidas não reparseiam o arquivo', () async {
+      final primeira = await repo.buscarTodos();
+      final segunda = await repo.buscarTodos();
+      expect(identical(primeira.first, segunda.first), isTrue);
     });
   });
 }

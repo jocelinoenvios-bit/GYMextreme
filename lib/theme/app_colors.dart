@@ -15,4 +15,13 @@ class AppColors {
   static const Color textSecondary = Color(0xFFB3B3B3);
 
   static const Color error = Color(0xFFFF5A5F);
+
+  // Tela de execução do exercício: o "palco" da demonstração usa fundo
+  // claro de propósito (mesma cor de fundo dos ativos 3D da Biblioteca de
+  // Exercícios — ver lib/models/exercise_model.dart) — um card escuro por
+  // trás do GIF pareceria um recorte quebrado, não uma escolha de design.
+  static const Color stage = Color(0xFFF3F1EC);
+  static const Color stageInk = Color(0xFF1C1A16);
+  static const Color musclePrimary = Color(0xFFE0392C);
+  static const Color muscleSecondary = Color(0xFFEDA24F);
 }

@@ -4,6 +4,7 @@ import '../../constants/grupos_musculares.dart';
 import '../../models/exercicio.dart';
 import '../../services/exercicio_service.dart';
 import '../../theme/app_colors.dart';
+import '../area_aluno/treino_execucao_screen.dart';
 import 'exercicio_detail_screen.dart';
 
 /// Biblioteca de exercicios: busca por nome + filtro por grupo
@@ -48,6 +49,21 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
         title: Text(
           widget.onSelecionar != null ? 'Selecionar exercício' : 'Biblioteca de exercícios',
         ),
+        actions: [
+          if (widget.onSelecionar == null)
+            IconButton(
+              tooltip: 'Pré-visualizar: Execução do Treino (Área do Aluno, dados de exemplo)',
+              icon: const Icon(Icons.play_circle_outline),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const TreinoExecucaoScreen(
+                    treinoId: 'preview-mock',
+                    treinoNome: 'Treino B · Costas/Bíceps',
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: Column(
         children: [

@@ -8,15 +8,23 @@ Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 const _tela = TreinoExecucaoScreen(treinoId: 'preview-mock', treinoNome: 'Treino B');
 
 /// A tela carrega de verdade da Biblioteca Oficial (JSON real + isolate
-/// via compute()) — nunca usar pumpAndSettle() aqui, porque o pulso da
-/// demonstração (AnimationController em loop infinito) nunca "assenta".
-/// Em vez disso, espera em passos curtos até o spinner de carregamento
-/// sumir, com um teto de tentativas.
+/// via compute()) — dois cuidados aqui:
+///
+/// 1. Nunca usar pumpAndSettle(): o pulso da demonstração
+///    (AnimationController em loop infinito) nunca "assenta".
+/// 2. `compute()` roda um isolate de verdade, e o corpo de um
+///    `testWidgets` roda numa zona "fake async" por padrão — uma
+///    conclusão de isolate real nunca chega só com `tester.pump()`.
+///    Precisa de `tester.runAsync()` pra sair da zona fake-async e
+///    deixar o tempo real passar de verdade a cada volta do laço.
 Future<void> _carregar(WidgetTester tester) async {
   await tester.pumpWidget(_wrap(_tela));
-  for (var i = 0; i < 60; i++) {
+  await tester.pump();
+
+  for (var i = 0; i < 100; i++) {
     if (find.byType(CircularProgressIndicator).evaluate().isEmpty) return;
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
   }
 }
 

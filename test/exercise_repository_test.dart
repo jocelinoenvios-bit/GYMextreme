@@ -26,6 +26,17 @@ void main() {
       expect(exercicio.dificuldade, isNotEmpty);
     });
 
+    test('nao perde nenhum subcampo de taxonomy — todos os 17 preservados', () async {
+      final exercicio = await repo.buscarPorId('0001');
+      const camposEsperados = {
+        'movementFamily', 'movementPattern', 'mechanic', 'forceType',
+        'planeOfMotion', 'laterality', 'bodyPosition', 'benchAngle',
+        'equipmentCategory', 'loadType', 'primaryRegion', 'isCompound',
+        'isUnilateral', 'isAssisted', 'isWeighted', 'signals', 'confidence',
+      };
+      expect(exercicio!.taxonomiaBruta.keys.toSet(), camposEsperados);
+    });
+
     test('resolve o caminho do gif pela nomenclatura oficial (id, sem renomeação)', () async {
       final exercicio = await repo.buscarPorId('0001');
       expect(exercicio!.gif180Url, contains('0001'));

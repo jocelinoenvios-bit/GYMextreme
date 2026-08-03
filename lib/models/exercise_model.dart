@@ -58,6 +58,7 @@ class ExerciseModel {
     required this.dificuldade,
     required this.categoria,
     required this.movementFamily,
+    this.taxonomiaBruta = const {},
     this.musculosPrincipais = const [],
     this.musculosAuxiliares = const [],
     this.passoAPasso = const [],
@@ -113,6 +114,16 @@ class ExerciseModel {
   /// Família de movimento (ex.: "biceps curl", "squat") — motor interno
   /// do "exercícios parecidos"; não precisa ser traduzido pra exibição.
   final String movementFamily;
+
+  /// O bloco `taxonomy` inteiro do arquivo original, sem perder nenhum
+  /// subcampo — inclui os 15 valores que ainda não viraram propriedade
+  /// própria (movementPattern, mechanic, forceType, planeOfMotion,
+  /// laterality, bodyPosition, benchAngle, loadType, primaryRegion,
+  /// isCompound, isUnilateral, isAssisted, isWeighted, signals,
+  /// confidence). Reservados pra uso futuro (ex.: lógica de
+  /// periodização na Área do Personal) — em vez de descartá-los ou
+  /// promover 15 campos que nada usa ainda, ficam disponíveis aqui.
+  final Map<String, dynamic> taxonomiaBruta;
 
   /// = `target` no arquivo original — músculo principal trabalhado.
   final List<String> musculosPrincipais;
@@ -182,6 +193,7 @@ class ExerciseModel {
       dificuldade: json['difficulty'] as String,
       categoria: json['category'] as String,
       movementFamily: taxonomy['movementFamily'] as String? ?? '',
+      taxonomiaBruta: taxonomy,
       musculosPrincipais: [json['target'] as String],
       musculosAuxiliares: (json['secondaryMuscles'] as List<dynamic>?)?.cast<String>() ?? const [],
       passoAPasso: (json['instructions'] as List<dynamic>?)?.cast<String>() ?? const [],

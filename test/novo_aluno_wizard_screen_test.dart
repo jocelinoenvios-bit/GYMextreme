@@ -94,17 +94,14 @@ void main() {
     await _preencher(tester, find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
 
     await _tocar(tester, find.text('CADASTRAR E CONTINUAR'));
-    // Um único pump(): o suficiente pra flushar os microtasks do
-    // _handleCriar (o fake service não faz I/O real, então não há
-    // espera de verdade) e pro _concluido virar true. Um segundo pump()
-    // avançaria a animação de crossfade do Stepper (que já troca pro
-    // passo "Anamnese" assim que _handleCriar termina) até um ponto em
-    // que o novo passo (AnamneseTab, com seu próprio ListView) recebe
-    // layout no meio da transição e quebra — bug do Flutter, não deste
-    // código. Não é preciso esperar essa animação terminar: o texto
-    // "Dados salvos." já aparece dentro do próprio passo "Dados" assim
-    // que _concluido vira true.
-    await tester.pump();
+    // Um único pump(), com uma duração maior que a animação de troca de
+    // passo do Stepper (kThemeAnimationDuration = 200ms): flusha os
+    // microtasks do _handleCriar (o fake service não faz I/O real) E
+    // resolve a animação de crossfade inteira de uma vez, num só frame —
+    // em vez de vários pumps pequenos, que acabam desenhando o passo
+    // "Anamnese" (com seu próprio ListView) no meio da transição e
+    // quebrando o layout (bug do Flutter, não deste código).
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(alunoService.aluno, isNotNull);
     expect(alunoService.aluno?.telefone, '11987654321');

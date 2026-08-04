@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - claude/chave-aqui-esta-u505zg
+      - claude/gymextreme-app-implementation-nehm3g
 
 permissions:
   contents: write

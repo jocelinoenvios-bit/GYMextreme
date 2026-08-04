@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/aluno.dart';
@@ -43,6 +44,13 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
   String? _uid;
   AppUser? _alunoCriado;
 
+  static const _titulosPasso = [
+    'Dados',
+    'Anamnese',
+    'Regulamento',
+    'Avaliação física',
+  ];
+
   @override
   Widget build(BuildContext context) {
     if (_passoAtual == 4) {
@@ -53,127 +61,244 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
       );
     }
 
+    // Causa raiz real do bug relatado (Anamnese em branco/com "VOLTAR"
+    // sobreposto): esta tela fica montada (e recebe layout) enquanto o
+    // Navigator empurra/remove a rota do formulário "Dados" por cima dela.
+    // Nesses frames intermediários de transição de rota, o Flutter mede o
+    // conteúdo com largura irrestrita (BoxConstraints sem limite máximo) —
+    // e um botão (ElevatedButton) dentro de uma Row, quando medido assim,
+    // quebra o layout (mesmo em release, sem crash visível — só o
+    // resultado errado que apareceu no aparelho real). Não é um problema
+    // do widget Stepper especificamente (acontecia mesmo depois de
+    // substituí-lo por este layout mais simples) — é sobre a largura que
+    // ESTA TELA recebe do Navigator durante a transição. O OverflowBox
+    // abaixo trava a largura/altura do corpo da tela nas dimensões reais
+    // da tela sempre, independente da largura recebida nesses frames.
+    final tamanhoTela = MediaQuery.sizeOf(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Novo aluno')),
-      body: Stepper(
-        currentStep: _passoAtual,
-        controlsBuilder: (context, details) => const SizedBox.shrink(),
-        steps: [
-          Step(
-            title: const Text('Dados'),
-            isActive: _passoAtual >= 0,
-            state: _uid != null ? StepState.complete : StepState.indexed,
-            content: _PassoDados(
-              alunoService: widget.alunoService,
-              storageService: widget.storageService,
-              staffAtual: widget.staffAtual,
-              onCriado: (uid, aluno) {
-                setState(() {
-                  _uid = uid;
-                  _alunoCriado = aluno;
-                  _passoAtual = 1;
-                });
-              },
+      body: OverflowBox(
+        fit: OverflowBoxFit.deferToChild,
+        alignment: Alignment.topLeft,
+        minWidth: 0,
+        maxWidth: tamanhoTela.width,
+        minHeight: 0,
+        maxHeight: tamanhoTela.height,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _IndicadorDePasso(
+                  passoAtual: _passoAtual,
+                  titulos: _titulosPasso,
+                ),
+                const SizedBox(height: 24),
+                _conteudoPasso(context, _passoAtual),
+              ],
             ),
           ),
-          Step(
-            title: const Text('Anamnese'),
-            isActive: _passoAtual >= 1,
-            content: _uid == null
-                ? const _AguardandoPassoAnterior()
-                : Column(
-                    children: [
-                      // AnamneseTab tem um ListView na raiz (correto no
-                      // TabBarView da ficha do aluno, que da altura
-                      // limitada) — dentro do Stepper (Column sem altura
-                      // limitada) esse ListView nao tem onde se apoiar e
-                      // renderiza em branco. SizedBox da a altura que falta.
-                      SizedBox(
-                        height: MediaQuery.sizeOf(context).height * 0.65,
-                        child: AnamneseTab(uid: _uid!, alunoService: widget.alunoService),
-                      ),
-                      const SizedBox(height: 12),
-                      _BotoesPasso(
-                        onVoltar: () => setState(() => _passoAtual = 0),
-                        onContinuar: () => setState(() => _passoAtual = 2),
-                      ),
-                    ],
+        ),
+      ),
+    );
+  }
+
+  Widget _conteudoPasso(BuildContext context, int passo) {
+    switch (passo) {
+      case 0:
+        return _uid == null
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Nome, contato, documento e endereço do aluno.',
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
-          ),
-          Step(
-            title: const Text('Regulamento'),
-            isActive: _passoAtual >= 2,
-            content: (_uid == null || _alunoCriado == null)
-                ? const _AguardandoPassoAnterior()
-                : Column(
-                    children: [
-                      // Mesmo motivo do SizedBox na Anamnese acima —
-                      // TermoTab tambem tem um ListView na raiz.
-                      SizedBox(
-                        height: MediaQuery.sizeOf(context).height * 0.65,
-                        child: TermoTab(
-                          aluno: _alunoCriado!,
-                          alunoService: widget.alunoService,
-                          staffAtual: widget.staffAtual,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _BotoesPasso(
-                        onVoltar: () => setState(() => _passoAtual = 1),
-                        onContinuar: () => setState(() => _passoAtual = 3),
-                      ),
-                    ],
-                  ),
-          ),
-          Step(
-            title: const Text('Avaliação física'),
-            isActive: _passoAtual >= 3,
-            content: _uid == null
-                ? const _AguardandoPassoAnterior()
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Peso, altura, IMC e circunferências — pode ser preenchida '
-                        'agora ou depois, na ficha do aluno.',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => AvaliacaoFisicaFormScreen(
-                              uid: _uid!,
-                              alunoService: widget.alunoService,
-                            ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => _TelaCheiaPasso(
+                          titulo: 'Dados do aluno',
+                          child: _PassoDados(
+                            alunoService: widget.alunoService,
+                            storageService: widget.storageService,
+                            staffAtual: widget.staffAtual,
+                            onCriado: (uid, aluno) {
+                              setState(() {
+                                _uid = uid;
+                                _alunoCriado = aluno;
+                                _passoAtual = 1;
+                              });
+                            },
                           ),
                         ),
-                        icon: const Icon(Icons.monitor_weight_outlined),
-                        label: const Text('PREENCHER AVALIAÇÃO FÍSICA'),
                       ),
-                      const SizedBox(height: 12),
-                      _BotoesPasso(
-                        onVoltar: () => setState(() => _passoAtual = 2),
-                        onContinuar: () => setState(() => _passoAtual = 4),
-                        rotuloContinuar: 'CONCLUIR CADASTRO',
-                      ),
-                    ],
+                    ),
+                    icon: const Icon(Icons.person_add_alt_1_outlined),
+                    label: const Text('PREENCHER DADOS'),
                   ),
+                ],
+              )
+            : const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Dados salvos.',
+                  style: TextStyle(color: AppColors.gold),
+                ),
+              );
+      case 1:
+        // AnamneseTab tem um ListView na raiz — funciona bem como body de
+        // um Scaffold próprio (é assim que a ficha do aluno já usa, dentro
+        // do TabBarView), por isso abre numa tela cheia separada.
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'As 13 perguntas da ficha de anamnese do aluno.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => _TelaCheiaPasso(
+                    titulo: 'Anamnese',
+                    child: AnamneseTab(
+                      uid: _uid!,
+                      alunoService: widget.alunoService,
+                    ),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.assignment_outlined),
+              label: const Text('PREENCHER ANAMNESE'),
+            ),
+            const SizedBox(height: 12),
+            _BotoesPasso(
+              onVoltar: () => setState(() => _passoAtual = 0),
+              onContinuar: () => setState(() => _passoAtual = 2),
+            ),
+          ],
+        );
+      case 2:
+        // Mesmo motivo da Anamnese acima — TermoTab também tem um
+        // ListView na raiz e vai pra tela cheia própria.
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'As 15 regras do regulamento, com aceite digital do aluno.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => _TelaCheiaPasso(
+                    titulo: 'Regulamento',
+                    child: TermoTab(
+                      aluno: _alunoCriado!,
+                      alunoService: widget.alunoService,
+                      staffAtual: widget.staffAtual,
+                    ),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.gavel_outlined),
+              label: const Text('ABRIR REGULAMENTO'),
+            ),
+            const SizedBox(height: 12),
+            _BotoesPasso(
+              onVoltar: () => setState(() => _passoAtual = 1),
+              onContinuar: () => setState(() => _passoAtual = 3),
+            ),
+          ],
+        );
+      default:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Peso, altura, IMC e circunferências — pode ser preenchida '
+              'agora ou depois, na ficha do aluno.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AvaliacaoFisicaFormScreen(
+                    uid: _uid!,
+                    alunoService: widget.alunoService,
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.monitor_weight_outlined),
+              label: const Text('PREENCHER AVALIAÇÃO FÍSICA'),
+            ),
+            const SizedBox(height: 12),
+            _BotoesPasso(
+              onVoltar: () => setState(() => _passoAtual = 2),
+              onContinuar: () => setState(() => _passoAtual = 4),
+              rotuloContinuar: 'CONCLUIR CADASTRO',
+            ),
+          ],
+        );
+    }
+  }
+}
+
+/// Indicador simples de progresso ("passo N de 4") — substitui o cabeçalho
+/// de ícones do Stepper original sem depender do widget `Stepper` em si.
+class _IndicadorDePasso extends StatelessWidget {
+  const _IndicadorDePasso({required this.passoAtual, required this.titulos});
+
+  final int passoAtual;
+  final List<String> titulos;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Passo ${passoAtual + 1} de ${titulos.length}: ${titulos[passoAtual]}',
+          style: const TextStyle(
+            color: AppColors.gold,
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: (passoAtual + 1) / titulos.length,
+            backgroundColor: AppColors.surfaceHigh,
+            color: AppColors.gold,
+            minHeight: 6,
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _AguardandoPassoAnterior extends StatelessWidget {
-  const _AguardandoPassoAnterior();
+/// Envolve `AnamneseTab`/`TermoTab` numa tela cheia própria (com
+/// `Scaffold`/`AppBar`) — dá a altura limitada que o `ListView` deles
+/// precisa pra funcionar.
+class _TelaCheiaPasso extends StatelessWidget {
+  const _TelaCheiaPasso({required this.titulo, required this.child});
+
+  final String titulo;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Conclua o passo "Dados" primeiro.',
-      style: TextStyle(color: AppColors.textSecondary),
+    return Scaffold(
+      appBar: AppBar(title: Text(titulo)),
+      body: child,
     );
   }
 }
@@ -191,11 +316,29 @@ class _BotoesPasso extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sem Spacer/Expanded de propósito: evita depender de largura finita
+    // pro espaçamento entre os botões. E cada botão vai dentro de um
+    // IntrinsicWidth: em certos frames (ex.: bem no instante em que o
+    // Navigator termina de remover a rota do formulário "Dados" por cima
+    // desta tela), este Row pode ser medido com largura totalmente livre
+    // (`BoxConstraints` sem limite máximo) — e um ElevatedButton medido
+    // assim, sem nenhuma largura de referência, quebra o layout (mesmo em
+    // release, sem crash visível — só o resultado errado que apareceu no
+    // aparelho real). IntrinsicWidth calcula a largura natural do botão a
+    // partir do próprio conteúdo (o texto), então cada botão sempre recebe
+    // uma largura finita, não importa a largura que o Row receber.
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        TextButton(onPressed: onVoltar, child: const Text('VOLTAR')),
-        const Spacer(),
-        ElevatedButton(onPressed: onContinuar, child: Text(rotuloContinuar)),
+        IntrinsicWidth(
+          child: TextButton(onPressed: onVoltar, child: const Text('VOLTAR')),
+        ),
+        IntrinsicWidth(
+          child: ElevatedButton(
+            onPressed: onContinuar,
+            child: Text(rotuloContinuar),
+          ),
+        ),
       ],
     );
   }
@@ -225,7 +368,11 @@ class _PassoConcluido extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle_outline, color: AppColors.gold, size: 64),
+              const Icon(
+                Icons.check_circle_outline,
+                color: AppColors.gold,
+                size: 64,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Aluno cadastrado com sucesso.',
@@ -329,7 +476,8 @@ class _PassoDadosState extends State<_PassoDados> {
     super.dispose();
   }
 
-  String? _textOrNull(String value) => value.trim().isEmpty ? null : value.trim();
+  String? _textOrNull(String value) =>
+      value.trim().isEmpty ? null : value.trim();
 
   Future<void> _escolherFoto() async {
     final arquivo = await ImagePicker().pickImage(
@@ -379,8 +527,12 @@ class _PassoDadosState extends State<_PassoDados> {
         telefone: _textOrNull(_telefoneController.text),
         whatsapp: _textOrNull(_whatsappController.text),
         endereco: endereco,
-        contatoEmergenciaNome: _textOrNull(_contatoEmergenciaNomeController.text),
-        contatoEmergenciaTelefone: _textOrNull(_contatoEmergenciaTelefoneController.text),
+        contatoEmergenciaNome: _textOrNull(
+          _contatoEmergenciaNomeController.text,
+        ),
+        contatoEmergenciaTelefone: _textOrNull(
+          _contatoEmergenciaTelefoneController.text,
+        ),
         observacoes: _textOrNull(_observacoesController.text),
         dataInicio: _dataInicio,
         diaVencimento: int.tryParse(_diaVencimentoController.text),
@@ -389,7 +541,10 @@ class _PassoDadosState extends State<_PassoDados> {
       );
 
       if (_fotoBytes != null) {
-        final fotoUrl = await widget.storageService.enviarFotoAluno(uid, _fotoBytes!);
+        final fotoUrl = await widget.storageService.enviarFotoAluno(
+          uid,
+          _fotoBytes!,
+        );
         await widget.alunoService.salvarDadosAluno(
           Aluno(
             uid: uid,
@@ -401,9 +556,12 @@ class _PassoDadosState extends State<_PassoDados> {
             telefone: _textOrNull(_telefoneController.text),
             whatsapp: _textOrNull(_whatsappController.text),
             endereco: endereco,
-            contatoEmergenciaNome: _textOrNull(_contatoEmergenciaNomeController.text),
-            contatoEmergenciaTelefone:
-                _textOrNull(_contatoEmergenciaTelefoneController.text),
+            contatoEmergenciaNome: _textOrNull(
+              _contatoEmergenciaNomeController.text,
+            ),
+            contatoEmergenciaTelefone: _textOrNull(
+              _contatoEmergenciaTelefoneController.text,
+            ),
             observacoes: _textOrNull(_observacoesController.text),
             dataInicio: _dataInicio,
             diaVencimento: int.tryParse(_diaVencimentoController.text),
@@ -424,6 +582,10 @@ class _PassoDadosState extends State<_PassoDados> {
             role: UserRole.aluno,
           ),
         );
+        // _PassoDados vive numa tela cheia própria (empurrada pelo passo
+        // "Dados" do wizard) — fecha ela de volta assim que o cadastro é
+        // criado, mesmo padrão do AvaliacaoFisicaFormScreen.
+        Navigator.of(context).pop();
       }
     } on AlunoServiceException catch (e) {
       _showError(e.message);
@@ -449,259 +611,299 @@ class _PassoDadosState extends State<_PassoDados> {
       );
     }
 
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 44,
-                  backgroundColor: AppColors.surfaceHigh,
-                  backgroundImage: _fotoBytes != null ? MemoryImage(_fotoBytes!) : null,
-                  child: _fotoBytes == null
-                      ? const Icon(Icons.person_outline, size: 40, color: AppColors.gold)
-                      : null,
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: InkWell(
-                    onTap: _escolherFoto,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: AppColors.gold,
-                        shape: BoxShape.circle,
+    // Antes vivia direto no Step.content do Stepper, que já fornecia
+    // rolagem (era o próprio ListView shrinkWrap do Stepper). Agora que
+    // este formulário abre numa tela cheia própria (Scaffold simples, sem
+    // rolagem embutida), precisa da sua própria área rolável.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 44,
+                    backgroundColor: AppColors.surfaceHigh,
+                    backgroundImage: _fotoBytes != null
+                        ? MemoryImage(_fotoBytes!)
+                        : null,
+                    child: _fotoBytes == null
+                        ? const Icon(
+                            Icons.person_outline,
+                            size: 40,
+                            color: AppColors.gold,
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: InkWell(
+                      onTap: _escolherFoto,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: AppColors.gold,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: AppColors.black,
+                        ),
                       ),
-                      child: const Icon(Icons.camera_alt, size: 16, color: AppColors.black),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _nomeController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Nome completo'),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'Informe o nome.'
+                  : null,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<Sexo>(
+                    initialValue: _sexo,
+                    decoration: const InputDecoration(labelText: 'Sexo'),
+                    items: Sexo.values
+                        .map(
+                          (sexo) => DropdownMenuItem(
+                            value: sexo,
+                            child: Text(sexo.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (sexo) => setState(() => _sexo = sexo),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: _pickDataNascimento,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Nascimento',
+                      ),
+                      child: Text(
+                        _dataNascimento == null
+                            ? '--/--/----'
+                            : '${_dataNascimento!.day.toString().padLeft(2, '0')}/'
+                                  '${_dataNascimento!.month.toString().padLeft(2, '0')}/'
+                                  '${_dataNascimento!.year}',
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _nomeController,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Nome completo'),
-            validator: (value) =>
-                (value == null || value.trim().isEmpty) ? 'Informe o nome.' : null,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<Sexo>(
-                  initialValue: _sexo,
-                  decoration: const InputDecoration(labelText: 'Sexo'),
-                  items: Sexo.values
-                      .map((sexo) => DropdownMenuItem(value: sexo, child: Text(sexo.label)))
-                      .toList(),
-                  onChanged: (sexo) => setState(() => _sexo = sexo),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _cpfController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [digitsOnlyFormatter],
+                    decoration: const InputDecoration(labelText: 'CPF'),
+                    validator: validarCpf,
+                  ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _rgController,
+                    decoration: const InputDecoration(labelText: 'RG'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'E-mail'),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Informe o e-mail.';
+                }
+                if (!value.contains('@') || !value.contains('.')) {
+                  return 'Informe um e-mail válido.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _senhaController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Senha inicial',
+                helperText:
+                    'O aluno pode trocar depois em "Esqueci minha senha".',
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: InkWell(
-                  onTap: _pickDataNascimento,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Nascimento'),
-                    child: Text(
-                      _dataNascimento == null
-                          ? '--/--/----'
-                          : '${_dataNascimento!.day.toString().padLeft(2, '0')}/'
-                                '${_dataNascimento!.month.toString().padLeft(2, '0')}/'
-                                '${_dataNascimento!.year}',
+              validator: (value) => (value == null || value.length < 6)
+                  ? 'Mínimo de 6 caracteres.'
+                  : null,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _telefoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [digitsOnlyFormatter],
+                    decoration: const InputDecoration(labelText: 'Telefone'),
+                    validator: validarTelefone,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _whatsappController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [digitsOnlyFormatter],
+                    decoration: const InputDecoration(labelText: 'WhatsApp'),
+                    validator: validarTelefone,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                SizedBox(
+                  width: 140,
+                  child: TextFormField(
+                    controller: _cepController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [digitsOnlyFormatter],
+                    decoration: const InputDecoration(labelText: 'CEP'),
+                    validator: validarCep,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _logradouroController,
+                    decoration: const InputDecoration(labelText: 'Rua/Av.'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: TextFormField(
+                    controller: _numeroController,
+                    decoration: const InputDecoration(labelText: 'Número'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _complementoController,
+                    decoration: const InputDecoration(labelText: 'Complemento'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _bairroController,
+              decoration: const InputDecoration(labelText: 'Bairro'),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextFormField(
+                    controller: _cidadeController,
+                    decoration: const InputDecoration(labelText: 'Cidade'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _ufController,
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'UF',
+                      counterText: '',
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _cpfController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [digitsOnlyFormatter],
-                  decoration: const InputDecoration(labelText: 'CPF'),
-                  validator: validarCpf,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _rgController,
-                  decoration: const InputDecoration(labelText: 'RG'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: 'E-mail'),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) return 'Informe o e-mail.';
-              if (!value.contains('@') || !value.contains('.')) {
-                return 'Informe um e-mail válido.';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: _senhaController,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Senha inicial',
-              helperText: 'O aluno pode trocar depois em "Esqueci minha senha".',
+              ],
             ),
-            validator: (value) =>
-                (value == null || value.length < 6) ? 'Mínimo de 6 caracteres.' : null,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _telefoneController,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [digitsOnlyFormatter],
-                  decoration: const InputDecoration(labelText: 'Telefone'),
-                  validator: validarTelefone,
-                ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _contatoEmergenciaNomeController,
+              decoration: const InputDecoration(
+                labelText: 'Contato de emergência — nome',
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _whatsappController,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [digitsOnlyFormatter],
-                  decoration: const InputDecoration(labelText: 'WhatsApp'),
-                  validator: validarTelefone,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              SizedBox(
-                width: 140,
-                child: TextFormField(
-                  controller: _cepController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [digitsOnlyFormatter],
-                  decoration: const InputDecoration(labelText: 'CEP'),
-                  validator: validarCep,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _logradouroController,
-                  decoration: const InputDecoration(labelText: 'Rua/Av.'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              SizedBox(
-                width: 100,
-                child: TextFormField(
-                  controller: _numeroController,
-                  decoration: const InputDecoration(labelText: 'Número'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _complementoController,
-                  decoration: const InputDecoration(labelText: 'Complemento'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: _bairroController,
-            decoration: const InputDecoration(labelText: 'Bairro'),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextFormField(
-                  controller: _cidadeController,
-                  decoration: const InputDecoration(labelText: 'Cidade'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _ufController,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 2,
-                  decoration: const InputDecoration(labelText: 'UF', counterText: ''),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _contatoEmergenciaNomeController,
-            decoration: const InputDecoration(labelText: 'Contato de emergência — nome'),
-          ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: _contatoEmergenciaTelefoneController,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [digitsOnlyFormatter],
-            decoration: const InputDecoration(labelText: 'Contato de emergência — telefone'),
-            validator: validarTelefone,
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _diaVencimentoController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [digitsOnlyFormatter],
-            decoration: const InputDecoration(
-              labelText: 'Dia de vencimento',
-              helperText: 'Dia do mês em que a mensalidade vence (1-31), não uma data',
             ),
-            validator: validarDiaVencimento,
-          ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: _observacoesController,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Observações'),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _isSaving ? null : _handleCriar,
-            child: _isSaving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
-                  )
-                : const Text('CADASTRAR E CONTINUAR'),
-          ),
-        ],
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _contatoEmergenciaTelefoneController,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [digitsOnlyFormatter],
+              decoration: const InputDecoration(
+                labelText: 'Contato de emergência — telefone',
+              ),
+              validator: validarTelefone,
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _diaVencimentoController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [digitsOnlyFormatter],
+              decoration: const InputDecoration(
+                labelText: 'Dia de vencimento',
+                helperText:
+                    'Dia do mês em que a mensalidade vence (1-31), não uma data',
+              ),
+              validator: validarDiaVencimento,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _observacoesController,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Observações'),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _isSaving ? null : _handleCriar,
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.black,
+                      ),
+                    )
+                  : const Text('CADASTRAR E CONTINUAR'),
+            ),
+          ],
+        ),
       ),
     );
   }

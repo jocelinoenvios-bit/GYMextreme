@@ -466,7 +466,7 @@ class _DadosTabState extends State<DadosTab> {
               controller: _contatoEmergenciaTelefoneController,
               keyboardType: TextInputType.phone,
               inputFormatters: [digitsOnlyFormatter],
-              decoration: const InputDecoration(labelText: 'Telefone'),
+              decoration: const InputDecoration(labelText: 'Contato de emergência — telefone'),
               validator: validarTelefone,
             ),
             const SizedBox(height: 20),

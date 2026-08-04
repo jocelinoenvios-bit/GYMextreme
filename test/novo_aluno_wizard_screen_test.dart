@@ -28,13 +28,19 @@ Widget _wrap(FakeAlunoService alunoService, FakeStorageService storageService) {
 /// disso, rola o campo/botão pro Stepper (que já é internamente scrollable)
 /// antes de cada interação.
 Future<void> _tocar(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
+  // alignment: 0.5 centraliza o alvo na viewport — o padrão (0.0) só
+  // rola o suficiente pra encostar na borda de cima, que nesta tela cai
+  // bem atrás da AppBar (fixa), roubando o hit test do tap().
+  await tester.ensureVisible(finder, alignment: 0.5);
   await tester.pump();
   await tester.tap(finder);
 }
 
 Future<void> _preencher(WidgetTester tester, Finder finder, String texto) async {
-  await tester.ensureVisible(finder);
+  // alignment: 0.5 centraliza o alvo na viewport — o padrão (0.0) só
+  // rola o suficiente pra encostar na borda de cima, que nesta tela cai
+  // bem atrás da AppBar (fixa), roubando o hit test do tap().
+  await tester.ensureVisible(finder, alignment: 0.5);
   await tester.pump();
   await tester.enterText(finder, texto);
 }

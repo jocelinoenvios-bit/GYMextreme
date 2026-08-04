@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import '../dev/emulator_config.dart';
 import '../firebase_options.dart';
 import '../models/aluno.dart';
 import '../models/anamnese.dart';
@@ -280,6 +281,9 @@ class AlunoService {
 
     try {
       final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
+      if (usarEmulador) {
+        await secondaryAuth.useAuthEmulator('localhost', 9099);
+      }
       late final String uid;
       try {
         final credential = await secondaryAuth.createUserWithEmailAndPassword(

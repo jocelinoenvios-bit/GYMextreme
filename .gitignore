@@ -19,3 +19,9 @@ build/
 # Chaves de assinatura Android (nunca versionar)
 android/key.properties
 
+# Scripts/artefatos de teste manual local (emulador, E2E) — nunca versionar
+*.local.js
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+

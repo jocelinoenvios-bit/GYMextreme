@@ -15,6 +15,7 @@ import '../theme/app_colors.dart';
 import '../utils/status_acesso.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
+import 'area_aluno/meus_treinos_screen.dart';
 import 'exercicios/exercicios_list_screen.dart';
 import 'funcionarios/funcionarios_list_screen.dart';
 
@@ -161,6 +162,18 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.fitness_center_outlined),
                 label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
+              ),
+            ],
+            if (user.role == UserRole.aluno) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MeusTreinosScreen(uid: uid, alunoService: alunoService),
+                  ),
+                ),
+                icon: const Icon(Icons.assignment_outlined),
+                label: const Text('MEUS TREINOS'),
               ),
             ],
             if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[

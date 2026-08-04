@@ -94,15 +94,16 @@ void main() {
     await _preencher(tester, find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
 
     await _tocar(tester, find.text('CADASTRAR E CONTINUAR'));
-    // Evita pumpAndSettle()/pumps demais aqui: o Stepper anima a troca de
-    // passo (crossfade de altura) assim que _handleCriar termina, e cada
-    // pump() adicional insiste em avançar essa animação. O suficiente pra
-    // o Future do fake service (sem I/O real) resolver já basta — não é
-    // preciso esperar a animação do Stepper terminar, porque o texto
-    // "Dados salvos." aparece imediatamente dentro do próprio passo
-    // "Dados" assim que _concluido vira true, independente do Stepper já
-    // ter (ou não) terminado de trocar de passo visualmente.
-    await tester.pump();
+    // Um único pump(): o suficiente pra flushar os microtasks do
+    // _handleCriar (o fake service não faz I/O real, então não há
+    // espera de verdade) e pro _concluido virar true. Um segundo pump()
+    // avançaria a animação de crossfade do Stepper (que já troca pro
+    // passo "Anamnese" assim que _handleCriar termina) até um ponto em
+    // que o novo passo (AnamneseTab, com seu próprio ListView) recebe
+    // layout no meio da transição e quebra — bug do Flutter, não deste
+    // código. Não é preciso esperar essa animação terminar: o texto
+    // "Dados salvos." já aparece dentro do próprio passo "Dados" assim
+    // que _concluido vira true.
     await tester.pump();
 
     expect(alunoService.aluno, isNotNull);

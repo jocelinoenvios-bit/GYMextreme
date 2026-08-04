@@ -38,7 +38,7 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.text('SALVAR ANAMNESE'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     final salva = alunoService.ultimaAnamneseSalva;
     expect(salva, isNotNull);

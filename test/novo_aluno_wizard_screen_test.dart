@@ -65,7 +65,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
 
     await tester.tap(find.text('CADASTRAR E CONTINUAR'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     expect(alunoService.aluno, isNotNull);
     expect(alunoService.aluno?.telefone, '11987654321');

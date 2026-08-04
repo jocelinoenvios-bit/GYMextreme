@@ -62,7 +62,7 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), '123');
     await tester.tap(find.text('SALVAR'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     expect(find.text('CPF deve ter 11 dígitos.'), findsOneWidget);
     expect(alunoService.ultimoAlunoSalvo, isNull);
@@ -76,7 +76,7 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
     await tester.tap(find.text('SALVAR'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     expect(alunoService.ultimoAlunoSalvo?.telefone, '11987654321');
     expect(find.text('Dados atualizados.'), findsOneWidget);

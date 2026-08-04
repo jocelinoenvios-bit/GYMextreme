@@ -43,7 +43,7 @@ void main() {
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pump();
     await tester.tap(find.text('ACEITAR E ASSINAR'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     expect(alunoService.ultimoTermoSalvo?.aceito, isTrue);
     expect(alunoService.ultimoTermoSalvo?.nomeAssinatura, 'Carlos Souza');
@@ -85,7 +85,7 @@ void main() {
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pump();
     await tester.tap(find.text('ACEITAR E ASSINAR'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     expect(alunoService.ultimoTermoSalvo?.aceito, isTrue);
     expect(alunoService.ultimoTermoSalvo?.responsavel, 'João Souza (pai)');

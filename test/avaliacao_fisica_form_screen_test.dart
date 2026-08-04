@@ -35,7 +35,7 @@ void main() {
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_host(alunoService));
     await tester.tap(find.text('abrir'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     await tester.enterText(find.widgetWithText(TextField, 'Peso (Kg)'), '80');
     await tester.enterText(find.widgetWithText(TextField, 'Altura (m)'), '2');
@@ -50,13 +50,13 @@ void main() {
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_host(alunoService));
     await tester.tap(find.text('abrir'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     await tester.enterText(find.widgetWithText(TextField, 'Peso (Kg)'), '80');
     await tester.enterText(find.widgetWithText(TextField, 'Altura (m)'), '2');
     await tester.enterText(find.widgetWithText(TextField, 'Peito'), '100');
     await tester.tap(find.text('SALVAR AVALIAÇÃO'));
-    await tester.pumpAndSettle();
+    await pumpCurto(tester);
 
     final salva = alunoService.ultimaAvaliacaoSalva;
     expect(salva, isNotNull);

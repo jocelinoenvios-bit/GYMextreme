@@ -9,10 +9,23 @@ import 'package:flutter_test/flutter_test.dart';
 /// com "0 widgets encontrados", mesmo que exista na lista lógica.
 /// Aumenta a janela de teste pra caber o formulário inteiro de uma vez.
 void usarViewportGrande(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1080, 6000);
+  tester.view.physicalSize = const Size(1080, 2600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
+}
+
+/// Alternativa a `pumpAndSettle()` pra depois de ações que disparam alguma
+/// animação transitória (ripple de botão, entrada de SnackBar, crossfade de
+/// Stepper, transição de rota) — `pumpAndSettle()` insiste até não sobrar
+/// nenhum frame agendado, o que combinado com essa janela de teste maior
+/// que o padrão pode nunca convergir. Um punhado de pumps curtos é tempo de
+/// sobra pras animações do Material (nenhuma passa de ~300ms) e pro
+/// `Future` do fake service (sem I/O de verdade) resolver.
+Future<void> pumpCurto(WidgetTester tester, {int vezes = 10}) async {
+  for (var i = 0; i < vezes; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }

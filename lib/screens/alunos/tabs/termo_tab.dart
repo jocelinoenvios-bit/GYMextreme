@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants/regulamento.dart';
+import '../../../models/aluno.dart';
 import '../../../models/app_user.dart';
 import '../../../models/termo_aceite.dart';
 import '../../../services/aluno_service.dart';
@@ -34,6 +35,10 @@ class _TermoTabState extends State<TermoTab> {
   bool _isSaving = false;
   bool _nomePreenchido = false;
 
+  /// Atualizado a cada rebuild a partir do [Aluno.idade] mais recente
+  /// (ver regra 07 do regulamento: só maior de idade assina sozinho).
+  bool _menorDeIdade = false;
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -46,6 +51,18 @@ class _TermoTabState extends State<TermoTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Informe o nome de quem está assinando.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (_menorDeIdade && _responsavelController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aluno menor de idade: informe o nome do responsável que está assinando.',
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -83,6 +100,17 @@ class _TermoTabState extends State<TermoTab> {
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<Aluno?>(
+      stream: widget.alunoService.watchAluno(widget.aluno.uid),
+      builder: (context, alunoSnapshot) {
+        final idade = alunoSnapshot.data?.idade;
+        _menorDeIdade = idade != null && idade < 18;
+        return _buildTermo(context);
+      },
+    );
+  }
+
+  Widget _buildTermo(BuildContext context) {
     return StreamBuilder<TermoAceite>(
       stream: widget.alunoService.watchTermoAceite(widget.aluno.uid),
       builder: (context, snapshot) {
@@ -137,6 +165,7 @@ class _TermoTabState extends State<TermoTab> {
                 responsavelController: _responsavelController,
                 declaraCiencia: _declaraCiencia,
                 isSaving: _isSaving,
+                menorDeIdade: _menorDeIdade,
                 onDeclaraCienciaChanged: (v) => setState(() => _declaraCiencia = v ?? false),
                 onSubmit: (_declaraCiencia && !_isSaving) ? _handleAceitar : null,
               ),
@@ -212,6 +241,7 @@ class _AceiteForm extends StatelessWidget {
     required this.responsavelController,
     required this.declaraCiencia,
     required this.isSaving,
+    required this.menorDeIdade,
     required this.onDeclaraCienciaChanged,
     required this.onSubmit,
   });
@@ -220,6 +250,10 @@ class _AceiteForm extends StatelessWidget {
   final TextEditingController responsavelController;
   final bool declaraCiencia;
   final bool isSaving;
+
+  /// Regra 07 do regulamento: só o aluno maior de idade assina sozinho —
+  /// menor de idade precisa do nome do responsável aqui.
+  final bool menorDeIdade;
   final ValueChanged<bool?> onDeclaraCienciaChanged;
   final VoidCallback? onSubmit;
 
@@ -243,13 +277,40 @@ class _AceiteForm extends StatelessWidget {
           decoration: const InputDecoration(labelText: 'Assinatura (nome completo)'),
         ),
         const SizedBox(height: 14),
-        TextField(
+        if (menorDeIdade)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: AppColors.gold, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Aluno menor de idade — o responsável precisa assinar '
+                    'por ele (regra 07 do regulamento).',
+                    style: TextStyle(color: AppColors.gold, fontSize: 12.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        TextFormField(
           controller: responsavelController,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Responsável',
-            helperText: 'Preencher apenas se o aluno for menor de idade',
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: InputDecoration(
+            labelText: menorDeIdade ? 'Responsável *' : 'Responsável',
+            helperText: menorDeIdade
+                ? 'Obrigatório — aluno menor de idade'
+                : 'Preencher apenas se o aluno for menor de idade',
           ),
+          validator: (value) {
+            if (menorDeIdade && (value == null || value.trim().isEmpty)) {
+              return 'Obrigatório para aluno menor de idade.';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 14),
         CheckboxListTile(

@@ -10,6 +10,7 @@ import '../../../services/aluno_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/idade.dart';
+import '../../../utils/validadores.dart';
 import 'mensalidade_section.dart';
 
 class DadosTab extends StatefulWidget {
@@ -31,6 +32,7 @@ class DadosTab extends StatefulWidget {
 }
 
 class _DadosTabState extends State<DadosTab> {
+  final _formKey = GlobalKey<FormState>();
   final _idadeController = TextEditingController();
   final _diaVencimentoController = TextEditingController();
   final _cpfController = TextEditingController();
@@ -171,6 +173,8 @@ class _DadosTabState extends State<DadosTab> {
   String? _textOrNull(String value) => value.trim().isEmpty ? null : value.trim();
 
   Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isSaving = true);
     try {
       var fotoUrl = _fotoUrl;
@@ -245,7 +249,9 @@ class _DadosTabState extends State<DadosTab> {
         _preencherSeNecessario(snapshot.data);
         final idadeCalculada = calcularIdade(_dataNascimento);
 
-        return ListView(
+        return Form(
+          key: _formKey,
+          child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
             Center(
@@ -333,9 +339,12 @@ class _DadosTabState extends State<DadosTab> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _cpfController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [digitsOnlyFormatter],
                     decoration: const InputDecoration(labelText: 'CPF'),
+                    validator: validarCpf,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -352,18 +361,22 @@ class _DadosTabState extends State<DadosTab> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _telefoneController,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [digitsOnlyFormatter],
                     decoration: const InputDecoration(labelText: 'Telefone'),
+                    validator: validarTelefone,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _whatsappController,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [digitsOnlyFormatter],
                     decoration: const InputDecoration(labelText: 'WhatsApp'),
+                    validator: validarTelefone,
                   ),
                 ),
               ],
@@ -374,10 +387,12 @@ class _DadosTabState extends State<DadosTab> {
               children: [
                 SizedBox(
                   width: 140,
-                  child: TextField(
+                  child: TextFormField(
                     controller: _cepController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [digitsOnlyFormatter],
                     decoration: const InputDecoration(labelText: 'CEP'),
+                    validator: validarCep,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -441,20 +456,24 @@ class _DadosTabState extends State<DadosTab> {
               decoration: const InputDecoration(labelText: 'Nome'),
             ),
             const SizedBox(height: 14),
-            TextField(
+            TextFormField(
               controller: _contatoEmergenciaTelefoneController,
               keyboardType: TextInputType.phone,
+              inputFormatters: [digitsOnlyFormatter],
               decoration: const InputDecoration(labelText: 'Telefone'),
+              validator: validarTelefone,
             ),
             const SizedBox(height: 20),
             const _SecaoTitulo('Academia'),
-            TextField(
+            TextFormField(
               controller: _diaVencimentoController,
               keyboardType: TextInputType.number,
+              inputFormatters: [digitsOnlyFormatter],
               decoration: const InputDecoration(
                 labelText: 'Dia de vencimento',
                 helperText: 'Dia do mês em que a mensalidade vence (1-31), não uma data',
               ),
+              validator: validarDiaVencimento,
             ),
             const SizedBox(height: 14),
             InkWell(
@@ -498,6 +517,7 @@ class _DadosTabState extends State<DadosTab> {
                   : const Text('SALVAR'),
             ),
           ],
+          ),
         );
       },
     );

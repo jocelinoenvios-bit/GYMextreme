@@ -10,6 +10,7 @@ import '../../models/user_role.dart';
 import '../../services/aluno_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/validadores.dart';
 import 'avaliacao_fisica_form_screen.dart';
 import 'tabs/anamnese_tab.dart';
 import 'tabs/termo_tab.dart';
@@ -516,7 +517,10 @@ class _PassoDadosState extends State<_PassoDados> {
               Expanded(
                 child: TextFormField(
                   controller: _cpfController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [digitsOnlyFormatter],
                   decoration: const InputDecoration(labelText: 'CPF'),
+                  validator: validarCpf,
                 ),
               ),
               const SizedBox(width: 12),
@@ -559,7 +563,9 @@ class _PassoDadosState extends State<_PassoDados> {
                 child: TextFormField(
                   controller: _telefoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [digitsOnlyFormatter],
                   decoration: const InputDecoration(labelText: 'Telefone'),
+                  validator: validarTelefone,
                 ),
               ),
               const SizedBox(width: 12),
@@ -567,7 +573,9 @@ class _PassoDadosState extends State<_PassoDados> {
                 child: TextFormField(
                   controller: _whatsappController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [digitsOnlyFormatter],
                   decoration: const InputDecoration(labelText: 'WhatsApp'),
+                  validator: validarTelefone,
                 ),
               ),
             ],
@@ -580,7 +588,9 @@ class _PassoDadosState extends State<_PassoDados> {
                 child: TextFormField(
                   controller: _cepController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [digitsOnlyFormatter],
                   decoration: const InputDecoration(labelText: 'CEP'),
+                  validator: validarCep,
                 ),
               ),
               const SizedBox(width: 12),
@@ -646,16 +656,20 @@ class _PassoDadosState extends State<_PassoDados> {
           TextFormField(
             controller: _contatoEmergenciaTelefoneController,
             keyboardType: TextInputType.phone,
+            inputFormatters: [digitsOnlyFormatter],
             decoration: const InputDecoration(labelText: 'Contato de emergência — telefone'),
+            validator: validarTelefone,
           ),
           const SizedBox(height: 20),
           TextFormField(
             controller: _diaVencimentoController,
             keyboardType: TextInputType.number,
+            inputFormatters: [digitsOnlyFormatter],
             decoration: const InputDecoration(
               labelText: 'Dia de vencimento',
               helperText: 'Dia do mês em que a mensalidade vence (1-31), não uma data',
             ),
+            validator: validarDiaVencimento,
           ),
           const SizedBox(height: 14),
           TextFormField(

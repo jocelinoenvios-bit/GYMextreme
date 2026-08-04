@@ -38,6 +38,11 @@ Future<void> _rolarAteVisivel(WidgetTester tester, Finder finder) {
 }
 
 Future<void> _tocar(WidgetTester tester, Finder finder) async {
+  // Depois de enterText() o campo continua com foco ativo — a seleção/
+  // handle dele fica num overlay que pode "roubar" o toque seguinte
+  // mesmo em outro widget. Tira o foco antes de tocar em qualquer coisa.
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pump();
   await _rolarAteVisivel(tester, finder);
   await tester.pump();
   await tester.tap(finder);

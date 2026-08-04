@@ -27,20 +27,24 @@ Widget _wrap(FakeAlunoService alunoService, FakeStorageService storageService) {
 /// animação de troca de passo (bug do framework, não deste código). Em vez
 /// disso, rola o campo/botão pro Stepper (que já é internamente scrollable)
 /// antes de cada interação.
+// WidgetTester.ensureVisible() não aceita `alignment` — só o método
+// estático Scrollable.ensureVisible tem esse parâmetro. alignment: 0.5
+// centraliza o alvo na viewport; o padrão (0.0) só rola o suficiente pra
+// encostar na borda de cima, que nesta tela cai bem atrás da AppBar
+// (fixa), roubando o hit test do tap(). duration: Duration.zero pula
+// direto pro destino, sem precisar de pumps extras pra animação.
+Future<void> _rolarAteVisivel(WidgetTester tester, Finder finder) {
+  return Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+}
+
 Future<void> _tocar(WidgetTester tester, Finder finder) async {
-  // alignment: 0.5 centraliza o alvo na viewport — o padrão (0.0) só
-  // rola o suficiente pra encostar na borda de cima, que nesta tela cai
-  // bem atrás da AppBar (fixa), roubando o hit test do tap().
-  await tester.ensureVisible(finder, alignment: 0.5);
+  await _rolarAteVisivel(tester, finder);
   await tester.pump();
   await tester.tap(finder);
 }
 
 Future<void> _preencher(WidgetTester tester, Finder finder, String texto) async {
-  // alignment: 0.5 centraliza o alvo na viewport — o padrão (0.0) só
-  // rola o suficiente pra encostar na borda de cima, que nesta tela cai
-  // bem atrás da AppBar (fixa), roubando o hit test do tap().
-  await tester.ensureVisible(finder, alignment: 0.5);
+  await _rolarAteVisivel(tester, finder);
   await tester.pump();
   await tester.enterText(finder, texto);
 }

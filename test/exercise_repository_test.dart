@@ -17,7 +17,7 @@ void main() {
 
       expect(exercicio, isNotNull);
       expect(exercicio!.nome, '3/4 sit-up');
-      expect(exercicio.nomeExibicao, exercicio.nome, reason: 'sem tradução ainda, cai pro nome original');
+      expect(exercicio.nomeExibicao, 'Abdominal supra 3/4', reason: 'traduzido, ver traducoes_pt.json');
       expect(exercicio.bodyPart, 'waist');
       expect(exercicio.musculosPrincipais, ['abs']);
       expect(exercicio.musculosAuxiliares, isNotEmpty);

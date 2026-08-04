@@ -209,7 +209,7 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
         title: Text(
           (erro != null || exercicios == null || _treinoConcluido)
               ? (_treinoNome ?? 'Treino')
-              : _prescricaoAtual.exercise.nome,
+              : _prescricaoAtual.exercise.nomeExibicao,
           style: const TextStyle(fontSize: 16),
         ),
         actions: [

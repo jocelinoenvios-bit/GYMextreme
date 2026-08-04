@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/dificuldade_exercicio.dart';
+import '../../constants/equipamentos.dart';
 import '../../constants/grupos_musculares.dart';
+import '../../constants/musculos.dart';
 import '../../models/exercise_model.dart';
 import '../../theme/app_colors.dart';
 
@@ -40,9 +43,11 @@ class ExercicioDetailScreen extends StatelessWidget {
             children: [
               if (exercicio.bodyPart.isNotEmpty) _InfoChip(label: labelGrupoMuscular(exercicio.bodyPart)),
               if (exercicio.musculosPrincipais.isNotEmpty)
-                _InfoChip(label: exercicio.musculosPrincipais.join(', ')),
-              if (exercicio.equipamentoTexto.isNotEmpty) _InfoChip(label: exercicio.equipamentoTexto),
-              if (exercicio.dificuldade.isNotEmpty) _InfoChip(label: exercicio.dificuldade),
+                _InfoChip(label: exercicio.musculosPrincipais.map(labelMusculo).join(', ')),
+              if (exercicio.equipamentoTexto.isNotEmpty)
+                _InfoChip(label: labelEquipamento(exercicio.equipamentoTexto)),
+              if (exercicio.dificuldade.isNotEmpty)
+                _InfoChip(label: labelDificuldade(exercicio.dificuldade)),
             ],
           ),
           if (exercicio.passoAPasso.isNotEmpty) ...[

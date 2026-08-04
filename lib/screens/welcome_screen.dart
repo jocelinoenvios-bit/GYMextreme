@@ -144,7 +144,14 @@ class WelcomeScreen extends StatelessWidget {
                 label: const Text('GERENCIAR ALUNOS'),
               ),
             ],
-            if (PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
+            // Permission.bibliotecaExercicios é uma permissão de staff (o
+            // aluno nunca tem nenhuma, por blindagem em
+            // PermissionService.effectivePermissions) — mas a Biblioteca
+            // Oficial é só um catálogo de referência, sem escrita, então
+            // faz sentido pro aluno também ver, sem depender do sistema
+            // de permissões de equipe.
+            if (user.role == UserRole.aluno ||
+                PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(

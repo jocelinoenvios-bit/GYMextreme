@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/grupos_musculares.dart';
+import '../../../constants/musculos.dart';
 import '../../../models/exercise_model.dart';
 import '../../../theme/app_colors.dart';
 
@@ -25,7 +27,7 @@ class ExercicioInfoList extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                exercicio.nome,
+                exercicio.nomeExibicao,
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -34,7 +36,7 @@ class ExercicioInfoList extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            _Chip(texto: exercicio.grupoMuscular, cor: AppColors.gold),
+            _Chip(texto: labelGrupoMuscular(exercicio.grupoMuscular), cor: AppColors.gold),
           ],
         ),
         const SizedBox(height: 16),
@@ -65,9 +67,9 @@ class ExercicioInfoList extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final musculo in exercicio.musculosPrincipais)
-                  _MusculoTag(nome: musculo, cor: AppColors.musclePrimary),
+                  _MusculoTag(nome: labelMusculo(musculo), cor: AppColors.musclePrimary),
                 for (final musculo in exercicio.musculosAuxiliares)
-                  _MusculoTag(nome: musculo, cor: AppColors.muscleSecondary),
+                  _MusculoTag(nome: labelMusculo(musculo), cor: AppColors.muscleSecondary),
               ],
             ),
           ),

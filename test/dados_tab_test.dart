@@ -8,6 +8,7 @@ import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_storage_service.dart';
+import 'support/test_viewport.dart';
 
 const _appUser = AppUser(uid: 'aluno-1', nome: 'Carlos Souza', email: 'carlos@exemplo.com', role: UserRole.aluno);
 const _staffAtual = AppUser(uid: 'staff-1', nome: 'Recepção Ana', email: 'ana@exemplo.com', role: UserRole.adm);
@@ -42,6 +43,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('carrega os dados cadastrais existentes do aluno nos campos', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(
       aluno: const Aluno(uid: 'aluno-1', cpf: '12345678900', telefone: '11987654321'),
     );
@@ -53,6 +55,7 @@ void main() {
   });
 
   testWidgets('CPF com quantidade errada de dígitos bloqueia o salvamento', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(aluno: const Aluno(uid: 'aluno-1'));
 
     await _carregar(tester, _wrap(alunoService, FakeStorageService()));
@@ -66,6 +69,7 @@ void main() {
   });
 
   testWidgets('editar telefone com formato valido salva os dados atualizados', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(aluno: const Aluno(uid: 'aluno-1'));
 
     await _carregar(tester, _wrap(alunoService, FakeStorageService()));

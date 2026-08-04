@@ -5,6 +5,7 @@ import 'package:gymextreme_app/screens/alunos/tabs/anamnese_tab.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/test_viewport.dart';
 
 Widget _wrap(FakeAlunoService alunoService) {
   return MaterialApp(
@@ -25,6 +26,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('responde as perguntas 01, 02 e 06 e salva a anamnese', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await _carregar(tester, _wrap(alunoService));
 
@@ -47,6 +49,7 @@ void main() {
   });
 
   testWidgets('anamnese ja respondida mostra a data de resposta', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(
       anamnese: Anamnese(diasPorSemana: 3, respondidoEm: DateTime(2026, 8, 1)),
     );

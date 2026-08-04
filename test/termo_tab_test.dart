@@ -8,6 +8,7 @@ import 'package:gymextreme_app/screens/alunos/tabs/termo_tab.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/test_viewport.dart';
 
 const _aluno = AppUser(uid: 'aluno-1', nome: 'Carlos Souza', email: 'carlos@exemplo.com', role: UserRole.aluno);
 const _staffAtual = AppUser(uid: 'staff-1', nome: 'Recepção Ana', email: 'ana@exemplo.com', role: UserRole.adm);
@@ -33,6 +34,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('aluno maior de idade aceita e assina sem precisar de responsavel', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(
       aluno: Aluno(uid: 'aluno-1', dataNascimento: DateTime(DateTime.now().year - 30, 1, 1)),
     );
@@ -50,6 +52,7 @@ void main() {
   testWidgets('aluno menor de idade nao consegue assinar sozinho sem informar o responsavel', (
     tester,
   ) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(
       aluno: Aluno(uid: 'aluno-1', dataNascimento: DateTime(DateTime.now().year - 10, 1, 1)),
     );
@@ -72,6 +75,7 @@ void main() {
   testWidgets('aluno menor de idade consegue assinar depois de informar o responsavel', (
     tester,
   ) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(
       aluno: Aluno(uid: 'aluno-1', dataNascimento: DateTime(DateTime.now().year - 10, 1, 1)),
     );
@@ -88,6 +92,7 @@ void main() {
   });
 
   testWidgets('termo ja aceito mostra a confirmacao em vez do formulario', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService(
       aluno: Aluno(uid: 'aluno-1', dataNascimento: DateTime(DateTime.now().year - 30, 1, 1)),
       termo: TermoAceite(

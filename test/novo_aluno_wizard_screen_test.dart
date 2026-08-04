@@ -7,6 +7,7 @@ import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_storage_service.dart';
+import 'support/test_viewport.dart';
 
 const _staffAtual = AppUser(uid: 'staff-1', nome: 'Recepção Ana', email: 'ana@exemplo.com', role: UserRole.adm);
 
@@ -25,6 +26,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('nao cria o cadastro se nome, e-mail ou senha estiverem vazios', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
 
@@ -36,6 +38,7 @@ void main() {
   });
 
   testWidgets('CPF com quantidade errada de digitos bloqueia o cadastro', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
 
@@ -52,6 +55,7 @@ void main() {
   });
 
   testWidgets('cadastra o aluno com dados validos e avanca pro proximo passo', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
 

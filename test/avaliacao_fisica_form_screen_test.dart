@@ -4,6 +4,7 @@ import 'package:gymextreme_app/screens/alunos/avaliacao_fisica_form_screen.dart'
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/test_viewport.dart';
 
 /// Empurra a tela a partir de um "host" (igual ao uso real, que sempre
 /// navega até aqui a partir da AvaliacoesTab) — o pop() ao salvar precisa
@@ -30,6 +31,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('mostra o IMC calculado a partir de peso e altura digitados', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_host(alunoService));
     await tester.tap(find.text('abrir'));
@@ -44,6 +46,7 @@ void main() {
   });
 
   testWidgets('salva peso, altura e circunferencias preenchidas e fecha a tela', (tester) async {
+    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_host(alunoService));
     await tester.tap(find.text('abrir'));

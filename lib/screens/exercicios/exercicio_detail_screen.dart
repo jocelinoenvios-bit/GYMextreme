@@ -50,7 +50,7 @@ class ExercicioDetailScreen extends StatelessWidget {
                 _InfoChip(label: labelDificuldade(exercicio.dificuldade)),
             ],
           ),
-          if (exercicio.passoAPasso.isNotEmpty) ...[
+          if (exercicio.passoAPassoExibicao.isNotEmpty) ...[
             const SizedBox(height: 24),
             const Text(
               'Instruções',
@@ -61,7 +61,7 @@ class ExercicioDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            ...List.generate(exercicio.passoAPasso.length, (index) {
+            ...List.generate(exercicio.passoAPassoExibicao.length, (index) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
@@ -73,7 +73,7 @@ class ExercicioDetailScreen extends StatelessWidget {
                     ),
                     Expanded(
                       child: Text(
-                        exercicio.passoAPasso[index],
+                        exercicio.passoAPassoExibicao[index],
                         style: const TextStyle(color: AppColors.textPrimary, height: 1.4),
                       ),
                     ),

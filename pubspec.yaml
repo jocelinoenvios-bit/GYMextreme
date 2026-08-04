@@ -68,6 +68,7 @@ flutter:
   assets:
     - assets/branding/logo_gym_xtreme.png
     - assets/exercicios/biblioteca_exercicios.json
+    - assets/exercicios/traducoes_pt.json
     - assets/exercicios/gifs/
     - assets/exercicios/gifs_360/
   # assets:

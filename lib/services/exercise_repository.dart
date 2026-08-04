@@ -45,11 +45,17 @@ abstract class ExerciseRepository {
 class LocalExerciseRepository implements ExerciseRepository {
   const LocalExerciseRepository({
     this.assetPath = _assetPadrao,
+    this.traducoesAssetPath = _traducoesPadrao,
   });
 
   static const _assetPadrao = 'assets/exercicios/biblioteca_exercicios.json';
+  static const _traducoesPadrao = 'assets/exercicios/traducoes_pt.json';
 
   final String assetPath;
+
+  /// Nome/instruções em PT-BR (ver `TraducoesBiblioteca`) — arquivo
+  /// separado do dataset original, carregado à parte.
+  final String traducoesAssetPath;
 
   static Future<Map<String, ExerciseModel>>? _indicePorId;
 
@@ -59,14 +65,16 @@ class LocalExerciseRepository implements ExerciseRepository {
 
   Future<Map<String, ExerciseModel>> _carregarEIndexar() async {
     final jsonString = await rootBundle.loadString(assetPath);
+    final traducoesString = await rootBundle.loadString(traducoesAssetPath);
     // O decode do JSON (a parte cara, ~13 MB de texto) roda num isolate
     // separado — só objetos "transferíveis" (Map/List/primitivos)
     // atravessam essa fronteira; montar os ExerciseModel a partir deles
     // é rápido o bastante pra rodar na isolate principal sem travar UI.
     final bruto = await compute(_decodificarJson, jsonString);
+    final traducoes = await compute(_decodificarTraducoes, traducoesString);
     return {
       for (final item in bruto)
-        (item['id'] as String): ExerciseModel.fromExerciseDbJson(item),
+        (item['id'] as String): ExerciseModel.fromExerciseDbJson(item, traducoes: traducoes),
     };
   }
 
@@ -86,4 +94,8 @@ class LocalExerciseRepository implements ExerciseRepository {
 List<Map<String, dynamic>> _decodificarJson(String jsonString) {
   final lista = json.decode(jsonString) as List<dynamic>;
   return lista.cast<Map<String, dynamic>>();
+}
+
+TraducoesBiblioteca _decodificarTraducoes(String jsonString) {
+  return TraducoesBiblioteca.fromJson(json.decode(jsonString) as Map<String, dynamic>);
 }

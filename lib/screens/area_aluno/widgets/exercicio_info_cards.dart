@@ -40,11 +40,11 @@ class ExercicioInfoList extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        if (exercicio.passoAPasso.isNotEmpty)
+        if (exercicio.passoAPassoExibicao.isNotEmpty)
           _InfoCard(
             icone: Icons.checklist_rounded,
             label: 'Passo a passo',
-            child: _ListaNumerada(itens: exercicio.passoAPasso),
+            child: _ListaNumerada(itens: exercicio.passoAPassoExibicao),
           ),
         if (exercicio.respiracao != null)
           _InfoCard(

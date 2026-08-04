@@ -1,3 +1,33 @@
+/// Tradução PT-BR de texto livre da Biblioteca Oficial (nome do exercício
+/// e passo a passo) — carregada de `assets/exercicios/traducoes_pt.json`
+/// por `LocalExerciseRepository`. Separada do arquivo original de
+/// propósito: o dataset da ExerciseDB pode ser atualizado/re-importado
+/// sem apagar a tradução, e a tradução evolui (mais frases cobertas) sem
+/// tocar no dataset.
+///
+/// [instrucoes] é indexado pela frase original em **inglês** (não pelo
+/// id do exercício) porque as mesmas instruções se repetem em muitos
+/// exercícios (ex.: "Repeat for the desired number of repetitions.") —
+/// traduzir a frase uma vez cobre todos os exercícios que a usam.
+class TraducoesBiblioteca {
+  const TraducoesBiblioteca({required this.nomes, required this.instrucoes});
+
+  /// id do exercício -> nome em português.
+  final Map<String, String> nomes;
+
+  /// frase original em inglês -> frase em português.
+  final Map<String, String> instrucoes;
+
+  static const vazio = TraducoesBiblioteca(nomes: {}, instrucoes: {});
+
+  factory TraducoesBiblioteca.fromJson(Map<String, dynamic> json) {
+    return TraducoesBiblioteca(
+      nomes: Map<String, String>.from(json['nomes'] as Map? ?? const {}),
+      instrucoes: Map<String, String>.from(json['instrucoes'] as Map? ?? const {}),
+    );
+  }
+}
+
 /// Um exercício relacionado (similar, substituição, progressão ou
 /// regressão) — a ExerciseDB já vem com o relacionamento calculado
 /// (`score`/`confianca`), a app só precisa exibir, nunca recalcular.
@@ -62,6 +92,7 @@ class ExerciseModel {
     this.musculosPrincipais = const [],
     this.musculosAuxiliares = const [],
     this.passoAPasso = const [],
+    this.passoAPassoLocalizado,
     this.descricao,
     required this.gif180Url,
     this.gif360Url,
@@ -131,8 +162,20 @@ class ExerciseModel {
   /// = `secondaryMuscles` no arquivo original.
   final List<String> musculosAuxiliares;
 
-  /// = `instructions` no arquivo original — passo a passo da execução.
+  /// = `instructions` no arquivo original — passo a passo da execução,
+  /// sempre em inglês (fonte original, nunca traduzida em memória).
   final List<String> passoAPasso;
+
+  /// [passoAPasso] traduzido linha a linha — só populado por quem carrega
+  /// a `TraducoesBiblioteca` (ver `LocalExerciseRepository`). Cada linha
+  /// cai pro original em inglês se aquela frase especifica ainda não
+  /// tiver tradução (tradução incremental nunca deixa a tela com um
+  /// buraco ou mistura estranha de idioma a nível de frase inteira).
+  final List<String>? passoAPassoLocalizado;
+
+  /// O que a UI deve exibir — traduzido quando disponível, senão o
+  /// original em inglês. Mesmo padrão de [nomeExibicao].
+  List<String> get passoAPassoExibicao => passoAPassoLocalizado ?? passoAPasso;
 
   /// = `description` no arquivo original — reservado; não faz parte da
   /// tela de execução aprovada hoje.
@@ -176,9 +219,19 @@ class ExerciseModel {
   /// (`bodyPart`, `target`, `secondaryMuscles`, `taxonomy.*` etc.). Sem
   /// dependências externas (só transforma dados), pra poder rodar dentro
   /// de um isolate via `compute()`.
-  factory ExerciseModel.fromExerciseDbJson(Map<String, dynamic> json) {
+  ///
+  /// [traducoes] é opcional e vem de `traducoes_pt.json` (ver
+  /// `TraducoesBiblioteca`/`LocalExerciseRepository`) — quando ausente
+  /// (ex.: testes que montam o JSON bruto na mão), o exercício continua
+  /// funcionando 100% em inglês, exatamente como antes desta tradução.
+  factory ExerciseModel.fromExerciseDbJson(
+    Map<String, dynamic> json, {
+    TraducoesBiblioteca? traducoes,
+  }) {
     final id = json['id'] as String;
     final taxonomy = json['taxonomy'] as Map<String, dynamic>? ?? const {};
+    final instrucoesOriginais =
+        (json['instructions'] as List<dynamic>?)?.cast<String>() ?? const [];
 
     List<ExercicioRelacionado> relacionados(String campo) {
       final lista = json[campo] as List<dynamic>? ?? const [];
@@ -190,6 +243,7 @@ class ExerciseModel {
     return ExerciseModel(
       id: id,
       nome: json['name'] as String,
+      nomeLocalizado: traducoes?.nomes[id],
       bodyPart: json['bodyPart'] as String,
       equipmentCategory: taxonomy['equipmentCategory'] as String? ?? 'unknown',
       equipamentoTexto: json['equipment'] as String,
@@ -199,7 +253,10 @@ class ExerciseModel {
       taxonomiaBruta: taxonomy,
       musculosPrincipais: [json['target'] as String],
       musculosAuxiliares: (json['secondaryMuscles'] as List<dynamic>?)?.cast<String>() ?? const [],
-      passoAPasso: (json['instructions'] as List<dynamic>?)?.cast<String>() ?? const [],
+      passoAPasso: instrucoesOriginais,
+      passoAPassoLocalizado: traducoes == null
+          ? null
+          : [for (final linha in instrucoesOriginais) traducoes.instrucoes[linha] ?? linha],
       descricao: json['description'] as String?,
       gif180Url: gif180PathPara(id),
       gif360Url: gif360PathPara(id),

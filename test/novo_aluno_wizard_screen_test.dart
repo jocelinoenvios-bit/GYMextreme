@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/alunos/novo_aluno_wizard_screen.dart';
+import 'package:gymextreme_app/screens/alunos/tabs/anamnese_tab.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_storage_service.dart';
+import 'support/test_viewport.dart';
 
 const _staffAtual = AppUser(uid: 'staff-1', nome: 'Recepção Ana', email: 'ana@exemplo.com', role: UserRole.adm);
 
@@ -111,4 +113,50 @@ void main() {
     expect(alunoService.aluno?.telefone, '11987654321');
     expect(alunoService.aluno?.cadastradoPorNome, 'Recepção Ana');
   });
+
+  testWidgets(
+    'AnamneseTab/TermoTab dentro de um Column sem altura definida precisam do '
+    'SizedBox pra renderizar (regressao)',
+    (tester) async {
+      // Regressao: AnamneseTab/TermoTab tem um ListView na raiz, que exige
+      // altura limitada do pai. No wizard (Stepper > Column), sem o SizedBox
+      // que hoje envolve os dois em novo_aluno_wizard_screen.dart, o passo
+      // renderiza completamente em branco (reportado num aparelho real: o
+      // passo "Anamnese" só mostrava o botão "VOLTAR", nenhuma pergunta).
+      // Reproduz aqui só a forma da árvore de widgets que quebrava —
+      // sem depender do Stepper/AnimatedCrossFade, que tem instabilidade
+      // própria de teste documentada no teste acima.
+      usarViewportGrande(tester);
+      final alunoService = FakeAlunoService();
+      alunoService.aluno = null;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 800,
+                    child: AnamneseTab(uid: 'aluno-1', alunoService: alunoService),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpCurto(tester);
+
+      // O texto da pergunta ("Quantos dias pretende treinar?") é um
+      // RichText/TextSpan, não um Text puro — as opções de resposta
+      // (ChoiceChip, Text normal) já bastam pra confirmar que o conteúdo
+      // real renderizou (e não em branco, como no bug original). O
+      // ListView é virtualizado (SizedBox de 800px não cabe as 13
+      // perguntas), então só afirma sobre o que está nesse trecho inicial.
+      expect(find.text('Hipertrofia'), findsOneWidget);
+      expect(find.text('Emagrecimento'), findsOneWidget);
+    },
+  );
 }

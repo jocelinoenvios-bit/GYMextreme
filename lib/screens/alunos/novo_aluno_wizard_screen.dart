@@ -83,7 +83,15 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
                 ? const _AguardandoPassoAnterior()
                 : Column(
                     children: [
-                      AnamneseTab(uid: _uid!, alunoService: widget.alunoService),
+                      // AnamneseTab tem um ListView na raiz (correto no
+                      // TabBarView da ficha do aluno, que da altura
+                      // limitada) — dentro do Stepper (Column sem altura
+                      // limitada) esse ListView nao tem onde se apoiar e
+                      // renderiza em branco. SizedBox da a altura que falta.
+                      SizedBox(
+                        height: MediaQuery.sizeOf(context).height * 0.65,
+                        child: AnamneseTab(uid: _uid!, alunoService: widget.alunoService),
+                      ),
                       const SizedBox(height: 12),
                       _BotoesPasso(
                         onVoltar: () => setState(() => _passoAtual = 0),
@@ -99,10 +107,15 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
                 ? const _AguardandoPassoAnterior()
                 : Column(
                     children: [
-                      TermoTab(
-                        aluno: _alunoCriado!,
-                        alunoService: widget.alunoService,
-                        staffAtual: widget.staffAtual,
+                      // Mesmo motivo do SizedBox na Anamnese acima —
+                      // TermoTab tambem tem um ListView na raiz.
+                      SizedBox(
+                        height: MediaQuery.sizeOf(context).height * 0.65,
+                        child: TermoTab(
+                          aluno: _alunoCriado!,
+                          alunoService: widget.alunoService,
+                          staffAtual: widget.staffAtual,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       _BotoesPasso(

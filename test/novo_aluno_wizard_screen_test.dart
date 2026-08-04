@@ -7,7 +7,6 @@ import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_storage_service.dart';
-import 'support/test_viewport.dart';
 
 const _staffAtual = AppUser(uid: 'staff-1', nome: 'Recepção Ana', email: 'ana@exemplo.com', role: UserRole.adm);
 
@@ -22,15 +21,32 @@ Widget _wrap(FakeAlunoService alunoService, FakeStorageService storageService) {
   );
 }
 
+/// O Stepper mantém a janela de teste padrão (não estica pra caber tudo de
+/// uma vez): a combinação de Stepper + janela artificialmente alta +
+/// formulário longo corrompe a árvore de semantics do Flutter durante a
+/// animação de troca de passo (bug do framework, não deste código). Em vez
+/// disso, rola o campo/botão pro Stepper (que já é internamente scrollable)
+/// antes de cada interação.
+Future<void> _tocar(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pump();
+  await tester.tap(finder);
+}
+
+Future<void> _preencher(WidgetTester tester, Finder finder, String texto) async {
+  await tester.ensureVisible(finder);
+  await tester.pump();
+  await tester.enterText(finder, texto);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('nao cria o cadastro se nome, e-mail ou senha estiverem vazios', (tester) async {
-    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
 
-    await tester.tap(find.text('CADASTRAR E CONTINUAR'));
+    await _tocar(tester, find.text('CADASTRAR E CONTINUAR'));
     await tester.pump();
 
     expect(find.text('Informe o nome.'), findsOneWidget);
@@ -38,16 +54,15 @@ void main() {
   });
 
   testWidgets('CPF com quantidade errada de digitos bloqueia o cadastro', (tester) async {
-    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Nome completo'), 'Carlos Souza');
-    await tester.enterText(find.widgetWithText(TextFormField, 'E-mail'), 'carlos@exemplo.com');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Senha inicial'), '123456');
-    await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), '123');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'Nome completo'), 'Carlos Souza');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'E-mail'), 'carlos@exemplo.com');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'Senha inicial'), '123456');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'CPF'), '123');
 
-    await tester.tap(find.text('CADASTRAR E CONTINUAR'));
+    await _tocar(tester, find.text('CADASTRAR E CONTINUAR'));
     await tester.pump();
 
     expect(find.text('CPF deve ter 11 dígitos.'), findsOneWidget);
@@ -55,17 +70,25 @@ void main() {
   });
 
   testWidgets('cadastra o aluno com dados validos e avanca pro proximo passo', (tester) async {
-    usarViewportGrande(tester);
     final alunoService = FakeAlunoService();
     await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Nome completo'), 'Carlos Souza');
-    await tester.enterText(find.widgetWithText(TextFormField, 'E-mail'), 'carlos@exemplo.com');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Senha inicial'), '123456');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'Nome completo'), 'Carlos Souza');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'E-mail'), 'carlos@exemplo.com');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'Senha inicial'), '123456');
+    await _preencher(tester, find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
 
-    await tester.tap(find.text('CADASTRAR E CONTINUAR'));
-    await pumpCurto(tester);
+    await _tocar(tester, find.text('CADASTRAR E CONTINUAR'));
+    // Evita pumpAndSettle()/pumps demais aqui: o Stepper anima a troca de
+    // passo (crossfade de altura) assim que _handleCriar termina, e cada
+    // pump() adicional insiste em avançar essa animação. O suficiente pra
+    // o Future do fake service (sem I/O real) resolver já basta — não é
+    // preciso esperar a animação do Stepper terminar, porque o texto
+    // "Dados salvos." aparece imediatamente dentro do próprio passo
+    // "Dados" assim que _concluido vira true, independente do Stepper já
+    // ter (ou não) terminado de trocar de passo visualmente.
+    await tester.pump();
+    await tester.pump();
 
     expect(alunoService.aluno, isNotNull);
     expect(alunoService.aluno?.telefone, '11987654321');

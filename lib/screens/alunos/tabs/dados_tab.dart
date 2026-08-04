@@ -32,6 +32,12 @@ class DadosTab extends StatefulWidget {
 }
 
 class _DadosTabState extends State<DadosTab> {
+  /// Criada uma única vez — se fosse recriada a cada `build()` (chamando
+  /// `watchAluno` direto no `StreamBuilder`), qualquer `setState` local
+  /// (ex.: trocar o Sexo, escolher uma data) resetaria o StreamBuilder pra
+  /// "carregando", piscando o spinner por cima do formulário inteiro.
+  late final Stream<Aluno?> _alunoStream = widget.alunoService.watchAluno(widget.aluno.uid);
+
   final _formKey = GlobalKey<FormState>();
   final _idadeController = TextEditingController();
   final _diaVencimentoController = TextEditingController();
@@ -241,7 +247,7 @@ class _DadosTabState extends State<DadosTab> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Aluno?>(
-      stream: widget.alunoService.watchAluno(widget.aluno.uid),
+      stream: _alunoStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !_isLoaded) {
           return const Center(child: CircularProgressIndicator());

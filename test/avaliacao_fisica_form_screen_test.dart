@@ -53,8 +53,11 @@ void main() {
     await pumpCurto(tester);
 
     await tester.enterText(find.widgetWithText(TextField, 'Peso (Kg)'), '80');
+    await tester.pump();
     await tester.enterText(find.widgetWithText(TextField, 'Altura (m)'), '2');
+    await tester.pump();
     await tester.enterText(find.widgetWithText(TextField, 'Peito'), '100');
+    await tester.pump();
     await tester.tap(find.text('SALVAR AVALIAÇÃO'));
     await pumpCurto(tester);
 

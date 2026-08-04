@@ -29,6 +29,15 @@ class TermoTab extends StatefulWidget {
 }
 
 class _TermoTabState extends State<TermoTab> {
+  /// Criados uma única vez — se fossem recriados a cada `build()` (chamando
+  /// watchAluno/watchTermoAceite direto no StreamBuilder), qualquer
+  /// setState local (ex.: marcar o checkbox) resetaria os StreamBuilders
+  /// pra "carregando", piscando o spinner por cima do formulário.
+  late final Stream<Aluno?> _alunoStream = widget.alunoService.watchAluno(widget.aluno.uid);
+  late final Stream<TermoAceite> _termoStream = widget.alunoService.watchTermoAceite(
+    widget.aluno.uid,
+  );
+
   final _nomeController = TextEditingController();
   final _responsavelController = TextEditingController();
   bool _declaraCiencia = false;
@@ -101,7 +110,7 @@ class _TermoTabState extends State<TermoTab> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Aluno?>(
-      stream: widget.alunoService.watchAluno(widget.aluno.uid),
+      stream: _alunoStream,
       builder: (context, alunoSnapshot) {
         final idade = alunoSnapshot.data?.idade;
         _menorDeIdade = idade != null && idade < 18;
@@ -112,7 +121,7 @@ class _TermoTabState extends State<TermoTab> {
 
   Widget _buildTermo(BuildContext context) {
     return StreamBuilder<TermoAceite>(
-      stream: widget.alunoService.watchTermoAceite(widget.aluno.uid),
+      stream: _termoStream,
       builder: (context, snapshot) {
         final termo = snapshot.data;
 

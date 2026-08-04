@@ -16,6 +16,12 @@ class AnamneseTab extends StatefulWidget {
 }
 
 class _AnamneseTabState extends State<AnamneseTab> {
+  /// Criada uma única vez — se fosse recriada a cada `build()` (chamando
+  /// `watchAnamnese` direto no `StreamBuilder`), qualquer `setState` local
+  /// (ex.: tocar num chip) resetaria o StreamBuilder pra "carregando",
+  /// piscando o spinner por cima das respostas a cada interação.
+  late final Stream<Anamnese?> _anamneseStream = widget.alunoService.watchAnamnese(widget.uid);
+
   bool _isLoaded = false;
   bool _isSaving = false;
 
@@ -144,7 +150,7 @@ class _AnamneseTabState extends State<AnamneseTab> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Anamnese?>(
-      stream: widget.alunoService.watchAnamnese(widget.uid),
+      stream: _anamneseStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !_isLoaded) {
           return const Center(child: CircularProgressIndicator());

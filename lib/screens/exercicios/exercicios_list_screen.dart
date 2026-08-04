@@ -1,31 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../constants/grupos_musculares.dart';
-import '../../models/exercicio.dart';
-import '../../services/exercicio_service.dart';
+import '../../models/exercise_model.dart';
+import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
-import '../area_aluno/treino_execucao_screen.dart';
 import 'exercicio_detail_screen.dart';
 
-/// Biblioteca de exercicios: busca por nome + filtro por grupo
-/// muscular. Somente leitura — o cadastro continua em um script/import
-/// separado, fora do app. Os grupos musculares do filtro sao lidos
-/// direto dos dados (nao ficam presos a taxonomia de uma API
-/// especifica, ja que a fonte dos exercicios pode mudar).
+/// Biblioteca Oficial de Exercícios (ExerciseDB, local/offline): busca
+/// por nome + filtro por grupo muscular. Somente leitura — a biblioteca
+/// em si é um asset do app, sem cadastro/edição pela interface.
 class ExerciciosListScreen extends StatefulWidget {
   const ExerciciosListScreen({
     super.key,
-    required this.exercicioService,
+    this.repository = const LocalExerciseRepository(),
     this.onSelecionar,
   });
 
-  final ExercicioService exercicioService;
+  final ExerciseRepository repository;
 
   /// Quando informado, a tela vira um seletor: tocar num exercicio chama
   /// este callback (com a tela ja fechada) em vez de abrir o detalhe —
   /// usado pelo `TreinoFormScreen` pra escolher exercicios sem duplicar
   /// este browser.
-  final ValueChanged<Exercicio>? onSelecionar;
+  final ValueChanged<ExerciseModel>? onSelecionar;
 
   @override
   State<ExerciciosListScreen> createState() => _ExerciciosListScreenState();
@@ -35,6 +32,13 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
   final _searchController = TextEditingController();
   String _busca = '';
   String? _grupoMuscularSelecionado;
+  late final Future<List<ExerciseModel>> _futureTodos;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureTodos = widget.repository.buscarTodos();
+  }
 
   @override
   void dispose() {
@@ -49,21 +53,6 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
         title: Text(
           widget.onSelecionar != null ? 'Selecionar exercício' : 'Biblioteca de exercícios',
         ),
-        actions: [
-          if (widget.onSelecionar == null)
-            IconButton(
-              tooltip: 'Pré-visualizar: Execução do Treino (Área do Aluno, dados de exemplo)',
-              icon: const Icon(Icons.play_circle_outline),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const TreinoExecucaoScreen(
-                    treinoId: 'preview-mock',
-                    treinoNome: 'Treino B · Costas/Bíceps',
-                  ),
-                ),
-              ),
-            ),
-        ],
       ),
       body: Column(
         children: [
@@ -79,8 +68,8 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<List<Exercicio>>(
-              stream: widget.exercicioService.watchExercicios(),
+            child: FutureBuilder<List<ExerciseModel>>(
+              future: _futureTodos,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -88,23 +77,23 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                 if (snapshot.hasError) {
                   return const Center(
                     child: Text(
-                      'Erro ao carregar a biblioteca.',
+                      'Erro ao carregar a Biblioteca Oficial de Exercícios.',
                       style: TextStyle(color: AppColors.error),
                     ),
                   );
                 }
 
-                final todos = snapshot.data ?? [];
+                final todos = snapshot.data ?? const <ExerciseModel>[];
                 final gruposDisponiveis =
-                    todos.map((e) => e.grupoMuscular).where((g) => g.isNotEmpty).toSet().toList()
+                    todos.map((e) => e.bodyPart).where((g) => g.isNotEmpty).toSet().toList()
                       ..sort();
 
                 final exercicios = todos
-                    .where((e) => _busca.isEmpty || e.nome.toLowerCase().contains(_busca))
+                    .where((e) => _busca.isEmpty || e.nomeExibicao.toLowerCase().contains(_busca))
                     .where(
                       (e) =>
                           _grupoMuscularSelecionado == null ||
-                          e.grupoMuscular == _grupoMuscularSelecionado,
+                          e.bodyPart == _grupoMuscularSelecionado,
                     )
                     .toList();
 
@@ -143,16 +132,13 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                     const SizedBox(height: 8),
                     Expanded(
                       child: exercicios.isEmpty
-                          ? Center(
+                          ? const Center(
                               child: Padding(
-                                padding: const EdgeInsets.all(24),
+                                padding: EdgeInsets.all(24),
                                 child: Text(
-                                  todos.isEmpty
-                                      ? 'Nenhum exercício cadastrado ainda na coleção '
-                                            '"exercicios" do Firestore.'
-                                      : 'Nenhum exercício encontrado com esse filtro.',
+                                  'Nenhum exercício encontrado com esse filtro.',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(color: AppColors.textSecondary),
+                                  style: TextStyle(color: AppColors.textSecondary),
                                 ),
                               ),
                             )
@@ -170,25 +156,19 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                     child: SizedBox(
                                       width: 52,
                                       height: 52,
-                                      child:
-                                          (exercicio.gifUrl != null &&
-                                              exercicio.gifUrl!.isNotEmpty)
-                                          ? Image.network(
-                                              exercicio.gifUrl!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) =>
-                                                  const _ThumbnailFallback(),
-                                            )
-                                          : const _ThumbnailFallback(),
+                                      child: Image.asset(
+                                        exercicio.gif180Url,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const _ThumbnailFallback(),
+                                      ),
                                     ),
                                   ),
-                                  title: Text(exercicio.nome),
-                                  subtitle: exercicio.grupoMuscular.isEmpty
-                                      ? null
-                                      : Text(
-                                          labelGrupoMuscular(exercicio.grupoMuscular),
-                                          style: const TextStyle(color: AppColors.textSecondary),
-                                        ),
+                                  title: Text(exercicio.nomeExibicao),
+                                  subtitle: Text(
+                                    labelGrupoMuscular(exercicio.bodyPart),
+                                    style: const TextStyle(color: AppColors.textSecondary),
+                                  ),
                                   trailing: const Icon(
                                     Icons.chevron_right,
                                     color: AppColors.textSecondary,
@@ -201,8 +181,7 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                     }
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) =>
-                                            ExercicioDetailScreen(exercicio: exercicio),
+                                        builder: (_) => ExercicioDetailScreen(exercicio: exercicio),
                                       ),
                                     );
                                   },

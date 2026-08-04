@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
-import '../../models/exercicio.dart';
+import '../../models/exercise_model.dart';
 import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
-import '../../services/exercicio_service.dart';
+import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
 import '../exercicios/exercicios_list_screen.dart';
 
@@ -12,21 +12,23 @@ const _letrasDisponiveis = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 /// Cria (quando [treino] for nulo) ou edita uma ficha de treino: nome,
 /// letra, grupo muscular do dia e a lista de exercicios (cada um
-/// escolhido na biblioteca ja existente, nunca digitado à mão).
+/// escolhido na Biblioteca Oficial de Exercícios, nunca digitado à
+/// mão) — os `exercicioId` gravados são sempre ids da Biblioteca
+/// Oficial, a mesma fonte que resolve nome/mídia na execução do treino.
 class TreinoFormScreen extends StatefulWidget {
   const TreinoFormScreen({
     super.key,
     required this.alunoUid,
     required this.alunoService,
-    required this.exercicioService,
     required this.staffAtual,
+    this.repository = const LocalExerciseRepository(),
     this.treino,
   });
 
   final String alunoUid;
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
   final AppUser staffAtual;
+  final ExerciseRepository repository;
   final Treino? treino;
 
   bool get _modoEdicao => treino != null;
@@ -40,6 +42,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
   final _grupoMuscularController = TextEditingController();
   String _letra = _letrasDisponiveis.first;
   late List<TreinoExercicio> _exercicios;
+  late final Future<List<ExerciseModel>> _futureBiblioteca;
   bool _isSaving = false;
 
   @override
@@ -50,6 +53,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
     _grupoMuscularController.text = treino?.grupoMuscular ?? '';
     _letra = treino?.letra ?? _letrasDisponiveis.first;
     _exercicios = [...(treino?.exercicios ?? const [])];
+    _futureBiblioteca = widget.repository.buscarTodos();
   }
 
   @override
@@ -60,10 +64,10 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
   }
 
   Future<void> _adicionarExercicio() async {
-    final exercicio = await Navigator.of(context).push<Exercicio>(
+    final exercicio = await Navigator.of(context).push<ExerciseModel>(
       MaterialPageRoute(
         builder: (_) => ExerciciosListScreen(
-          exercicioService: widget.exercicioService,
+          repository: widget.repository,
           onSelecionar: (e) => Navigator.of(context).pop(e),
         ),
       ),
@@ -73,7 +77,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
     final parametros = await showDialog<TreinoExercicio>(
       context: context,
       builder: (_) => _ExercicioParametrosDialog(
-        exercicioNome: exercicio.nome,
+        exercicioNome: exercicio.nomeExibicao,
         inicial: TreinoExercicio(exercicioId: exercicio.id, ordem: _exercicios.length),
       ),
     );
@@ -224,10 +228,12 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
                 ),
               )
             else
-              StreamBuilder<List<Exercicio>>(
-                stream: widget.exercicioService.watchExercicios(),
+              FutureBuilder<List<ExerciseModel>>(
+                future: _futureBiblioteca,
                 builder: (context, snapshot) {
-                  final biblioteca = {for (final e in snapshot.data ?? <Exercicio>[]) e.id: e};
+                  final biblioteca = {
+                    for (final e in snapshot.data ?? <ExerciseModel>[]) e.id: e,
+                  };
                   return ReorderableListView(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -240,7 +246,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
                           exercicio: biblioteca[_exercicios[i].exercicioId],
                           onEditar: () => _editarExercicio(
                             i,
-                            biblioteca[_exercicios[i].exercicioId]?.nome ?? 'Exercício',
+                            biblioteca[_exercicios[i].exercicioId]?.nomeExibicao ?? 'Exercício',
                           ),
                           onRemover: () => _removerExercicio(i),
                         ),
@@ -276,7 +282,7 @@ class _ExercicioTreinoTile extends StatelessWidget {
   });
 
   final TreinoExercicio treinoExercicio;
-  final Exercicio? exercicio;
+  final ExerciseModel? exercicio;
   final VoidCallback onEditar;
   final VoidCallback onRemover;
 
@@ -301,7 +307,7 @@ class _ExercicioTreinoTile extends StatelessWidget {
       child: ListTile(
         onTap: onEditar,
         leading: const Icon(Icons.drag_handle, color: AppColors.textSecondary),
-        title: Text(exercicio?.nome ?? 'Exercício não encontrado'),
+        title: Text(exercicio?.nomeExibicao ?? 'Exercício não encontrado'),
         subtitle: resumo.isEmpty
             ? null
             : Text(resumo, style: const TextStyle(color: AppColors.textSecondary)),

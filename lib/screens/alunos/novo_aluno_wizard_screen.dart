@@ -8,7 +8,6 @@ import '../../models/app_user.dart';
 import '../../models/endereco.dart';
 import '../../models/user_role.dart';
 import '../../services/aluno_service.dart';
-import '../../services/exercicio_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import 'avaliacao_fisica_form_screen.dart';
@@ -26,13 +25,11 @@ class NovoAlunoWizardScreen extends StatefulWidget {
   const NovoAlunoWizardScreen({
     super.key,
     required this.alunoService,
-    required this.exercicioService,
     required this.storageService,
     required this.staffAtual,
   });
 
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
   final StorageService storageService;
   final AppUser staffAtual;
 
@@ -51,7 +48,6 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
       return _PassoConcluido(
         alunoUid: _uid!,
         alunoService: widget.alunoService,
-        exercicioService: widget.exercicioService,
         staffAtual: widget.staffAtual,
       );
     }
@@ -198,13 +194,11 @@ class _PassoConcluido extends StatelessWidget {
   const _PassoConcluido({
     required this.alunoUid,
     required this.alunoService,
-    required this.exercicioService,
     required this.staffAtual,
   });
 
   final String alunoUid;
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
   final AppUser staffAtual;
 
   @override
@@ -231,7 +225,6 @@ class _PassoConcluido extends StatelessWidget {
                     builder: (_) => TreinoFormScreen(
                       alunoUid: alunoUid,
                       alunoService: alunoService,
-                      exercicioService: exercicioService,
                       staffAtual: staffAtual,
                     ),
                   ),

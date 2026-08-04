@@ -4,27 +4,26 @@ import '../../../models/app_user.dart';
 import '../../../models/permission.dart';
 import '../../../models/treino.dart';
 import '../../../services/aluno_service.dart';
-import '../../../services/exercicio_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../area_aluno/treino_execucao_screen.dart';
 import '../treino_form_screen.dart';
 import '../copiar_treino_dialog.dart';
 
 /// Fichas de treino do aluno (Treino A, B, C...) — cada card abre pra
-/// editar; o professor cria, edita, exclui ou duplica um treino, ou
-/// copia um treino ja pronto de outro aluno.
+/// editar; o professor cria, edita, exclui ou duplica um treino, copia
+/// um treino ja pronto de outro aluno, ou executa o treino (mesmo fluxo
+/// real que o aluno usa, útil pra revisar antes de liberar).
 class TreinosTab extends StatelessWidget {
   const TreinosTab({
     super.key,
     required this.uid,
     required this.alunoService,
-    required this.exercicioService,
     required this.staffAtual,
   });
 
   final String uid;
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
   final AppUser staffAtual;
 
   bool get _podeCriar => PermissionService.has(staffAtual, Permission.criarTreinos);
@@ -36,7 +35,6 @@ class TreinosTab extends StatelessWidget {
         builder: (_) => TreinoFormScreen(
           alunoUid: uid,
           alunoService: alunoService,
-          exercicioService: exercicioService,
           staffAtual: staffAtual,
         ),
       ),
@@ -137,9 +135,16 @@ class TreinosTab extends StatelessWidget {
                   builder: (_) => TreinoFormScreen(
                     alunoUid: uid,
                     alunoService: alunoService,
-                    exercicioService: exercicioService,
                     staffAtual: staffAtual,
                     treino: treinos[index],
+                  ),
+                ),
+              ),
+              onExecutar: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TreinoExecucaoScreen(
+                    alunoUid: uid,
+                    treinoId: treinos[index].id!,
                   ),
                 ),
               ),
@@ -163,6 +168,7 @@ class _TreinoCard extends StatelessWidget {
     required this.treino,
     required this.podeEditar,
     required this.onTap,
+    required this.onExecutar,
     required this.onDuplicar,
     required this.onExcluir,
   });
@@ -170,6 +176,7 @@ class _TreinoCard extends StatelessWidget {
   final Treino treino;
   final bool podeEditar;
   final VoidCallback onTap;
+  final VoidCallback onExecutar;
   final VoidCallback onDuplicar;
   final VoidCallback onExcluir;
 
@@ -201,8 +208,16 @@ class _TreinoCard extends StatelessWidget {
           ].join(' • '),
           style: const TextStyle(color: AppColors.textSecondary),
         ),
-        trailing: podeEditar
-            ? PopupMenuButton<String>(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Executar treino',
+              icon: const Icon(Icons.play_circle_outline, color: AppColors.gold),
+              onPressed: onExecutar,
+            ),
+            if (podeEditar)
+              PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
                 onSelected: (acao) {
                   if (acao == 'duplicar') onDuplicar();
@@ -213,7 +228,10 @@ class _TreinoCard extends StatelessWidget {
                   PopupMenuItem(value: 'excluir', child: Text('Excluir')),
                 ],
               )
-            : const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            else
+              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }

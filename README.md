@@ -123,7 +123,7 @@ lib/
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install/windows) (canal stable)
 - [Android Studio](https://developer.android.com/studio) com o Android SDK (para rodar/testar o app Android localmente; o build de release roda no Codemagic)
-- Node.js so e necessario se for mexer no `importar-exercicios.js` (script separado, nao faz parte do app Flutter)
+- Node.js so e necessario se for mexer nos scripts separados (`seed-alunos-teste.js`, `functions/`, `catraca-servico-local/`) — nao fazem parte do app Flutter
 
 Depois de clonar o repositorio:
 
@@ -139,7 +139,7 @@ cadastrados via `flutterfire configure`). Ambos os arquivos **nao
 contem segredos** (sao chaves publicas de cliente, restritas por
 regras do Firebase), por isso ficam versionados no Git normalmente —
 o que nunca deve ir para o repositorio e o `firebase-key.json`
-(service account, usado so pelo script Node `importar-exercicios.js`),
+(service account, usado pelos scripts Node como `seed-alunos-teste.js`),
 que ja esta no `.gitignore`.
 
 Se o projeto Firebase mudar (nova chave, novo app), regenere assim:
@@ -211,11 +211,11 @@ um aluno novo, preencher a anamnese, aceitar o termo de
 responsabilidade e registrar uma avaliacao fisica — e tudo isso
 aparecer salvo ao reabrir a ficha do aluno.
 
-Criterio de pronto do Modulo 3: com a colecao `exercicios` populada
-(veja `importar-exercicios.js`, ou o novo script/import quando a API
-trocar), logado como ADM ou Personal, abrir "Biblioteca de
-exercicios", buscar por nome, filtrar por grupo muscular e abrir o
-detalhe de um exercicio (gif, instrucoes).
+Criterio de pronto do Modulo 3: a Biblioteca Oficial de Exercicios
+(ExerciseDB, 1.394 exercicios com GIFs 180/360, 100% local/offline —
+sem colecao no Firestore) ja vem empacotada com o app. Logado como ADM
+ou Personal, abrir "Biblioteca de exercicios", buscar por nome, filtrar
+por grupo muscular e abrir o detalhe de um exercicio (gif, instrucoes).
 
 ### Testar "adicionar a tela de inicio" no iPhone
 
@@ -294,7 +294,7 @@ abrir o arquivo, se ainda nao estiver liberada.
 - Catalogo de equipamentos fisicos da academia (esteiras, maquinas
   etc.) como algo separado do exercicio em si — nao entrou neste
   modulo; hoje o "equipamento" e so um campo dentro de cada exercicio.
-- Trocar a fonte dos exercicios pela API que sera comprada (a
-  WorkoutX usada em `importar-exercicios.js` era so um ponto de
-  partida) — a tela em si (`lib/screens/exercicios/`) nao deve
-  precisar mudar, so o script/import.
+- Enriquecer a Biblioteca Oficial com a API V2 (ExerciseDB) quando
+  houver internet — arquitetura ja preparada
+  (`RemoteExerciseRepository`/`HybridExerciseRepository`, ainda nao
+  implementadas), local continua sendo a fonte principal.

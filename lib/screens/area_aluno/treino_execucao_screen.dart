@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/exercise_model.dart';
 import '../../models/treino.dart';
+import '../../services/aluno_service.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
 import 'widgets/exercicio_info_cards.dart';
@@ -16,26 +17,34 @@ import 'widgets/treino_progress_bar.dart';
 ///
 /// Duas fontes de dados, deliberadamente separadas:
 /// - **Prescrição** (séries/repetições/carga/descanso/observações) —
-///   mesmo formato de [TreinoExercicio], o domínio real; ainda mockada
-///   nesta etapa (a integração com o treino de verdade do Firestore é
-///   uma etapa própria, futura).
+///   a ficha real (`Treino`/[TreinoExercicio]) do aluno, lida do
+///   Firestore via [buscarTreino] a partir de [alunoUid]/[treinoId].
 /// - **Conteúdo do exercício** (nome, instruções, mídia, taxonomia) —
 ///   resolvido via [ExerciseRepository.buscarPorId] a partir do
-///   `exercicioId` de cada prescrição. Consome só a interface — nunca
-///   `LocalExerciseRepository` diretamente, nem o arquivo da Biblioteca
-///   Oficial, nem uma API. Trocar por `RemoteExerciseRepository` ou
+///   `exercicioId` de cada item da prescrição. Consome só a interface —
+///   nunca `LocalExerciseRepository` diretamente, nem o arquivo da
+///   Biblioteca Oficial. Trocar por `RemoteExerciseRepository` ou
 ///   `HybridExerciseRepository` no futuro não muda esta tela.
 class TreinoExecucaoScreen extends StatefulWidget {
   const TreinoExecucaoScreen({
     super.key,
+    required this.alunoUid,
     required this.treinoId,
-    required this.treinoNome,
     this.repository = const LocalExerciseRepository(),
+    this.buscarTreino = _buscarTreinoPadrao,
   });
 
+  final String alunoUid;
   final String treinoId;
-  final String treinoNome;
   final ExerciseRepository repository;
+
+  /// Injetável pra teste — o padrão lê de verdade do Firestore via
+  /// [AlunoService.buscarTreino].
+  final Future<Treino?> Function(String alunoUid, String treinoId) buscarTreino;
+
+  static Future<Treino?> _buscarTreinoPadrao(String alunoUid, String treinoId) {
+    return AlunoService().buscarTreino(alunoUid, treinoId);
+  }
 
   @override
   State<TreinoExecucaoScreen> createState() => _TreinoExecucaoScreenState();
@@ -43,6 +52,9 @@ class TreinoExecucaoScreen extends StatefulWidget {
 
 class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
   List<ExercisePrescription>? _exercicios;
+  String? _treinoNome;
+  String? _erro;
+
   int _exercicioIndex = 0;
   int _seriesConcluidas = 0;
   bool _treinoConcluido = false;
@@ -61,62 +73,52 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
     _carregar();
   }
 
-  /// Prescrição mockada — mesma forma de `TreinoExercicio` (o domínio
-  /// real), só que ainda não lida do Firestore. Ids reais da Biblioteca
-  /// Oficial de Exercícios: 0577 (lever chest press), 0180 (cable low
-  /// seated row), 0043 (barbell full squat).
-  static const _prescricoesMock = [
-    TreinoExercicio(
-      exercicioId: '0577',
-      series: 3,
-      repeticoes: '12',
-      cargaKg: 18,
-      descansoSegundos: 60,
-      observacoes: 'Foco na fase excêntrica — desça em 3 segundos.',
-      ordem: 0,
-    ),
-    TreinoExercicio(
-      exercicioId: '0180',
-      series: 3,
-      repeticoes: '10-12',
-      cargaKg: 40,
-      descansoSegundos: 60,
-      ordem: 1,
-    ),
-    TreinoExercicio(
-      exercicioId: '0043',
-      series: 4,
-      repeticoes: '8',
-      cargaKg: 50,
-      descansoSegundos: 90,
-      observacoes: 'Sem pressa — controle a descida.',
-      ordem: 2,
-    ),
-  ];
-
   Future<void> _carregar() async {
-    final resolvidos = <ExercisePrescription>[];
-    for (final prescricao in _prescricoesMock) {
-      final exercicio = await widget.repository.buscarPorId(prescricao.exercicioId);
-      if (exercicio == null) continue;
-      resolvidos.add(
-        ExercisePrescription(
-          exercise: exercicio,
-          series: prescricao.series ?? 3,
-          repeticoes: prescricao.repeticoes ?? '',
-          cargaKg: prescricao.cargaKg,
-          descansoSegundos: prescricao.descansoSegundos ?? 60,
-          observacoesPersonal: prescricao.observacoes,
-        ),
-      );
-    }
-    if (!mounted) return;
-    setState(() {
-      _exercicios = resolvidos;
-      if (resolvidos.isNotEmpty) {
-        _cargaController.text = _formatarCarga(resolvidos.first.cargaKg);
+    try {
+      final treino = await widget.buscarTreino(widget.alunoUid, widget.treinoId);
+      if (treino == null) {
+        if (!mounted) return;
+        setState(() => _erro = 'Treino não encontrado.');
+        return;
       }
-    });
+
+      final prescricoes = [...treino.exercicios]..sort((a, b) => a.ordem.compareTo(b.ordem));
+      final resolvidos = <ExercisePrescription>[];
+      for (final prescricao in prescricoes) {
+        final exercicio = await widget.repository.buscarPorId(prescricao.exercicioId);
+        if (exercicio == null) continue;
+        resolvidos.add(
+          ExercisePrescription(
+            exercise: exercicio,
+            series: prescricao.series ?? 3,
+            repeticoes: prescricao.repeticoes ?? '',
+            cargaKg: prescricao.cargaKg,
+            descansoSegundos: prescricao.descansoSegundos ?? 60,
+            observacoesPersonal: prescricao.observacoes,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      if (resolvidos.isEmpty) {
+        setState(() => _erro = 'Este treino não tem nenhum exercício com mídia disponível na Biblioteca Oficial.');
+        return;
+      }
+
+      setState(() {
+        _treinoNome = treino.nome;
+        _exercicios = resolvidos;
+        _cargaController.text = _formatarCarga(resolvidos.first.cargaKg);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _erro = 'Erro ao carregar o treino. Verifique sua conexão e tente novamente.');
+    }
+  }
+
+  void _tentarNovamente() {
+    setState(() => _erro = null);
+    _carregar();
   }
 
   @override
@@ -200,15 +202,18 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
   @override
   Widget build(BuildContext context) {
     final exercicios = _exercicios;
+    final erro = _erro;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          exercicios == null || _treinoConcluido ? widget.treinoNome : _prescricaoAtual.exercise.nome,
+          (erro != null || exercicios == null || _treinoConcluido)
+              ? (_treinoNome ?? 'Treino')
+              : _prescricaoAtual.exercise.nome,
           style: const TextStyle(fontSize: 16),
         ),
         actions: [
-          if (exercicios != null && !_treinoConcluido)
+          if (erro == null && exercicios != null && !_treinoConcluido)
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Center(
@@ -232,7 +237,9 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
             ),
         ],
       ),
-      body: exercicios == null
+      body: erro != null
+          ? _ErroCarregamentoView(mensagem: erro, onTentarNovamente: _tentarNovamente)
+          : exercicios == null
           ? const Center(child: CircularProgressIndicator())
           : _treinoConcluido
           ? _TreinoConcluidoView(totalExercicios: exercicios.length)
@@ -259,7 +266,7 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
                 ),
               ],
             ),
-      bottomNavigationBar: (exercicios == null || _treinoConcluido)
+      bottomNavigationBar: (erro != null || exercicios == null || _treinoConcluido)
           ? null
           : ExecucaoBottomBar(
               prescricao: _prescricaoAtual,
@@ -271,6 +278,39 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
               onConcluirSerie: _concluirSerie,
               onPularDescanso: _pularDescanso,
             ),
+    );
+  }
+}
+
+class _ErroCarregamentoView extends StatelessWidget {
+  const _ErroCarregamentoView({required this.mensagem, required this.onTentarNovamente});
+
+  final String mensagem;
+  final VoidCallback onTentarNovamente;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 56),
+            const SizedBox(height: 16),
+            Text(
+              mensagem,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: onTentarNovamente,
+              child: const Text('TENTAR NOVAMENTE'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

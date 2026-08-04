@@ -7,7 +7,6 @@ import '../models/user_role.dart';
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/cargo_service.dart';
-import '../services/exercicio_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
@@ -30,7 +29,6 @@ class WelcomeScreen extends StatelessWidget {
     required this.authService,
     required this.userService,
     required this.alunoService,
-    required this.exercicioService,
     required this.cargoService,
     required this.funcionarioService,
     required this.storageService,
@@ -40,7 +38,6 @@ class WelcomeScreen extends StatelessWidget {
   final AuthService authService;
   final UserService userService;
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
   final CargoService cargoService;
   final FuncionarioService funcionarioService;
   final StorageService storageService;
@@ -138,7 +135,6 @@ class WelcomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => AlunosListScreen(
                       alunoService: alunoService,
-                      exercicioService: exercicioService,
                       storageService: storageService,
                       staffAtual: user,
                     ),
@@ -153,7 +149,7 @@ class WelcomeScreen extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => ExerciciosListScreen(exercicioService: exercicioService),
+                    builder: (_) => const ExerciciosListScreen(),
                   ),
                 ),
                 icon: const Icon(Icons.fitness_center_outlined),

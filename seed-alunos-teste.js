@@ -2,10 +2,9 @@
 // de avaliacoes e ficha de treino) direto no Firestore/Auth, pra validar o
 // Modulo 2 sem preencher o wizard na mao repetidas vezes.
 //
-// Segue o mesmo padrao de `importar-exercicios.js`: precisa do
-// `firebase-key.json` (Firebase Console > Configuracoes do projeto >
-// Contas de servico > Gerar nova chave privada) salvo na raiz do projeto.
-// Esse arquivo já está no .gitignore — nunca commite.
+// Precisa do `firebase-key.json` (Firebase Console > Configuracoes do
+// projeto > Contas de servico > Gerar nova chave privada) salvo na raiz
+// do projeto. Esse arquivo já está no .gitignore — nunca commite.
 //
 // Uso:
 //   npm install        (só na primeira vez; já usa as deps do projeto)
@@ -163,9 +162,16 @@ const ALUNOS_TESTE = [
   },
 ];
 
-async function pegarExerciciosDisponiveis(qtd) {
-  const snap = await db.collection('exercicios').limit(qtd).get();
-  return snap.docs.map((doc) => ({ id: doc.id, nome: doc.data().nome }));
+// Ids reais da Biblioteca Oficial de Exercícios (ExerciseDB, empacotada
+// como asset local do app — não fica na coleção "exercicios" do
+// Firestore, então não há nada pra consultar aqui). Bastam ids válidos;
+// nome/gif/instruções são sempre resolvidos pelo app a partir do id.
+const EXERCICIOS_BIBLIOTECA_OFICIAL = [
+  '0001', '0002', '0003', '0006', '0007', '0009', '0010', '0011', '0012', '0013',
+];
+
+function pegarExerciciosDisponiveis(qtd) {
+  return EXERCICIOS_BIBLIOTECA_OFICIAL.slice(0, qtd).map((id) => ({ id }));
 }
 
 async function criarOuReaproveitarConta(email, nome) {
@@ -282,15 +288,11 @@ async function seedAluno(config, exerciciosDisponiveis) {
   }
 
   for (const t of config.treinos) {
-    if (exerciciosDisponiveis.length === 0) {
-      console.log('  [aviso] coleção "exercicios" vazia — pulando treino (rode importar-exercicios.js antes).');
-      break;
-    }
     await db.collection('alunos').doc(uid).collection('treinos').add(
       montarTreino(t, exerciciosDisponiveis)
     );
   }
-  if (config.treinos.length && exerciciosDisponiveis.length > 0) {
+  if (config.treinos.length) {
     console.log(`  ${config.treinos.length} ficha(s) de treino gravada(s).`);
   }
 
@@ -298,11 +300,7 @@ async function seedAluno(config, exerciciosDisponiveis) {
 }
 
 async function main() {
-  const exerciciosDisponiveis = await pegarExerciciosDisponiveis(10);
-  if (exerciciosDisponiveis.length === 0) {
-    console.log('Aviso: a coleção "exercicios" está vazia — os treinos de teste ficarão sem exercícios.');
-    console.log('Rode "node importar-exercicios.js" antes, se quiser testar a ficha de treino preenchida.\n');
-  }
+  const exerciciosDisponiveis = pegarExerciciosDisponiveis(10);
 
   const criados = [];
   for (const config of ALUNOS_TESTE) {

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../models/permission.dart';
 import '../../services/aluno_service.dart';
-import '../../services/exercicio_service.dart';
 import '../../services/permission_service.dart';
 import '../../services/storage_service.dart';
 import 'tabs/anamnese_tab.dart';
@@ -20,14 +19,12 @@ class AlunoDetailScreen extends StatelessWidget {
     super.key,
     required this.aluno,
     required this.alunoService,
-    required this.exercicioService,
     required this.storageService,
     required this.staffAtual,
   });
 
   final AppUser aluno;
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
   final StorageService storageService;
   final AppUser staffAtual;
 
@@ -66,7 +63,6 @@ class AlunoDetailScreen extends StatelessWidget {
               TreinosTab(
                 uid: aluno.uid,
                 alunoService: alunoService,
-                exercicioService: exercicioService,
                 staffAtual: staffAtual,
               ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/exercise_model.dart';
+import 'package:gymextreme_app/models/treino.dart';
 import 'package:gymextreme_app/screens/area_aluno/treino_execucao_screen.dart';
 import 'package:gymextreme_app/services/exercise_repository.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
@@ -10,11 +11,10 @@ Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 /// Repositório de teste — a correção da Biblioteca Oficial em si (todos
 /// os 1.394 exercícios, relacionamentos, taxonomy) já é validada contra
 /// o asset real em `exercise_repository_test.dart`. Esta tela só precisa
-/// validar comportamento de UI (carregamento, progressão de séries,
-/// descanso, conclusão), então usa dados fixos e resolução imediata —
-/// sem depender de `compute()`/isolate de verdade dentro da fake-async
-/// zone do `testWidgets`, que se mostrou não confiável mesmo com
-/// pré-aquecimento do cache estático.
+/// validar comportamento de UI (carregamento do treino real via
+/// Firestore, progressão de séries, descanso, conclusão), então usa
+/// dados fixos e resolução imediata — sem depender de `compute()`/
+/// isolate de verdade dentro da fake-async zone do `testWidgets`.
 class _FakeExerciseRepository implements ExerciseRepository {
   const _FakeExerciseRepository();
 
@@ -64,18 +64,56 @@ class _FakeExerciseRepository implements ExerciseRepository {
   Future<List<ExerciseModel>> buscarTodos() async => _catalogo.values.toList(growable: false);
 }
 
-const _tela = TreinoExecucaoScreen(
-  treinoId: 'preview-mock',
-  treinoNome: 'Treino B',
-  repository: _FakeExerciseRepository(),
+/// Simula a ficha real que estaria em `alunos/{uid}/treinos/{id}` —
+/// mesmos ids da Biblioteca Oficial que o repositório fake resolve.
+const _treinoFake = Treino(
+  id: 'treino-1',
+  nome: 'Treino B',
+  letra: 'B',
+  exercicios: [
+    TreinoExercicio(
+      exercicioId: '0577',
+      series: 3,
+      repeticoes: '12',
+      cargaKg: 18,
+      descansoSegundos: 60,
+      observacoes: 'Foco na fase excêntrica — desça em 3 segundos.',
+      ordem: 0,
+    ),
+    TreinoExercicio(
+      exercicioId: '0180',
+      series: 3,
+      repeticoes: '10-12',
+      cargaKg: 40,
+      descansoSegundos: 60,
+      ordem: 1,
+    ),
+    TreinoExercicio(
+      exercicioId: '0043',
+      series: 4,
+      repeticoes: '8',
+      cargaKg: 50,
+      descansoSegundos: 90,
+      observacoes: 'Sem pressa — controle a descida.',
+      ordem: 2,
+    ),
+  ],
+);
+
+Widget _telaComTreino(Treino? treino) => TreinoExecucaoScreen(
+  alunoUid: 'aluno-1',
+  treinoId: 'treino-1',
+  repository: const _FakeExerciseRepository(),
+  buscarTreino: (alunoUid, treinoId) async => treino,
 );
 
 /// Nunca usar pumpAndSettle() aqui, porque o pulso da demonstração
 /// (AnimationController em loop infinito) nunca "assenta". Espera em
 /// passos curtos até o spinner de carregamento sumir, com um teto de
-/// tentativas — o fake repository resolve em poucos microtasks.
-Future<void> _carregar(WidgetTester tester) async {
-  await tester.pumpWidget(_wrap(_tela));
+/// tentativas — o fake repository/buscarTreino resolve em poucos
+/// microtasks.
+Future<void> _carregar(WidgetTester tester, {Treino? treino = _treinoFake}) async {
+  await tester.pumpWidget(_wrap(_telaComTreino(treino)));
   for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 20));
     if (find.byType(CircularProgressIndicator).evaluate().isEmpty) return;
@@ -85,7 +123,7 @@ Future<void> _carregar(WidgetTester tester) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('carrega da Biblioteca Oficial e mostra o primeiro exercicio prescrito', (
+  testWidgets('carrega o treino real do Firestore e mostra o primeiro exercicio prescrito', (
     tester,
   ) async {
     await _carregar(tester);
@@ -135,5 +173,31 @@ void main() {
 
     expect(find.text('Treino concluído!'), findsOneWidget);
     expect(find.text('3 exercícios finalizados'), findsOneWidget);
+  });
+
+  testWidgets('treino inexistente no Firestore mostra erro com opção de tentar de novo', (
+    tester,
+  ) async {
+    await _carregar(tester, treino: null);
+
+    expect(find.text('Treino não encontrado.'), findsOneWidget);
+    expect(find.text('TENTAR NOVAMENTE'), findsOneWidget);
+  });
+
+  testWidgets('treino cujo exerciseId nao existe na Biblioteca Oficial mostra erro', (
+    tester,
+  ) async {
+    const treinoComIdInvalido = Treino(
+      id: 'treino-2',
+      nome: 'Treino quebrado',
+      letra: 'C',
+      exercicios: [TreinoExercicio(exercicioId: 'id-que-nao-existe', ordem: 0)],
+    );
+    await _carregar(tester, treino: treinoComIdInvalido);
+
+    expect(
+      find.text('Este treino não tem nenhum exercício com mídia disponível na Biblioteca Oficial.'),
+      findsOneWidget,
+    );
   });
 }

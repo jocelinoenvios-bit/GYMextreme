@@ -169,6 +169,16 @@ class AlunoService {
     );
   }
 
+  /// Uma ficha de treino específica — usado pela tela de execução, que
+  /// só precisa de um treino por vez (não da lista inteira via
+  /// [watchTreinos]). `null` se o documento não existir.
+  Future<Treino?> buscarTreino(String alunoUid, String treinoId) async {
+    final doc = await _treinos(alunoUid).doc(treinoId).get();
+    final data = doc.data();
+    if (data == null) return null;
+    return Treino.fromFirestore(doc.id, data);
+  }
+
   /// Cria (se `treino.id` for nulo) ou atualiza uma ficha de treino.
   /// `staffUid`/`staffNome` identificam quem fez a acao — carimbados em
   /// `criadoPor*` só na criação e em `atualizadoPor*` sempre.

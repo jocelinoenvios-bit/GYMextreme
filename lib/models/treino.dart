@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Um exercicio dentro de uma ficha de treino — referencia um exercicio
-/// da biblioteca (`exercicios/{exercicioId}`, ver `ExercicioService`) e
-/// nunca duplica nome/gif/instrucoes, so os parametros de execucao.
+/// da Biblioteca Oficial de Exercícios (asset local, ver
+/// `ExerciseRepository`/`LocalExerciseRepository`) pelo mesmo `id` do
+/// fornecedor, e nunca duplica nome/gif/instrucoes, so os parametros de
+/// execucao.
 class TreinoExercicio {
   const TreinoExercicio({
     required this.exercicioId,

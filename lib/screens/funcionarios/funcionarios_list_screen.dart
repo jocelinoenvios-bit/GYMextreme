@@ -48,10 +48,19 @@ class FuncionariosListScreen extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return const Center(
-                  child: Text(
-                    'Erro ao carregar os funcionários.',
-                    style: TextStyle(color: AppColors.error),
+                // Mesma consulta where+orderBy em campos diferentes do
+                // watchAlunos — mostra o erro real, provavelmente um link
+                // do Firestore pra criar o índice composto que falta.
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        'Erro ao carregar os funcionários.\n\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.error),
+                      ),
+                    ),
                   ),
                 );
               }
@@ -96,7 +105,10 @@ class FuncionariosListScreen extends StatelessWidget {
                       cargoNome ?? funcionario.role.welcomeLabel,
                       style: const TextStyle(color: AppColors.textSecondary),
                     ),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textSecondary,
+                    ),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => FuncionarioFormScreen(

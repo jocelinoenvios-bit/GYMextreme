@@ -58,7 +58,8 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _busca = value.trim().toLowerCase()),
+              onChanged: (value) =>
+                  setState(() => _busca = value.trim().toLowerCase()),
               decoration: const InputDecoration(
                 hintText: 'Buscar aluno pelo nome',
                 prefixIcon: Icon(Icons.search),
@@ -73,16 +74,31 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return const Center(
-                    child: Text(
-                      'Erro ao carregar os alunos.',
-                      style: TextStyle(color: AppColors.error),
+                  // Mostra o erro real (não só uma mensagem genérica): a
+                  // causa mais provável é o Firestore exigir um índice
+                  // composto pra essa consulta (where + orderBy em campos
+                  // diferentes) — o erro do Firestore normalmente já vem
+                  // com um link direto pra criar o índice que falta.
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          'Erro ao carregar os alunos.\n\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.error),
+                        ),
+                      ),
                     ),
                   );
                 }
 
                 final alunos = (snapshot.data ?? [])
-                    .where((a) => _busca.isEmpty || a.nome.toLowerCase().contains(_busca))
+                    .where(
+                      (a) =>
+                          _busca.isEmpty ||
+                          a.nome.toLowerCase().contains(_busca),
+                    )
                     .toList();
 
                 if (alunos.isEmpty) {
@@ -111,11 +127,20 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                     return ListTile(
                       leading: const CircleAvatar(
                         backgroundColor: AppColors.surfaceHigh,
-                        child: Icon(Icons.fitness_center_outlined, color: AppColors.gold),
+                        child: Icon(
+                          Icons.fitness_center_outlined,
+                          color: AppColors.gold,
+                        ),
                       ),
                       title: Text(aluno.nome),
-                      subtitle: Text(aluno.email, style: const TextStyle(color: AppColors.textSecondary)),
-                      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                      subtitle: Text(
+                        aluno.email,
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textSecondary,
+                      ),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => AlunoDetailScreen(

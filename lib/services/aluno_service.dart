@@ -40,15 +40,28 @@ class AlunoService {
       _alunos.doc(uid).collection('pagamentos');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
+  ///
+  /// Ordena em Dart (não com `.orderBy('nome')` no Firestore) de propósito:
+  /// um `where` de igualdade combinado com `orderBy` em outro campo exige
+  /// um índice composto no Firestore, e sem esse índice a consulta falha
+  /// silenciosamente com `failed-precondition` — foi exatamente isso que
+  /// quebrou a lista de alunos em produção (cadastro salvava certinho, mas
+  /// a lista nunca carregava). A lista de alunos de uma academia é pequena
+  /// o bastante pra ordenar no cliente sem custo real, e assim a tela
+  /// nunca mais depende de um índice existir no projeto Firebase.
   Stream<List<AppUser>> watchAlunos() {
     return _usuarios
         .where('role', isEqualTo: UserRole.aluno.firestoreValue)
-        .orderBy('nome')
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => AppUser.fromFirestore(doc.id, doc.data()))
-              .toList(),
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => AppUser.fromFirestore(doc.id, doc.data()))
+                  .toList()
+                ..sort(
+                  (a, b) =>
+                      a.nome.toLowerCase().compareTo(b.nome.toLowerCase()),
+                ),
         );
   }
 
@@ -77,17 +90,20 @@ class AlunoService {
   }
 
   Stream<List<AvaliacaoFisica>> watchAvaliacoes(String uid) {
-    return _avaliacoes(
-      uid,
-    ).orderBy('data', descending: true).snapshots().map(
-      (snapshot) => snapshot.docs
-          .map((doc) => AvaliacaoFisica.fromFirestore(doc.id, doc.data()))
-          .toList(),
-    );
+    return _avaliacoes(uid)
+        .orderBy('data', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => AvaliacaoFisica.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   Future<void> salvarDadosAluno(Aluno aluno) {
-    return _alunos.doc(aluno.uid).set(aluno.toFirestore(), SetOptions(merge: true));
+    return _alunos
+        .doc(aluno.uid)
+        .set(aluno.toFirestore(), SetOptions(merge: true));
   }
 
   Future<void> salvarAnamnese(String uid, Anamnese anamnese) {
@@ -109,10 +125,14 @@ class AlunoService {
   /// Historico de pagamentos registrados pela recepcao, mais recente
   /// primeiro.
   Stream<List<Pagamento>> watchPagamentos(String uid) {
-    return _pagamentos(uid).orderBy('registradoEm', descending: true).snapshots().map(
-      (snapshot) =>
-          snapshot.docs.map((doc) => Pagamento.fromFirestore(doc.id, doc.data())).toList(),
-    );
+    return _pagamentos(uid)
+        .orderBy('registradoEm', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Pagamento.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   /// Registra que a recepcao recebeu o pagamento (dinheiro, PIX, cartao ou
@@ -163,11 +183,14 @@ class AlunoService {
 
   /// Fichas de treino do aluno, mais recentes/ativas primeiro.
   Stream<List<Treino>> watchTreinos(String uid) {
-    return _treinos(uid).orderBy('ordem').snapshots().map(
-      (snapshot) => snapshot.docs
-          .map((doc) => Treino.fromFirestore(doc.id, doc.data()))
-          .toList(),
-    );
+    return _treinos(uid)
+        .orderBy('ordem')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Treino.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   /// Uma ficha de treino específica — usado pela tela de execução, que
@@ -221,7 +244,12 @@ class AlunoService {
       ordem: treino.ordem,
       exercicios: treino.exercicios,
     );
-    return salvarTreino(alunoUid, copia, staffUid: staffUid, staffNome: staffNome);
+    return salvarTreino(
+      alunoUid,
+      copia,
+      staffUid: staffUid,
+      staffNome: staffNome,
+    );
   }
 
   /// Copia um treino de outro aluno pra este (usado quando o personal
@@ -246,7 +274,12 @@ class AlunoService {
       ordem: original.ordem,
       exercicios: original.exercicios,
     );
-    return salvarTreino(destinoUid, copia, staffUid: staffUid, staffNome: staffNome);
+    return salvarTreino(
+      destinoUid,
+      copia,
+      staffUid: staffUid,
+      staffNome: staffNome,
+    );
   }
 
   /// Cria a conta de login (Firebase Auth) e os documentos de cadastro

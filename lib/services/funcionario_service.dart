@@ -22,6 +22,13 @@ class FuncionarioService {
 
   /// Lista de funcionarios (ADM, Personal legado e Funcionario), ordenada
   /// por nome. Nao inclui alunos.
+  ///
+  /// Ordena em Dart, não com `.orderBy('nome')` no Firestore — mesmo motivo
+  /// do `AlunoService.watchAlunos()`: `where` + `orderBy` em campo
+  /// diferente exige índice composto, e sem ele a consulta falha calada
+  /// (foi o que quebrou a lista de alunos em produção). A lista de
+  /// funcionários de uma academia é pequena, ordenar no cliente não tem
+  /// custo real e elimina essa dependência.
   Stream<List<AppUser>> watchFuncionarios() {
     return _usuarios
         .where(
@@ -32,12 +39,16 @@ class FuncionarioService {
             UserRole.funcionario.firestoreValue,
           ],
         )
-        .orderBy('nome')
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => AppUser.fromFirestore(doc.id, doc.data()))
-              .toList(),
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => AppUser.fromFirestore(doc.id, doc.data()))
+                  .toList()
+                ..sort(
+                  (a, b) =>
+                      a.nome.toLowerCase().compareTo(b.nome.toLowerCase()),
+                ),
         );
   }
 
@@ -79,16 +90,18 @@ class FuncionarioService {
           ? UserRole.adm
           : UserRole.funcionario;
 
-      await _usuarios.doc(uid).set(
-        AppUser(
-          uid: uid,
-          nome: nome.trim(),
-          email: email.trim(),
-          role: role,
-          cargoId: cargo.id,
-          permissoes: permissoes,
-        ).toFirestore(),
-      );
+      await _usuarios
+          .doc(uid)
+          .set(
+            AppUser(
+              uid: uid,
+              nome: nome.trim(),
+              email: email.trim(),
+              role: role,
+              cargoId: cargo.id,
+              permissoes: permissoes,
+            ).toFirestore(),
+          );
     } finally {
       await secondaryApp.delete();
     }

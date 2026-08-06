@@ -44,7 +44,7 @@ class AlunoDetailScreen extends StatelessWidget {
               const Tab(text: 'Anamnese'),
               const Tab(text: 'Termo'),
               const Tab(text: 'Avaliações'),
-              if (mostrarTreino) const Tab(text: 'Treino'),
+              if (mostrarTreino) const Tab(text: 'Treinos'),
             ],
           ),
         ),

@@ -24,6 +24,8 @@ const List<CircunferenciaField> circunferenciaFields = [
   CircunferenciaField('gluteo', 'Glúteo (quadril)'),
   CircunferenciaField('coxaProximalD', 'Coxa proximal D.'),
   CircunferenciaField('coxaProximalE', 'Coxa proximal E.'),
+  CircunferenciaField('vastoLateralD', 'Vasto lateral D.'),
+  CircunferenciaField('vastoLateralE', 'Vasto lateral E.'),
   CircunferenciaField('panturrilhaD', 'Panturrilha D.'),
   CircunferenciaField('panturrilhaE', 'Panturrilha E.'),
 ];

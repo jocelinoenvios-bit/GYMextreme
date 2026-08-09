@@ -2,6 +2,7 @@ import 'package:gymextreme_app/models/aluno.dart';
 import 'package:gymextreme_app/models/anamnese.dart';
 import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/avaliacao_fisica.dart';
+import 'package:gymextreme_app/models/conta_receber.dart';
 import 'package:gymextreme_app/models/endereco.dart';
 import 'package:gymextreme_app/models/matricula.dart';
 import 'package:gymextreme_app/models/pagamento.dart';
@@ -22,6 +23,7 @@ class FakeAlunoService implements AlunoService {
     this.treinos = const [],
     this.alunos = const [],
     this.matriculas = const [],
+    this.contasReceber = const [],
   });
 
   Aluno? aluno;
@@ -31,12 +33,16 @@ class FakeAlunoService implements AlunoService {
   List<Treino> treinos;
   List<AppUser> alunos;
   List<Matricula> matriculas;
+  List<ContaReceber> contasReceber;
 
   Aluno? ultimoAlunoSalvo;
   Anamnese? ultimaAnamneseSalva;
   TermoAceite? ultimoTermoSalvo;
   AvaliacaoFisica? ultimaAvaliacaoSalva;
   String? ultimaMatriculaCanceladaId;
+  String? ultimaContaExcluidaId;
+  ContaReceber? ultimaContaAtualizada;
+  ContaReceber? ultimoRecebimentoRegistrado;
 
   @override
   Stream<List<AppUser>> watchAlunos() => Stream.value(alunos);
@@ -138,6 +144,143 @@ class FakeAlunoService implements AlunoService {
           matricula.copyWith(status: StatusMatricula.cancelada)
         else
           matricula,
+    ];
+  }
+
+  @override
+  Stream<List<ContaReceber>> watchContasReceber(String uid) =>
+      Stream.value(contasReceber.where((c) => c.alunoId == uid).toList());
+
+  @override
+  Stream<List<ContaReceber>> watchTodasContasReceber() => Stream.value(contasReceber);
+
+  @override
+  Future<String> criarContaReceber(
+    String alunoUid, {
+    String? matriculaId,
+    required String descricao,
+    required double valorOriginal,
+    double desconto = 0,
+    double jurosMulta = 0,
+    required DateTime vencimento,
+    String? formaPagamento,
+    String? observacao,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final id = 'conta-${contasReceber.length + 1}';
+    contasReceber = [
+      ...contasReceber,
+      ContaReceber(
+        id: id,
+        alunoId: alunoUid,
+        matriculaId: matriculaId,
+        descricao: descricao,
+        valorOriginal: valorOriginal,
+        desconto: desconto,
+        jurosMulta: jurosMulta,
+        vencimento: vencimento,
+        formaPagamento: formaPagamento,
+        observacao: observacao,
+        criadoPorUid: staffUid,
+        criadoPorNome: staffNome,
+      ),
+    ];
+    return id;
+  }
+
+  @override
+  Future<String> criarContaReceberDeMatricula(
+    String alunoUid,
+    Matricula matricula, {
+    String? descricao,
+    required String staffUid,
+    required String staffNome,
+  }) {
+    return criarContaReceber(
+      alunoUid,
+      matriculaId: matricula.id,
+      descricao: descricao ?? 'Matrícula',
+      valorOriginal: matricula.valorContratado,
+      vencimento: matricula.dataVencimento,
+      formaPagamento: matricula.formaPagamento,
+      staffUid: staffUid,
+      staffNome: staffNome,
+    );
+  }
+
+  @override
+  Future<void> atualizarContaReceber(
+    String alunoUid,
+    String contaId, {
+    String? matriculaId,
+    required String descricao,
+    required double valorOriginal,
+    required double desconto,
+    required double jurosMulta,
+    required DateTime vencimento,
+    String? observacao,
+  }) async {
+    contasReceber = [
+      for (final conta in contasReceber)
+        if (conta.id == contaId)
+          conta.copyWith(
+            matriculaId: matriculaId,
+            descricao: descricao,
+            valorOriginal: valorOriginal,
+            desconto: desconto,
+            jurosMulta: jurosMulta,
+            vencimento: vencimento,
+            observacao: observacao,
+          )
+        else
+          conta,
+    ];
+    ultimaContaAtualizada = contasReceber.firstWhere((c) => c.id == contaId);
+  }
+
+  @override
+  Future<void> registrarRecebimento(
+    String alunoUid,
+    String contaId, {
+    required double valorPago,
+    required double desconto,
+    required double jurosMulta,
+    required DateTime dataPagamento,
+    String? formaPagamento,
+    String? observacao,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    contasReceber = [
+      for (final conta in contasReceber)
+        if (conta.id == contaId)
+          conta.copyWith(
+            status: StatusContaReceber.pago,
+            valorPago: valorPago,
+            desconto: desconto,
+            jurosMulta: jurosMulta,
+            dataPagamento: dataPagamento,
+            formaPagamento: formaPagamento,
+            observacao: observacao,
+            recebidoPorUid: staffUid,
+            recebidoPorNome: staffNome,
+          )
+        else
+          conta,
+    ];
+    ultimoRecebimentoRegistrado = contasReceber.firstWhere((c) => c.id == contaId);
+  }
+
+  @override
+  Future<void> excluirContaReceber(String alunoUid, String contaId) async {
+    ultimaContaExcluidaId = contaId;
+    contasReceber = [
+      for (final conta in contasReceber)
+        if (conta.id == contaId)
+          conta.copyWith(status: StatusContaReceber.cancelado)
+        else
+          conta,
     ];
   }
 

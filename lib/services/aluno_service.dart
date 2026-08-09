@@ -8,6 +8,7 @@ import '../models/aluno.dart';
 import '../models/anamnese.dart';
 import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
+import '../models/conta_receber.dart';
 import '../models/endereco.dart';
 import '../models/matricula.dart';
 import '../models/pagamento.dart';
@@ -17,9 +18,10 @@ import '../models/user_role.dart';
 
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
 /// `alunos`), anamnese e termo de responsabilidade (campos dentro do
-/// mesmo documento), historico de avaliacoes fisicas, fichas de treino e
-/// matriculas (subcolecoes `alunos/{uid}/avaliacoes`, `alunos/{uid}/treinos`
-/// e `alunos/{uid}/matriculas`).
+/// mesmo documento), historico de avaliacoes fisicas, fichas de treino,
+/// matriculas e contas a receber (subcolecoes `alunos/{uid}/avaliacoes`,
+/// `alunos/{uid}/treinos`, `alunos/{uid}/matriculas` e
+/// `alunos/{uid}/contasReceber`).
 class AlunoService {
   AlunoService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -43,6 +45,9 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _matriculas(String uid) =>
       _alunos.doc(uid).collection('matriculas');
+
+  CollectionReference<Map<String, dynamic>> _contasReceber(String uid) =>
+      _alunos.doc(uid).collection('contasReceber');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
   ///
@@ -278,6 +283,155 @@ class AlunoService {
   Future<void> cancelarMatricula(String alunoUid, String matriculaId) {
     return _matriculas(alunoUid).doc(matriculaId).set({
       'status': StatusMatricula.cancelada.name,
+      'atualizadoEm': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Contas a receber de UM aluno, vencimento mais próximo primeiro.
+  Stream<List<ContaReceber>> watchContasReceber(String uid) {
+    return _contasReceber(uid).snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => ContaReceber.fromFirestore(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => a.vencimento.compareTo(b.vencimento)),
+    );
+  }
+
+  /// Todas as contas a receber de TODOS os alunos (collection group query
+  /// sobre `contasReceber`) — alimenta a tela administrativa "Contas a
+  /// Receber". Mesmo motivo de `watchTodasMatriculas()` pra não usar
+  /// `.orderBy()`/`.where()` no Firestore: evita depender de índice
+  /// composto; a tela filtra/ordena no cliente.
+  Stream<List<ContaReceber>> watchTodasContasReceber() {
+    return _firestore.collectionGroup('contasReceber').snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => ContaReceber.fromFirestore(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => a.vencimento.compareTo(b.vencimento)),
+    );
+  }
+
+  /// Lança uma cobrança nova pro aluno — sempre nasce `pendente`, nunca é
+  /// criada já como paga (isso passa por [registrarRecebimento]).
+  Future<String> criarContaReceber(
+    String alunoUid, {
+    String? matriculaId,
+    required String descricao,
+    required double valorOriginal,
+    double desconto = 0,
+    double jurosMulta = 0,
+    required DateTime vencimento,
+    String? formaPagamento,
+    String? observacao,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final ref = await _contasReceber(alunoUid).add(
+      ContaReceber(
+        alunoId: alunoUid,
+        matriculaId: matriculaId,
+        descricao: descricao,
+        valorOriginal: valorOriginal,
+        desconto: desconto,
+        jurosMulta: jurosMulta,
+        vencimento: vencimento,
+        formaPagamento: formaPagamento,
+        observacao: observacao,
+        criadoPorUid: staffUid,
+        criadoPorNome: staffNome,
+      ).toFirestore(),
+    );
+    return ref.id;
+  }
+
+  /// Gera uma cobrança a partir de uma matrícula já existente — copia só
+  /// valor/vencimento/forma de pagamento no momento da criação (nunca lê
+  /// a matrícula de novo depois), o mesmo raciocínio de "cópia na
+  /// criação" que `Matricula.valorContratado` já usa em relação ao
+  /// `Plano`. Não duplica nem altera nada na matrícula em si.
+  Future<String> criarContaReceberDeMatricula(
+    String alunoUid,
+    Matricula matricula, {
+    String? descricao,
+    required String staffUid,
+    required String staffNome,
+  }) {
+    return criarContaReceber(
+      alunoUid,
+      matriculaId: matricula.id,
+      descricao: descricao ?? 'Matrícula',
+      valorOriginal: matricula.valorContratado,
+      vencimento: matricula.dataVencimento,
+      formaPagamento: matricula.formaPagamento,
+      staffUid: staffUid,
+      staffNome: staffNome,
+    );
+  }
+
+  /// Edita os dados básicos de uma cobrança (descrição, valor, desconto,
+  /// juros/multa, vencimento, vínculo com matrícula, observação). Nunca
+  /// mexe em status/valorPago/dataPagamento/responsável pelo recebimento —
+  /// isso é sempre [registrarRecebimento], nunca esta função.
+  Future<void> atualizarContaReceber(
+    String alunoUid,
+    String contaId, {
+    String? matriculaId,
+    required String descricao,
+    required double valorOriginal,
+    required double desconto,
+    required double jurosMulta,
+    required DateTime vencimento,
+    String? observacao,
+  }) {
+    return _contasReceber(alunoUid).doc(contaId).set({
+      'matriculaId': matriculaId,
+      'descricao': descricao,
+      'valorOriginal': valorOriginal,
+      'desconto': desconto,
+      'jurosMulta': jurosMulta,
+      'vencimento': Timestamp.fromDate(vencimento),
+      'observacao': observacao,
+      'atualizadoEm': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Registra o recebimento de uma cobrança — marca `status: pago` sem
+  /// apagar nada: mesmo documento, histórico completo preservado (quem
+  /// lançou continua em `criadoPor*`, quem recebeu fica em
+  /// `recebidoPor*`). Desconto/juros podem ser ajustados aqui mesmo (ex.:
+  /// desconto concedido só na hora de pagar).
+  Future<void> registrarRecebimento(
+    String alunoUid,
+    String contaId, {
+    required double valorPago,
+    required double desconto,
+    required double jurosMulta,
+    required DateTime dataPagamento,
+    String? formaPagamento,
+    String? observacao,
+    required String staffUid,
+    required String staffNome,
+  }) {
+    return _contasReceber(alunoUid).doc(contaId).set({
+      'status': StatusContaReceber.pago.name,
+      'valorPago': valorPago,
+      'desconto': desconto,
+      'jurosMulta': jurosMulta,
+      'dataPagamento': Timestamp.fromDate(dataPagamento),
+      'formaPagamento': formaPagamento,
+      'observacao': observacao,
+      'recebidoPorUid': staffUid,
+      'recebidoPorNome': staffNome,
+      'atualizadoEm': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// "Exclui" uma cobrança sem apagar o documento — marca `cancelado`,
+  /// mesmo padrão de `PlanoService.excluirPlano`/`cancelarMatricula`
+  /// (preserva o histórico financeiro, nunca reaproveita o registro).
+  Future<void> excluirContaReceber(String alunoUid, String contaId) {
+    return _contasReceber(alunoUid).doc(contaId).set({
+      'status': StatusContaReceber.cancelado.name,
       'atualizadoEm': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

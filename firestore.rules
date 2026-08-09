@@ -104,6 +104,43 @@ service cloud.firestore {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('matriculas');
       }
+
+      // Contas a receber: diferente de pagamentos/matriculas/treinos acima,
+      // a leitura AQUI não usa `ehStaff()` genérico — exige a permissão
+      // granular `acessarContasReceber` mesmo pra visualizar, conforme
+      // pedido explicitamente na Fase 1B (não repetir "qualquer staff").
+      match /contasReceber/{contaId} {
+        allow read: if request.auth != null &&
+          (request.auth.uid == uid || temPermissao('acessarContasReceber'));
+
+        // Toda cobrança nasce pendente — nunca criada já como paga (isso é
+        // sempre responsabilidade de `registrarRecebimento`, nunca da
+        // criação direta).
+        allow create: if temPermissao('cadastrarContasReceber') &&
+          request.resource.data.status == 'pendente';
+
+        // Cada permissão granular só pode alterar os campos da própria
+        // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`
+        // já usada em `planos`, pra impedir que "receber" vire uma porta
+        // aberta pra editar descrição/valor, ou que "excluir" faça mais
+        // que cancelar.
+        allow update: if
+          (temPermissao('alterarContasReceber') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'matriculaId', 'descricao', 'valorOriginal', 'desconto',
+              'jurosMulta', 'vencimento', 'observacao', 'atualizadoEm'
+            ])) ||
+          (temPermissao('receberContasReceber') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'valorPago', 'desconto', 'jurosMulta', 'dataPagamento',
+              'formaPagamento', 'observacao', 'recebidoPorUid', 'recebidoPorNome',
+              'atualizadoEm'
+            ])) ||
+          (temPermissao('excluirContasReceber') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm']));
+
+        allow delete: if false;
+      }
     }
 
     // Collection group query sobre `matriculas` (AlunoService.watchTodasMatriculas,
@@ -115,6 +152,13 @@ service cloud.firestore {
     // path completo (regra acima), nunca por uma query deste tipo.
     match /{path=**}/matriculas/{matriculaId} {
       allow read: if ehStaff();
+    }
+
+    // Mesma justificativa acima, só que para `contasReceber`
+    // (AlunoService.watchTodasContasReceber) — aqui a permissão exigida é
+    // a granular `acessarContasReceber`, não `ehStaff()`.
+    match /{path=**}/contasReceber/{contaId} {
+      allow read: if temPermissao('acessarContasReceber');
     }
 
     // Controle de acesso da catraca (identificacao, autorizacao e

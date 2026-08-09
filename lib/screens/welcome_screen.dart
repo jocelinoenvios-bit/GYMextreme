@@ -17,6 +17,7 @@ import '../utils/status_acesso.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'area_aluno/meus_treinos_screen.dart';
+import 'contas_receber/contas_receber_list_screen.dart';
 import 'exercicios/exercicios_list_screen.dart';
 import 'funcionarios/funcionarios_list_screen.dart';
 import 'matriculas/matriculas_list_screen.dart';
@@ -179,6 +180,21 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.assignment_ind_outlined),
                 label: const Text('MATRÍCULAS'),
+              ),
+            ],
+            if (PermissionService.has(user, Permission.acessarContasReceber)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ContasReceberListScreen(
+                      alunoService: alunoService,
+                      staffAtual: user,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('CONTAS A RECEBER'),
               ),
             ],
             // Permission.bibliotecaExercicios é uma permissão de staff (o

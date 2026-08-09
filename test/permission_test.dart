@@ -179,4 +179,77 @@ void main() {
       },
     );
   });
+
+  group('Permission — Contas a Receber (Fase 1B)', () {
+    test('cobre as 5 permissoes granulares', () {
+      expect(Permission.values, contains(Permission.acessarContasReceber));
+      expect(Permission.values, contains(Permission.cadastrarContasReceber));
+      expect(Permission.values, contains(Permission.alterarContasReceber));
+      expect(Permission.values, contains(Permission.excluirContasReceber));
+      expect(Permission.values, contains(Permission.receberContasReceber));
+    });
+
+    test('ADM tem as 5 automaticamente, mesmo sem nada gravado', () {
+      const adm = AppUser(
+        uid: 'adm1',
+        nome: 'Dono',
+        email: 'adm@gymextreme.com.br',
+        role: UserRole.adm,
+      );
+      expect(PermissionService.has(adm, Permission.acessarContasReceber), isTrue);
+      expect(PermissionService.has(adm, Permission.cadastrarContasReceber), isTrue);
+      expect(PermissionService.has(adm, Permission.alterarContasReceber), isTrue);
+      expect(PermissionService.has(adm, Permission.excluirContasReceber), isTrue);
+      expect(PermissionService.has(adm, Permission.receberContasReceber), isTrue);
+    });
+
+    test(
+      'funcionario com so acessarContasReceber nao consegue cadastrar, '
+      'alterar, excluir nem receber',
+      () {
+        const funcionario = AppUser(
+          uid: 'func1',
+          nome: 'Recepção',
+          email: 'recepcao@gymextreme.com.br',
+          role: UserRole.funcionario,
+          permissoes: {Permission.acessarContasReceber},
+        );
+
+        expect(PermissionService.has(funcionario, Permission.acessarContasReceber), isTrue);
+        expect(PermissionService.has(funcionario, Permission.cadastrarContasReceber), isFalse);
+        expect(PermissionService.has(funcionario, Permission.alterarContasReceber), isFalse);
+        expect(PermissionService.has(funcionario, Permission.excluirContasReceber), isFalse);
+        expect(PermissionService.has(funcionario, Permission.receberContasReceber), isFalse);
+      },
+    );
+
+    test('aluno nunca tem nenhuma das 5, mesmo com o campo corrompido', () {
+      const aluno = AppUser(
+        uid: 'aluno1',
+        nome: 'Aluno Teste',
+        email: 'aluno@gymextreme.com.br',
+        role: UserRole.aluno,
+        permissoes: {
+          Permission.acessarContasReceber,
+          Permission.cadastrarContasReceber,
+          Permission.receberContasReceber,
+        },
+      );
+
+      expect(PermissionService.has(aluno, Permission.acessarContasReceber), isFalse);
+      expect(PermissionService.has(aluno, Permission.receberContasReceber), isFalse);
+    });
+  });
+
+  group('CargosPadrao.recepcionista — Contas a Receber (Fase 1B)', () {
+    test('tem acesso, cadastro e recebimento, mas nao alterar/excluir', () {
+      final permissoes = CargosPadrao.recepcionista.permissoesPadrao;
+
+      expect(permissoes, contains(Permission.acessarContasReceber));
+      expect(permissoes, contains(Permission.cadastrarContasReceber));
+      expect(permissoes, contains(Permission.receberContasReceber));
+      expect(permissoes, isNot(contains(Permission.alterarContasReceber)));
+      expect(permissoes, isNot(contains(Permission.excluirContasReceber)));
+    });
+  });
 }

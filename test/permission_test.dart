@@ -252,4 +252,82 @@ void main() {
       expect(permissoes, isNot(contains(Permission.excluirContasReceber)));
     });
   });
+
+  group('Permission — Controle de Caixa (Fase 1C)', () {
+    test('cobre as 6 permissoes granulares', () {
+      expect(Permission.values, contains(Permission.acessarControleCaixa));
+      expect(Permission.values, contains(Permission.abrirCaixa));
+      expect(Permission.values, contains(Permission.fecharCaixa));
+      expect(Permission.values, contains(Permission.realizarRetiradas));
+      expect(Permission.values, contains(Permission.realizarSuprimentos));
+      expect(Permission.values, contains(Permission.consultarRelatorioCaixa));
+    });
+
+    test('ADM tem as 6 automaticamente, mesmo sem nada gravado', () {
+      const adm = AppUser(
+        uid: 'adm1',
+        nome: 'Dono',
+        email: 'adm@gymextreme.com.br',
+        role: UserRole.adm,
+      );
+      expect(PermissionService.has(adm, Permission.acessarControleCaixa), isTrue);
+      expect(PermissionService.has(adm, Permission.abrirCaixa), isTrue);
+      expect(PermissionService.has(adm, Permission.fecharCaixa), isTrue);
+      expect(PermissionService.has(adm, Permission.realizarRetiradas), isTrue);
+      expect(PermissionService.has(adm, Permission.realizarSuprimentos), isTrue);
+      expect(PermissionService.has(adm, Permission.consultarRelatorioCaixa), isTrue);
+    });
+
+    test(
+      'funcionario com so acessarControleCaixa nao consegue abrir, fechar, '
+      'retirar, suprir nem consultar relatorio',
+      () {
+        const funcionario = AppUser(
+          uid: 'func1',
+          nome: 'Recepção',
+          email: 'recepcao@gymextreme.com.br',
+          role: UserRole.funcionario,
+          permissoes: {Permission.acessarControleCaixa},
+        );
+
+        expect(PermissionService.has(funcionario, Permission.acessarControleCaixa), isTrue);
+        expect(PermissionService.has(funcionario, Permission.abrirCaixa), isFalse);
+        expect(PermissionService.has(funcionario, Permission.fecharCaixa), isFalse);
+        expect(PermissionService.has(funcionario, Permission.realizarRetiradas), isFalse);
+        expect(PermissionService.has(funcionario, Permission.realizarSuprimentos), isFalse);
+        expect(PermissionService.has(funcionario, Permission.consultarRelatorioCaixa), isFalse);
+      },
+    );
+
+    test('aluno nunca tem nenhuma das 6, mesmo com o campo corrompido', () {
+      const aluno = AppUser(
+        uid: 'aluno1',
+        nome: 'Aluno Teste',
+        email: 'aluno@gymextreme.com.br',
+        role: UserRole.aluno,
+        permissoes: {
+          Permission.acessarControleCaixa,
+          Permission.abrirCaixa,
+          Permission.fecharCaixa,
+        },
+      );
+
+      expect(PermissionService.has(aluno, Permission.acessarControleCaixa), isFalse);
+      expect(PermissionService.has(aluno, Permission.abrirCaixa), isFalse);
+      expect(PermissionService.has(aluno, Permission.fecharCaixa), isFalse);
+    });
+  });
+
+  group('CargosPadrao.recepcionista — Controle de Caixa (Fase 1C)', () {
+    test('tem as 6 permissoes de caixa', () {
+      final permissoes = CargosPadrao.recepcionista.permissoesPadrao;
+
+      expect(permissoes, contains(Permission.acessarControleCaixa));
+      expect(permissoes, contains(Permission.abrirCaixa));
+      expect(permissoes, contains(Permission.fecharCaixa));
+      expect(permissoes, contains(Permission.realizarRetiradas));
+      expect(permissoes, contains(Permission.realizarSuprimentos));
+      expect(permissoes, contains(Permission.consultarRelatorioCaixa));
+    });
+  });
 }

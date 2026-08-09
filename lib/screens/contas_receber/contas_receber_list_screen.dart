@@ -4,6 +4,7 @@ import '../../models/app_user.dart';
 import '../../models/conta_receber.dart';
 import '../../models/permission.dart';
 import '../../services/aluno_service.dart';
+import '../../services/caixa_service.dart';
 import '../../services/permission_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
@@ -21,10 +22,12 @@ class ContasReceberListScreen extends StatefulWidget {
   const ContasReceberListScreen({
     super.key,
     required this.alunoService,
+    required this.caixaService,
     required this.staffAtual,
   });
 
   final AlunoService alunoService;
+  final CaixaService caixaService;
   final AppUser staffAtual;
 
   @override
@@ -86,6 +89,7 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
       MaterialPageRoute(
         builder: (_) => RegistrarRecebimentoScreen(
           alunoService: widget.alunoService,
+          caixaService: widget.caixaService,
           staffAtual: widget.staffAtual,
           conta: conta,
         ),

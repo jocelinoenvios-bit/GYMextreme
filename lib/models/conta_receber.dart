@@ -60,6 +60,7 @@ class ContaReceber {
     this.criadoPorNome,
     this.recebidoPorUid,
     this.recebidoPorNome,
+    this.movimentacaoCaixaId,
   });
 
   final String? id;
@@ -102,6 +103,14 @@ class ContaReceber {
   final String? recebidoPorUid;
   final String? recebidoPorNome;
 
+  /// Id da `CaixaMovimentacao` gerada quando este recebimento foi
+  /// registrado com um caixa aberto (ver
+  /// `CaixaService.registrarRecebimentoContaReceber`). Nulo se a cobrança
+  /// ainda não foi paga, ou se foi paga sem nenhum caixa aberto no
+  /// momento — usado também como trava contra registrar o mesmo
+  /// recebimento no caixa duas vezes.
+  final String? movimentacaoCaixaId;
+
   /// Valor líquido esperado: original - desconto + juros/multa. Nunca
   /// negativo (um desconto maior que o valor original zera a cobrança,
   /// não a deixa negativa).
@@ -136,6 +145,7 @@ class ContaReceber {
       criadoPorNome: data['criadoPorNome'] as String?,
       recebidoPorUid: data['recebidoPorUid'] as String?,
       recebidoPorNome: data['recebidoPorNome'] as String?,
+      movimentacaoCaixaId: data['movimentacaoCaixaId'] as String?,
     );
   }
 
@@ -161,6 +171,7 @@ class ContaReceber {
       if (criadoPorNome != null) 'criadoPorNome': criadoPorNome,
       if (recebidoPorUid != null) 'recebidoPorUid': recebidoPorUid,
       if (recebidoPorNome != null) 'recebidoPorNome': recebidoPorNome,
+      if (movimentacaoCaixaId != null) 'movimentacaoCaixaId': movimentacaoCaixaId,
     };
   }
 
@@ -178,6 +189,7 @@ class ContaReceber {
     String? observacao,
     String? recebidoPorUid,
     String? recebidoPorNome,
+    String? movimentacaoCaixaId,
   }) {
     return ContaReceber(
       id: id,
@@ -199,6 +211,7 @@ class ContaReceber {
       criadoPorNome: criadoPorNome,
       recebidoPorUid: recebidoPorUid ?? this.recebidoPorUid,
       recebidoPorNome: recebidoPorNome ?? this.recebidoPorNome,
+      movimentacaoCaixaId: movimentacaoCaixaId ?? this.movimentacaoCaixaId,
     );
   }
 }

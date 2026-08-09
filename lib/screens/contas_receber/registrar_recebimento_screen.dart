@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
+import '../../models/caixa.dart';
 import '../../models/conta_receber.dart';
 import '../../services/aluno_service.dart';
+import '../../services/caixa_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
 
@@ -10,15 +14,25 @@ import '../../utils/moeda.dart';
 /// juros/multa, forma de pagamento, data e observação. Não apaga nada: a
 /// própria [ContaReceber] é atualizada (`status: pago`), o histórico
 /// (quem lançou, quando) continua no mesmo documento.
+///
+/// Integração com o Caixa: se houver um caixa aberto no momento (ver
+/// `CaixaService.watchCaixaAberto`), o recebimento também é lançado como
+/// uma movimentação nesse caixa, atomicamente
+/// (`CaixaService.registrarRecebimentoContaReceber`). Sem caixa aberto,
+/// o recebimento segue exatamente como antes
+/// (`AlunoService.registrarRecebimento`), sem depender do módulo de
+/// caixa pra nada.
 class RegistrarRecebimentoScreen extends StatefulWidget {
   const RegistrarRecebimentoScreen({
     super.key,
     required this.alunoService,
+    required this.caixaService,
     required this.staffAtual,
     required this.conta,
   });
 
   final AlunoService alunoService;
+  final CaixaService caixaService;
   final AppUser staffAtual;
   final ContaReceber conta;
 
@@ -45,8 +59,20 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
   DateTime _dataPagamento = DateTime.now();
   bool _isSaving = false;
 
+  Caixa? _caixaAberto;
+  StreamSubscription<Caixa?>? _caixaSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _caixaSubscription = widget.caixaService.watchCaixaAberto().listen((caixa) {
+      if (mounted) setState(() => _caixaAberto = caixa);
+    });
+  }
+
   @override
   void dispose() {
+    _caixaSubscription?.cancel();
     _valorPagoController.dispose();
     _descontoController.dispose();
     _jurosMultaController.dispose();
@@ -76,25 +102,50 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
   Future<void> _handleConfirmar() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final valorPago = parseValorReais(_valorPagoController.text)!;
+    final desconto = parseValorReais(_descontoController.text) ?? 0;
+    final jurosMulta = parseValorReais(_jurosMultaController.text) ?? 0;
+    final formaPagamento = _formaPagamentoController.text.trim().isEmpty
+        ? null
+        : _formaPagamentoController.text.trim();
+    final observacao = _observacaoController.text.trim().isEmpty
+        ? null
+        : _observacaoController.text.trim();
+    final caixaAberto = _caixaAberto;
+
     setState(() => _isSaving = true);
     try {
-      await widget.alunoService.registrarRecebimento(
-        widget.conta.alunoId,
-        widget.conta.id!,
-        valorPago: parseValorReais(_valorPagoController.text)!,
-        desconto: parseValorReais(_descontoController.text) ?? 0,
-        jurosMulta: parseValorReais(_jurosMultaController.text) ?? 0,
-        dataPagamento: _dataPagamento,
-        formaPagamento: _formaPagamentoController.text.trim().isEmpty
-            ? null
-            : _formaPagamentoController.text.trim(),
-        observacao: _observacaoController.text.trim().isEmpty
-            ? null
-            : _observacaoController.text.trim(),
-        staffUid: widget.staffAtual.uid,
-        staffNome: widget.staffAtual.nome,
-      );
+      if (caixaAberto != null) {
+        await widget.caixaService.registrarRecebimentoContaReceber(
+          caixaId: caixaAberto.id!,
+          alunoUid: widget.conta.alunoId,
+          contaReceberId: widget.conta.id!,
+          valorPago: valorPago,
+          desconto: desconto,
+          jurosMulta: jurosMulta,
+          dataPagamento: _dataPagamento,
+          formaPagamento: formaPagamento,
+          observacao: observacao,
+          staffUid: widget.staffAtual.uid,
+          staffNome: widget.staffAtual.nome,
+        );
+      } else {
+        await widget.alunoService.registrarRecebimento(
+          widget.conta.alunoId,
+          widget.conta.id!,
+          valorPago: valorPago,
+          desconto: desconto,
+          jurosMulta: jurosMulta,
+          dataPagamento: _dataPagamento,
+          formaPagamento: formaPagamento,
+          observacao: observacao,
+          staffUid: widget.staffAtual.uid,
+          staffNome: widget.staffAtual.nome,
+        );
+      }
       if (mounted) Navigator.of(context).pop();
+    } on CaixaServiceException catch (e) {
+      _showError(e.message);
     } catch (_) {
       _showError('Erro ao registrar o recebimento. Tente novamente.');
     } finally {
@@ -125,6 +176,15 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
                   'Vencimento: ${_formatarData(widget.conta.vencimento)} · '
                   'Valor esperado: ${formatarReais(widget.conta.valorLiquido)}',
                   style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _caixaAberto != null
+                      ? 'Caixa aberto — este recebimento também será lançado como '
+                            'entrada no caixa.'
+                      : 'Nenhum caixa aberto — este recebimento não gera nenhuma '
+                            'movimentação de caixa.',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
                 const SizedBox(height: 20),
                 TextFormField(

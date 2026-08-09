@@ -69,6 +69,61 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /caixas/{caixaId} {
+      // Controle de Caixa (Fase 1C): nao pertence a nenhum aluno, e uma
+      // colecao de nivel de academia, como `planos`. Leitura exige a
+      // permissao geral de acesso ao modulo OU (pra quem so consulta
+      // relatorios/historico, sem mexer no dia a dia) a permissao de
+      // relatorio — nunca "qualquer staff" generico, conforme pedido.
+      allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa');
+
+      // Abrir um caixa novo sempre nasce com status "aberto" —
+      // `CaixaService.abrirCaixa` e quem garante (via transacao, com
+      // leitura previa) que nao existe outro caixa aberto ao mesmo tempo;
+      // a regra so cuida da permissao e do estado inicial do documento.
+      allow create: if temPermissao('abrirCaixa') && request.resource.data.status == 'aberto';
+
+      // Fechar so pode partir de um caixa que ainda esta "aberto" e so
+      // pode tocar nos campos do proprio fechamento. Depois de fechado
+      // (`resource.data.status` deixa de ser 'aberto'), nenhuma condicao
+      // abaixo bate mais, entao o documento fica travado — cumpre "depois
+      // de fechado, o caixa nao deve ser alterado livremente".
+      allow update: if temPermissao('fecharCaixa') &&
+        resource.data.status == 'aberto' &&
+        request.resource.data.status == 'fechado' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'valorContado', 'valorEsperadoNoFechamento', 'diferenca',
+          'fechadoPorUid', 'fechadoPorNome', 'fechadoEm', 'observacaoFechamento'
+        ]);
+
+      // Nunca apagar uma sessao de caixa — preserva o historico financeiro.
+      allow delete: if false;
+
+      match /movimentacoes/{movimentacaoId} {
+        // Mesma leitura do caixa-pai.
+        allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa');
+
+        // Cada tipo de movimentacao exige a sua propria permissao granular
+        // — nunca "qualquer staff". "recebimento" so nasce junto com o
+        // recebimento de uma ContaReceber
+        // (`CaixaService.registrarRecebimentoContaReceber`), por isso usa
+        // a mesma permissao "receberContasReceber" que ja autoriza aquela
+        // transacao (ver /alunos/{uid}/contasReceber abaixo). "ajuste" e
+        // uma operacao sensivel sem tela propria ainda (nao pedida entre
+        // as 6 permissoes granulares desta fase) — reservada pro ADM ate
+        // ganhar uma permissao dedicada num proximo modulo.
+        allow create: if
+          (request.resource.data.tipo == 'retirada' && temPermissao('realizarRetiradas')) ||
+          (request.resource.data.tipo == 'suprimento' && temPermissao('realizarSuprimentos')) ||
+          (request.resource.data.tipo == 'recebimento' && temPermissao('receberContasReceber')) ||
+          (request.resource.data.tipo == 'ajuste' && ehAdm());
+
+        // Movimentacao lancada e definitiva — nunca editada nem apagada
+        // (mesma logica de imutabilidade ja usada em pagamentos/contasReceber).
+        allow update, delete: if false;
+      }
+    }
+
     match /alunos/{uid} {
       // O proprio aluno pode ler a propria ficha; ADM/Personal leem e
       // escrevem a ficha de qualquer aluno (cadastro, anamnese, termo).

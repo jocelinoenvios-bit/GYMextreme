@@ -7,6 +7,7 @@ import 'package:gymextreme_app/screens/contas_receber/registrar_recebimento_scre
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/fake_caixa_service.dart';
 
 const _staff = AppUser(
   uid: 'staff-1',
@@ -23,11 +24,12 @@ Future<void> _tocar(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
 }
 
-Widget _wrap(FakeAlunoService service, ContaReceber conta) {
+Widget _wrap(FakeAlunoService service, ContaReceber conta, {FakeCaixaService? caixaService}) {
   return MaterialApp(
     theme: AppTheme.dark,
     home: RegistrarRecebimentoScreen(
       alunoService: service,
+      caixaService: caixaService ?? FakeCaixaService(),
       staffAtual: _staff,
       conta: conta,
     ),

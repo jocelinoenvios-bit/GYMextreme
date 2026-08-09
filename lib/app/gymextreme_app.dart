@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
+import '../services/caixa_service.dart';
 import '../services/cargo_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/plano_service.dart';
@@ -18,6 +19,7 @@ class GymExtremeApp extends StatelessWidget {
     final authService = AuthService();
     final userService = UserService();
     final alunoService = AlunoService();
+    final caixaService = CaixaService();
     final cargoService = CargoService();
     final funcionarioService = FuncionarioService();
     final planoService = PlanoService();
@@ -31,6 +33,7 @@ class GymExtremeApp extends StatelessWidget {
         authService: authService,
         userService: userService,
         alunoService: alunoService,
+        caixaService: caixaService,
         cargoService: cargoService,
         funcionarioService: funcionarioService,
         planoService: planoService,

@@ -8,6 +8,7 @@ import 'package:gymextreme_app/screens/contas_receber/contas_receber_list_screen
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/fake_caixa_service.dart';
 
 const _adm = AppUser(
   uid: 'adm-1',
@@ -48,7 +49,11 @@ const _carlos = AppUser(
 Widget _wrap(FakeAlunoService service, AppUser staffAtual) {
   return MaterialApp(
     theme: AppTheme.dark,
-    home: ContasReceberListScreen(alunoService: service, staffAtual: staffAtual),
+    home: ContasReceberListScreen(
+      alunoService: service,
+      caixaService: FakeCaixaService(),
+      staffAtual: staffAtual,
+    ),
   );
 }
 

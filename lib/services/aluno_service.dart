@@ -9,6 +9,7 @@ import '../models/anamnese.dart';
 import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
 import '../models/endereco.dart';
+import '../models/matricula.dart';
 import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
@@ -16,8 +17,9 @@ import '../models/user_role.dart';
 
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
 /// `alunos`), anamnese e termo de responsabilidade (campos dentro do
-/// mesmo documento), historico de avaliacoes fisicas e fichas de treino
-/// (subcolecoes `alunos/{uid}/avaliacoes` e `alunos/{uid}/treinos`).
+/// mesmo documento), historico de avaliacoes fisicas, fichas de treino e
+/// matriculas (subcolecoes `alunos/{uid}/avaliacoes`, `alunos/{uid}/treinos`
+/// e `alunos/{uid}/matriculas`).
 class AlunoService {
   AlunoService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -38,6 +40,9 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _pagamentos(String uid) =>
       _alunos.doc(uid).collection('pagamentos');
+
+  CollectionReference<Map<String, dynamic>> _matriculas(String uid) =>
+      _alunos.doc(uid).collection('matriculas');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
   ///
@@ -179,6 +184,102 @@ class AlunoService {
     final ultimoDiaDoNovoMes = DateTime(novoAno, novoMes + 1, 0).day;
     final dia = data.day > ultimoDiaDoNovoMes ? ultimoDiaDoNovoMes : data.day;
     return DateTime(novoAno, novoMes, dia);
+  }
+
+  /// Histórico de matrículas de UM aluno, mais recente primeiro. Usada
+  /// pela tela administrativa quando filtrada por um aluno específico.
+  Stream<List<Matricula>> watchMatriculas(String uid) {
+    return _matriculas(uid).snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => Matricula.fromFirestore(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => b.dataInicio.compareTo(a.dataInicio)),
+    );
+  }
+
+  /// Todas as matrículas de TODOS os alunos (collection group query sobre
+  /// `matriculas`) — alimenta a tela administrativa "Matrículas", que
+  /// precisa listar/filtrar por status/aluno/plano de uma vez, sem abrir
+  /// aluno por aluno.
+  ///
+  /// Sem `.orderBy()`/`.where()` no Firestore de propósito — mesmo motivo
+  /// de `watchAlunos()`: um `where`/`orderBy` sobre uma collection group
+  /// query também pode exigir índice composto, e a lista de matrículas de
+  /// uma academia é pequena o bastante pra filtrar/ordenar no cliente sem
+  /// custo real. A tela usa `Matricula.alunoId`/`planoId` (gravados no
+  /// próprio documento) pra filtrar sem precisar do path do aluno.
+  Stream<List<Matricula>> watchTodasMatriculas() {
+    return _firestore.collectionGroup('matriculas').snapshots().map(
+      (snapshot) => snapshot.docs
+          .map((doc) => Matricula.fromFirestore(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => b.dataInicio.compareTo(a.dataInicio)),
+    );
+  }
+
+  /// Cria uma matrícula nova pro aluno. Se ele já tiver uma matrícula com
+  /// `status == ativa`, ela é automaticamente encerrada (`cancelada`) na
+  /// mesma transação — garante o invariante "no máximo uma matrícula ativa
+  /// por aluno" mesmo sob concorrência (ex.: dois dispositivos da recepção
+  /// ao mesmo tempo), sem apagar o histórico.
+  ///
+  /// Também serve pra "renovar": chame de novo com o novo período/plano —
+  /// se a matrícula anterior já não estiver mais `ativa` (ex.: já expirou
+  /// e virou `vencida`), ela fica intacta no histórico, sem ser tocada.
+  Future<String> criarMatricula(
+    String alunoUid, {
+    required String planoId,
+    required DateTime dataInicio,
+    required DateTime dataVencimento,
+    required double valorContratado,
+    String? formaPagamento,
+    String? observacao,
+  }) async {
+    final ativasSnap = await _matriculas(
+      alunoUid,
+    ).where('status', isEqualTo: StatusMatricula.ativa.name).get();
+
+    return _firestore.runTransaction<String>((transaction) async {
+      // Todas as leituras da transação precisam vir antes de qualquer
+      // escrita (regra do Firestore) — por isso o get() de cada matrícula
+      // ainda ativa roda num laço separado do laço que as encerra.
+      final frescas = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final doc in ativasSnap.docs) {
+        frescas.add(await transaction.get(doc.reference));
+      }
+
+      for (final fresca in frescas) {
+        if (fresca.exists && fresca.data()?['status'] == StatusMatricula.ativa.name) {
+          transaction.update(fresca.reference, {
+            'status': StatusMatricula.cancelada.name,
+            'atualizadoEm': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      final novaRef = _matriculas(alunoUid).doc();
+      transaction.set(
+        novaRef,
+        Matricula(
+          alunoId: alunoUid,
+          planoId: planoId,
+          dataInicio: dataInicio,
+          dataVencimento: dataVencimento,
+          valorContratado: valorContratado,
+          formaPagamento: formaPagamento,
+          observacao: observacao,
+        ).toFirestore(),
+      );
+      return novaRef.id;
+    });
+  }
+
+  /// Cancela uma matrícula (fica no histórico, nunca é apagada).
+  Future<void> cancelarMatricula(String alunoUid, String matriculaId) {
+    return _matriculas(alunoUid).doc(matriculaId).set({
+      'status': StatusMatricula.cancelada.name,
+      'atualizadoEm': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   /// Fichas de treino do aluno, mais recentes/ativas primeiro.

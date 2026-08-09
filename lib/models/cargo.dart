@@ -79,7 +79,8 @@ class CargosPadrao {
     permissoesPadrao: {
       Permission.gerenciarAlunos,
       Permission.matriculas,
-      Permission.planos,
+      Permission.acessarPlanos,
+      Permission.cadastrarPlanos,
       Permission.frequencia,
       Permission.visitantes,
       Permission.receberMensalidades,

@@ -3,6 +3,7 @@ import 'package:gymextreme_app/models/anamnese.dart';
 import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/avaliacao_fisica.dart';
 import 'package:gymextreme_app/models/endereco.dart';
+import 'package:gymextreme_app/models/matricula.dart';
 import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/termo_aceite.dart';
 import 'package:gymextreme_app/models/treino.dart';
@@ -20,6 +21,7 @@ class FakeAlunoService implements AlunoService {
     this.avaliacoes = const [],
     this.treinos = const [],
     this.alunos = const [],
+    this.matriculas = const [],
   });
 
   Aluno? aluno;
@@ -28,11 +30,13 @@ class FakeAlunoService implements AlunoService {
   List<AvaliacaoFisica> avaliacoes;
   List<Treino> treinos;
   List<AppUser> alunos;
+  List<Matricula> matriculas;
 
   Aluno? ultimoAlunoSalvo;
   Anamnese? ultimaAnamneseSalva;
   TermoAceite? ultimoTermoSalvo;
   AvaliacaoFisica? ultimaAvaliacaoSalva;
+  String? ultimaMatriculaCanceladaId;
 
   @override
   Stream<List<AppUser>> watchAlunos() => Stream.value(alunos);
@@ -86,6 +90,56 @@ class FakeAlunoService implements AlunoService {
 
   @override
   Future<void> definirVencimentoInicial(String uid, DateTime vencimento) async {}
+
+  @override
+  Stream<List<Matricula>> watchMatriculas(String uid) =>
+      Stream.value(matriculas.where((m) => m.alunoId == uid).toList());
+
+  @override
+  Stream<List<Matricula>> watchTodasMatriculas() => Stream.value(matriculas);
+
+  @override
+  Future<String> criarMatricula(
+    String alunoUid, {
+    required String planoId,
+    required DateTime dataInicio,
+    required DateTime dataVencimento,
+    required double valorContratado,
+    String? formaPagamento,
+    String? observacao,
+  }) async {
+    final id = 'matricula-${matriculas.length + 1}';
+    matriculas = [
+      for (final matricula in matriculas)
+        if (matricula.alunoId == alunoUid && matricula.status == StatusMatricula.ativa)
+          matricula.copyWith(status: StatusMatricula.cancelada)
+        else
+          matricula,
+      Matricula(
+        id: id,
+        alunoId: alunoUid,
+        planoId: planoId,
+        dataInicio: dataInicio,
+        dataVencimento: dataVencimento,
+        valorContratado: valorContratado,
+        formaPagamento: formaPagamento,
+        observacao: observacao,
+      ),
+    ];
+    return id;
+  }
+
+  @override
+  Future<void> cancelarMatricula(String alunoUid, String matriculaId) async {
+    ultimaMatriculaCanceladaId = matriculaId;
+    matriculas = [
+      for (final matricula in matriculas)
+        if (matricula.id == matriculaId)
+          matricula.copyWith(status: StatusMatricula.cancelada)
+        else
+          matricula,
+    ];
+  }
 
   @override
   Stream<List<Treino>> watchTreinos(String uid) => Stream.value(treinos);

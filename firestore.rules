@@ -54,6 +54,21 @@ service cloud.firestore {
       allow write: if temPermissao('gerenciarFuncionarios');
     }
 
+    match /planos/{planoId} {
+      // Catalogo de planos da academia (nao pertence a nenhum aluno).
+      allow read: if temPermissao('acessarPlanos');
+      allow create: if temPermissao('cadastrarPlanos');
+      // "Excluir" um plano (PlanoService.excluirPlano) na pratica so seta
+      // `ativo: false` — nunca apaga o documento (preserva o historico
+      // das matriculas que ja o referenciam) — por isso quem so tem
+      // excluirPlanos (sem alterarPlanos) ainda pode fazer essa alteracao
+      // pontual, mas nao mexer em nenhum outro campo.
+      allow update: if temPermissao('alterarPlanos') ||
+        (temPermissao('excluirPlanos') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm']));
+      allow delete: if false;
+    }
+
     match /alunos/{uid} {
       // O proprio aluno pode ler a propria ficha; ADM/Personal leem e
       // escrevem a ficha de qualquer aluno (cadastro, anamnese, termo).
@@ -80,6 +95,26 @@ service cloud.firestore {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
       }
+
+      // Historico de matriculas do aluno — mesmo padrao de pagamentos: o
+      // proprio aluno so le a propria, staff generico tambem le, e so
+      // quem tem a permissao especifica de matriculas escreve (cria,
+      // renova, cancela).
+      match /matriculas/{matriculaId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if temPermissao('matriculas');
+      }
+    }
+
+    // Collection group query sobre `matriculas` (AlunoService.watchTodasMatriculas,
+    // usada pela tela administrativa "Matrículas") — uma regra normal em
+    // /alunos/{uid}/matriculas so autoriza acesso ao path exato; consultas
+    // "collection group" (que cruzam todas as subcolecoes matriculas de
+    // todos os alunos de uma vez) exigem esta regra com wildcard recursivo
+    // à parte. So leitura — toda escrita de matricula sempre passa pelo
+    // path completo (regra acima), nunca por uma query deste tipo.
+    match /{path=**}/matriculas/{matriculaId} {
+      allow read: if ehStaff();
     }
 
     // Controle de acesso da catraca (identificacao, autorizacao e

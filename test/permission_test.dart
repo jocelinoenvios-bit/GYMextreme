@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/app_user.dart';
+import 'package:gymextreme_app/models/cargo.dart';
 import 'package:gymextreme_app/models/permission.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/services/permission_service.dart';
@@ -21,6 +22,31 @@ void main() {
 
     test('setFromFirestoreValues com lista nula retorna vazio', () {
       expect(Permission.setFromFirestoreValues(null), isEmpty);
+    });
+
+    // FASE 1A: Permission.planos (flag unico, nunca usado em nenhuma tela)
+    // foi substituido pelos 4 granulares abaixo, no mesmo padrao ja usado
+    // pra Alunos (gerenciarAlunos + cadastrar/editar/excluirAlunos).
+    test('cobre as 4 permissoes granulares de planos', () {
+      expect(Permission.values, contains(Permission.acessarPlanos));
+      expect(Permission.values, contains(Permission.cadastrarPlanos));
+      expect(Permission.values, contains(Permission.alterarPlanos));
+      expect(Permission.values, contains(Permission.excluirPlanos));
+    });
+  });
+
+  group('CargosPadrao.recepcionista', () {
+    test('tem acesso e cadastro de planos, mas nao alterar/excluir', () {
+      final permissoes = CargosPadrao.recepcionista.permissoesPadrao;
+
+      expect(permissoes, contains(Permission.acessarPlanos));
+      expect(permissoes, contains(Permission.cadastrarPlanos));
+      expect(permissoes, isNot(contains(Permission.alterarPlanos)));
+      expect(permissoes, isNot(contains(Permission.excluirPlanos)));
+    });
+
+    test('continua com a permissao de matriculas', () {
+      expect(CargosPadrao.recepcionista.permissoesPadrao, contains(Permission.matriculas));
     });
   });
 

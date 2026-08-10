@@ -398,4 +398,90 @@ void main() {
       expect(permissoes, isNot(contains(Permission.pagarContasPagar)));
     });
   });
+
+  group('Permission — Produtos e Estoque (Fase 1E)', () {
+    test('cobre as 6 permissoes granulares', () {
+      expect(Permission.values, contains(Permission.acessarProdutos));
+      expect(Permission.values, contains(Permission.cadastrarProdutos));
+      expect(Permission.values, contains(Permission.alterarProdutos));
+      expect(Permission.values, contains(Permission.excluirProdutos));
+      expect(Permission.values, contains(Permission.acessarEstoque));
+      expect(Permission.values, contains(Permission.movimentarEstoque));
+    });
+
+    test('ADM tem as 6 automaticamente, mesmo sem nada gravado', () {
+      const adm = AppUser(
+        uid: 'adm1',
+        nome: 'Dono',
+        email: 'adm@gymextreme.com.br',
+        role: UserRole.adm,
+      );
+      expect(PermissionService.has(adm, Permission.acessarProdutos), isTrue);
+      expect(PermissionService.has(adm, Permission.cadastrarProdutos), isTrue);
+      expect(PermissionService.has(adm, Permission.alterarProdutos), isTrue);
+      expect(PermissionService.has(adm, Permission.excluirProdutos), isTrue);
+      expect(PermissionService.has(adm, Permission.acessarEstoque), isTrue);
+      expect(PermissionService.has(adm, Permission.movimentarEstoque), isTrue);
+    });
+
+    test(
+      'funcionario com so acessarProdutos nao consegue cadastrar, alterar, '
+      'excluir, acessar estoque nem movimentar',
+      () {
+        const funcionario = AppUser(
+          uid: 'func1',
+          nome: 'Estoquista',
+          email: 'estoque@gymextreme.com.br',
+          role: UserRole.funcionario,
+          permissoes: {Permission.acessarProdutos},
+        );
+
+        expect(PermissionService.has(funcionario, Permission.acessarProdutos), isTrue);
+        expect(PermissionService.has(funcionario, Permission.cadastrarProdutos), isFalse);
+        expect(PermissionService.has(funcionario, Permission.alterarProdutos), isFalse);
+        expect(PermissionService.has(funcionario, Permission.excluirProdutos), isFalse);
+        expect(PermissionService.has(funcionario, Permission.acessarEstoque), isFalse);
+        expect(PermissionService.has(funcionario, Permission.movimentarEstoque), isFalse);
+      },
+    );
+
+    test(
+      'funcionario com acessarEstoque mas sem movimentarEstoque so consulta',
+      () {
+        const funcionario = AppUser(
+          uid: 'func2',
+          nome: 'Consulta Estoque',
+          email: 'consulta@gymextreme.com.br',
+          role: UserRole.funcionario,
+          permissoes: {Permission.acessarEstoque},
+        );
+
+        expect(PermissionService.has(funcionario, Permission.acessarEstoque), isTrue);
+        expect(PermissionService.has(funcionario, Permission.movimentarEstoque), isFalse);
+      },
+    );
+
+    test('aluno nunca tem nenhuma das 6, mesmo com o campo corrompido', () {
+      const aluno = AppUser(
+        uid: 'aluno1',
+        nome: 'Aluno Teste',
+        email: 'aluno@gymextreme.com.br',
+        role: UserRole.aluno,
+        permissoes: {
+          Permission.acessarProdutos,
+          Permission.movimentarEstoque,
+        },
+      );
+
+      expect(PermissionService.has(aluno, Permission.acessarProdutos), isFalse);
+      expect(PermissionService.has(aluno, Permission.movimentarEstoque), isFalse);
+    });
+
+    test('cargo padrao de recepcionista nao ganha produtos/estoque por padrao', () {
+      final permissoes = CargosPadrao.recepcionista.permissoesPadrao;
+
+      expect(permissoes, isNot(contains(Permission.acessarProdutos)));
+      expect(permissoes, isNot(contains(Permission.movimentarEstoque)));
+    });
+  });
 }

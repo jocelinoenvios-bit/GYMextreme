@@ -166,6 +166,59 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /produtos/{produtoId} {
+      // Produtos e Estoque (Fase 1E): catálogo interno da academia — não
+      // pertence a nenhum aluno, mesmo padrão de `planos`/`caixas`/
+      // `contasPagar`. Sem nenhum vínculo com venda/PDV/pagamento —
+      // módulo deliberadamente independente do financeiro.
+      allow read: if temPermissao('acessarProdutos');
+
+      // Todo produto nasce ativo — "excluir" (`ProdutoService.definirAtivo`)
+      // nunca apaga o documento, só alterna esse campo.
+      allow create: if temPermissao('cadastrarProdutos') && request.resource.data.ativo == true;
+
+      // Cada permissão granular só pode alterar os campos da própria
+      // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`
+      // já usada em `contasPagar`. `movimentarEstoque` só pode tocar em
+      // `estoqueAtual` (a escrita real acontece dentro da transação de
+      // `ProdutoService.registrarEntrada`/`registrarSaida`/
+      // `registrarAjuste`, que também cria a movimentação); nunca pode
+      // editar nome/preço/categoria por essa via.
+      allow update: if
+        (temPermissao('alterarProdutos') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'nome', 'codigo', 'categoria', 'descricao', 'unidadeMedida', 'precoCusto',
+            'precoVenda', 'estoqueMinimo', 'fornecedor', 'atualizadoEm'
+          ])) ||
+        (temPermissao('excluirProdutos') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm'])) ||
+        (temPermissao('movimentarEstoque') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estoqueAtual', 'atualizadoEm']));
+
+      // Produtos com histórico de movimentações nunca são apagados
+      // fisicamente — preserva a rastreabilidade completa.
+      allow delete: if false;
+
+      match /movimentacoes/{movimentacaoId} {
+        // Leitura do histórico/quantidades exige especificamente
+        // `acessarEstoque` — separada de `acessarProdutos`, que só cobre
+        // o cadastro (nome, código, categoria, preços). As duas são
+        // permissões independentes, conforme pedido.
+        allow read: if temPermissao('acessarEstoque');
+
+        // Entrada, saída e ajuste usam a mesma permissão
+        // `movimentarEstoque` — não existe uma permissão dedicada só
+        // para ajuste no catálogo pedido; o requisito "ajustes exigem
+        // permissão apropriada" é cumprido por não deixar nenhuma
+        // movimentação passar sem essa permissão.
+        allow create: if temPermissao('movimentarEstoque');
+
+        // Movimentação lançada é definitiva — nunca editada nem apagada,
+        // preserva o histórico de estoque por completo.
+        allow update, delete: if false;
+      }
+    }
+
     match /alunos/{uid} {
       // O proprio aluno pode ler a propria ficha; ADM/Personal leem e
       // escrevem a ficha de qualquer aluno (cadastro, anamnese, termo).

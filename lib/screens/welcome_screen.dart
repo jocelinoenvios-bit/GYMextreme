@@ -12,6 +12,7 @@ import '../services/conta_pagar_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/permission_service.dart';
 import '../services/plano_service.dart';
+import '../services/produto_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
@@ -26,6 +27,7 @@ import 'exercicios/exercicios_list_screen.dart';
 import 'funcionarios/funcionarios_list_screen.dart';
 import 'matriculas/matriculas_list_screen.dart';
 import 'planos/planos_list_screen.dart';
+import 'produtos/produtos_list_screen.dart';
 
 /// Tela pos-login: cada botao aparece de acordo com as permissoes
 /// individuais do usuario logado (ver `PermissionService`), nao mais um
@@ -43,6 +45,7 @@ class WelcomeScreen extends StatelessWidget {
     required this.contaPagarService,
     required this.funcionarioService,
     required this.planoService,
+    required this.produtoService,
     required this.storageService,
   });
 
@@ -55,6 +58,7 @@ class WelcomeScreen extends StatelessWidget {
   final ContaPagarService contaPagarService;
   final FuncionarioService funcionarioService;
   final PlanoService planoService;
+  final ProdutoService produtoService;
   final StorageService storageService;
 
   @override
@@ -235,6 +239,21 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.request_quote_outlined),
                 label: const Text('CONTAS A PAGAR'),
+              ),
+            ],
+            if (PermissionService.has(user, Permission.acessarProdutos)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ProdutosListScreen(
+                      produtoService: produtoService,
+                      staffAtual: user,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.inventory_2_outlined),
+                label: const Text('PRODUTOS'),
               ),
             ],
             // Permission.bibliotecaExercicios é uma permissão de staff (o

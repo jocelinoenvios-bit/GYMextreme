@@ -6,6 +6,26 @@ import 'support/fake_produto_service.dart';
 
 void main() {
   group('criarProduto', () {
+    test('recusa estoque inicial negativo', () {
+      final service = FakeProdutoService();
+
+      expect(
+        () => service.criarProduto(
+          nome: 'Whey Protein',
+          codigo: 'WP001',
+          categoria: 'Suplementos',
+          unidadeMedida: 'un',
+          precoCusto: 50,
+          precoVenda: 90,
+          estoqueInicial: -5,
+          estoqueMinimo: 5,
+          staffUid: 's1',
+          staffNome: 'Ana',
+        ),
+        throwsA(isA<ProdutoServiceException>()),
+      );
+    });
+
     test('cadastra um produto novo, sempre ativo', () async {
       final service = FakeProdutoService();
 

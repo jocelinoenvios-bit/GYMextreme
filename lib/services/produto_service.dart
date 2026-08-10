@@ -78,6 +78,9 @@ class ProdutoService {
     required String staffUid,
     required String staffNome,
   }) async {
+    if (estoqueInicial < 0) {
+      throw ProdutoServiceException('O estoque inicial não pode ser negativo.');
+    }
     final ref = await _produtos.add(
       Produto(
         nome: nome,

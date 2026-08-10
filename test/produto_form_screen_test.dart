@@ -46,6 +46,27 @@ void main() {
     expect(service.produtos, isEmpty);
   });
 
+  testWidgets('nao salva com estoque inicial ou minimo negativos', (tester) async {
+    final service = FakeProdutoService();
+    await tester.pumpWidget(_wrap(service));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Nome'), 'Whey Protein');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Código/SKU'), 'WP001');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Categoria'), 'Suplementos');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Preço de venda (R\$)'),
+      '90,00',
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'Estoque inicial'), '-5');
+
+    await _tocar(tester, find.text('CADASTRAR PRODUTO'));
+    await tester.pump();
+
+    expect(find.text('Não pode ser negativo.'), findsOneWidget);
+    expect(service.produtos, isEmpty);
+  });
+
   testWidgets('cadastra um produto novo com dados validos', (tester) async {
     final service = FakeProdutoService();
     await tester.pumpWidget(_wrap(service));

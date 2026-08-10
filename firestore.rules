@@ -174,8 +174,13 @@ service cloud.firestore {
       allow read: if temPermissao('acessarProdutos');
 
       // Todo produto nasce ativo — "excluir" (`ProdutoService.definirAtivo`)
-      // nunca apaga o documento, só alterna esse campo.
-      allow create: if temPermissao('cadastrarProdutos') && request.resource.data.ativo == true;
+      // nunca apaga o documento, só alterna esse campo. `estoqueAtual >= 0`
+      // também é checado aqui — defesa extra, além da validação do
+      // formulário e de `ProdutoService.criarProduto`, contra estoque
+      // inicial negativo.
+      allow create: if temPermissao('cadastrarProdutos') &&
+        request.resource.data.ativo == true &&
+        request.resource.data.estoqueAtual >= 0;
 
       // Cada permissão granular só pode alterar os campos da própria
       // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`
@@ -183,7 +188,11 @@ service cloud.firestore {
       // `estoqueAtual` (a escrita real acontece dentro da transação de
       // `ProdutoService.registrarEntrada`/`registrarSaida`/
       // `registrarAjuste`, que também cria a movimentação); nunca pode
-      // editar nome/preço/categoria por essa via.
+      // editar nome/preço/categoria por essa via. A checagem
+      // `estoqueAtual >= 0` aqui é defesa em profundidade — o serviço já
+      // recusa qualquer movimentação que deixaria o estoque negativo,
+      // mas a regra também barra uma escrita direta via SDK que
+      // contornasse o app.
       allow update: if
         (temPermissao('alterarProdutos') &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -193,7 +202,8 @@ service cloud.firestore {
         (temPermissao('excluirProdutos') &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm'])) ||
         (temPermissao('movimentarEstoque') &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estoqueAtual', 'atualizadoEm']));
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estoqueAtual', 'atualizadoEm']) &&
+          request.resource.data.estoqueAtual >= 0);
 
       // Produtos com histórico de movimentações nunca são apagados
       // fisicamente — preserva a rastreabilidade completa.
@@ -210,8 +220,11 @@ service cloud.firestore {
         // `movimentarEstoque` — não existe uma permissão dedicada só
         // para ajuste no catálogo pedido; o requisito "ajustes exigem
         // permissão apropriada" é cumprido por não deixar nenhuma
-        // movimentação passar sem essa permissão.
-        allow create: if temPermissao('movimentarEstoque');
+        // movimentação passar sem essa permissão. `estoquePosterior >= 0`
+        // é a mesma defesa em profundidade contra estoque negativo do
+        // documento pai, aplicada aqui à movimentação em si.
+        allow create: if temPermissao('movimentarEstoque') &&
+          request.resource.data.estoquePosterior >= 0;
 
         // Movimentação lançada é definitiva — nunca editada nem apagada,
         // preserva o histórico de estoque por completo.

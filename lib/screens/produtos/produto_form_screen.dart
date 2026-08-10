@@ -225,10 +225,12 @@ class _ProdutoFormScreenState extends State<ProdutoFormScreen> {
                           controller: _estoqueInicialController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: const InputDecoration(labelText: 'Estoque inicial'),
-                          validator: (value) =>
-                              double.tryParse((value ?? '').trim()) == null
-                              ? 'Valor inválido.'
-                              : null,
+                          validator: (value) {
+                            final estoque = double.tryParse((value ?? '').trim());
+                            if (estoque == null) return 'Valor inválido.';
+                            if (estoque < 0) return 'Não pode ser negativo.';
+                            return null;
+                          },
                         ),
                       ),
                     if (!widget._ehEdicao) const SizedBox(width: 14),
@@ -237,10 +239,12 @@ class _ProdutoFormScreenState extends State<ProdutoFormScreen> {
                         controller: _estoqueMinimoController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: const InputDecoration(labelText: 'Estoque mínimo'),
-                        validator: (value) =>
-                            double.tryParse((value ?? '').trim()) == null
-                            ? 'Valor inválido.'
-                            : null,
+                        validator: (value) {
+                          final estoque = double.tryParse((value ?? '').trim());
+                          if (estoque == null) return 'Valor inválido.';
+                          if (estoque < 0) return 'Não pode ser negativo.';
+                          return null;
+                        },
                       ),
                     ),
                   ],

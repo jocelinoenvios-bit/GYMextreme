@@ -56,6 +56,9 @@ class FakeProdutoService implements ProdutoService {
     required String staffUid,
     required String staffNome,
   }) async {
+    if (estoqueInicial < 0) {
+      throw ProdutoServiceException('O estoque inicial não pode ser negativo.');
+    }
     final id = 'produto-${_proximoId++}';
     final produto = Produto(
       id: id,

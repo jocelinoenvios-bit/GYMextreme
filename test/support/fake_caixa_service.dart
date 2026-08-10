@@ -16,12 +16,16 @@ class FakeCaixaService implements CaixaService {
   /// caixa" sem precisar simular todo o estado da `ContaReceber`.
   bool lancarErroAoRegistrarRecebimento = false;
 
+  /// Mesma ideia acima, só que pro caminho de pagamento de `ContaPagar`.
+  bool lancarErroAoRegistrarPagamento = false;
+
   double? ultimoValorInicialAbertura;
   String? ultimoCaixaFechadoId;
   double? ultimoValorContadoFechamento;
   CaixaMovimentacao? ultimaMovimentacaoRegistrada;
   ({String caixaId, String alunoUid, String contaReceberId, double valorPago})?
   ultimoRecebimentoViaCaixa;
+  ({String caixaId, String contaPagarId, double valorPago})? ultimoPagamentoViaCaixa;
 
   @override
   Stream<Caixa?> watchCaixaAberto() => Stream.value(caixaAberto);
@@ -64,9 +68,10 @@ class FakeCaixaService implements CaixaService {
     required String staffUid,
     required String staffNome,
   }) async {
-    if (tipo == TipoMovimentacaoCaixa.recebimento) {
+    if (tipo == TipoMovimentacaoCaixa.recebimento ||
+        tipo == TipoMovimentacaoCaixa.pagamentoContaPagar) {
       throw CaixaServiceException(
-        'Recebimentos de cobrança devem usar registrarRecebimentoContaReceber.',
+        'Recebimentos e pagamentos vinculados a contas devem usar o método dedicado.',
       );
     }
     if (caixaAberto == null || caixaAberto!.id != caixaId) {
@@ -77,7 +82,8 @@ class FakeCaixaService implements CaixaService {
       TipoMovimentacaoCaixa.suprimento => valor.abs(),
       TipoMovimentacaoCaixa.retirada => -valor.abs(),
       TipoMovimentacaoCaixa.ajuste => valor,
-      TipoMovimentacaoCaixa.recebimento => valor,
+      TipoMovimentacaoCaixa.recebimento ||
+      TipoMovimentacaoCaixa.pagamentoContaPagar => valor,
     };
 
     final mov = CaixaMovimentacao(
@@ -134,6 +140,47 @@ class FakeCaixaService implements CaixaService {
       caixaId: caixaId,
       alunoUid: alunoUid,
       contaReceberId: contaReceberId,
+      valorPago: valorPago,
+    );
+    return mov.id!;
+  }
+
+  @override
+  Future<String> registrarPagamentoContaPagar({
+    required String caixaId,
+    required String contaPagarId,
+    required double valorPago,
+    required double desconto,
+    required double jurosMulta,
+    required DateTime dataPagamento,
+    String? formaPagamento,
+    String? observacao,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    if (lancarErroAoRegistrarPagamento) {
+      throw CaixaServiceException('Esta conta já foi paga.');
+    }
+    if (caixaAberto == null || caixaAberto!.id != caixaId) {
+      throw CaixaServiceException('Este caixa não está aberto.');
+    }
+
+    final mov = CaixaMovimentacao(
+      id: 'mov-${movimentacoes.length + 1}',
+      tipo: TipoMovimentacaoCaixa.pagamentoContaPagar,
+      valor: -valorPago.abs(),
+      formaPagamento: formaPagamento,
+      descricao: observacao,
+      contaPagarId: contaPagarId,
+      staffUid: staffUid,
+      staffNome: staffNome,
+      criadoEm: DateTime.now(),
+    );
+    movimentacoes = [...movimentacoes, mov];
+    ultimaMovimentacaoRegistrada = mov;
+    ultimoPagamentoViaCaixa = (
+      caixaId: caixaId,
+      contaPagarId: contaPagarId,
       valorPago: valorPago,
     );
     return mov.id!;

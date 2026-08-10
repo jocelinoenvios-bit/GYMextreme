@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/caixa.dart';
 import '../models/caixa_movimentacao.dart';
+import '../models/conta_pagar.dart';
 import '../models/conta_receber.dart';
 
 /// Controle de caixa da academia (coleção `caixas`, nível de academia —
@@ -112,9 +113,10 @@ class CaixaService {
   }
 
   /// Registra uma movimentação avulsa — suprimento, retirada ou ajuste.
-  /// Para recebimento de cobrança use sempre [registrarRecebimentoContaReceber],
-  /// nunca este método diretamente (por isso `tipo == recebimento` é
-  /// rejeitado aqui).
+  /// Para recebimento de cobrança use sempre [registrarRecebimentoContaReceber]
+  /// e para pagamento de despesa use sempre [registrarPagamentoContaPagar] —
+  /// nunca este método diretamente (por isso ambos os tipos são
+  /// rejeitados aqui).
   ///
   /// [valor] é a MAGNITUDE positiva digitada pelo usuário pra
   /// suprimento/retirada — o sinal certo é aplicado aqui dentro (retirada
@@ -130,9 +132,10 @@ class CaixaService {
     required String staffUid,
     required String staffNome,
   }) async {
-    if (tipo == TipoMovimentacaoCaixa.recebimento) {
+    if (tipo == TipoMovimentacaoCaixa.recebimento ||
+        tipo == TipoMovimentacaoCaixa.pagamentoContaPagar) {
       throw CaixaServiceException(
-        'Recebimentos de cobrança devem usar registrarRecebimentoContaReceber.',
+        'Recebimentos e pagamentos vinculados a contas devem usar o método dedicado.',
       );
     }
 
@@ -142,7 +145,8 @@ class CaixaService {
       TipoMovimentacaoCaixa.suprimento => valor.abs(),
       TipoMovimentacaoCaixa.retirada => -valor.abs(),
       TipoMovimentacaoCaixa.ajuste => valor,
-      TipoMovimentacaoCaixa.recebimento =>
+      TipoMovimentacaoCaixa.recebimento ||
+      TipoMovimentacaoCaixa.pagamentoContaPagar =>
         valor, // inalcançável — bloqueado acima
     };
 
@@ -236,6 +240,83 @@ class CaixaService {
           descricao: observacao,
           contaReceberAlunoId: alunoUid,
           contaReceberId: contaReceberId,
+          staffUid: staffUid,
+          staffNome: staffNome,
+        ).toFirestore(),
+      );
+
+      return movRef.id;
+    });
+  }
+
+  /// Registra o pagamento de uma `ContaPagar` E a movimentação de caixa
+  /// correspondente (uma saída), atomicamente — mesmo padrão de
+  /// [registrarRecebimentoContaReceber], só que na direção contrária
+  /// (`valor` sempre negativo). Usado quando existe um caixa aberto no
+  /// momento do pagamento; sem caixa aberto, o pagamento passa por
+  /// `ContaPagarService.registrarPagamentoSemCaixa` sozinho.
+  ///
+  /// Trava contra duplicidade: se a `ContaPagar` já tiver
+  /// `movimentacaoCaixaId` preenchido, lança [CaixaServiceException] em
+  /// vez de criar uma segunda movimentação pro mesmo pagamento. Também
+  /// recusa se o caixa já estiver fechado.
+  Future<String> registrarPagamentoContaPagar({
+    required String caixaId,
+    required String contaPagarId,
+    required double valorPago,
+    required double desconto,
+    required double jurosMulta,
+    required DateTime dataPagamento,
+    String? formaPagamento,
+    String? observacao,
+    required String staffUid,
+    required String staffNome,
+  }) {
+    final contaRef = _firestore.collection('contasPagar').doc(contaPagarId);
+    final caixaRef = _caixas.doc(caixaId);
+    final movRef = _movimentacoes(caixaId).doc();
+
+    return _firestore.runTransaction<String>((transaction) async {
+      // Leituras antes de qualquer escrita (regra do Firestore).
+      final contaSnap = await transaction.get(contaRef);
+      final caixaSnap = await transaction.get(caixaRef);
+
+      if (!contaSnap.exists) {
+        throw CaixaServiceException('Conta a pagar não encontrada.');
+      }
+      if (contaSnap.data()?['movimentacaoCaixaId'] != null) {
+        throw CaixaServiceException('Esta conta já foi paga.');
+      }
+      if (!caixaSnap.exists ||
+          StatusCaixa.fromFirestoreValue(
+                caixaSnap.data()?['status'] as String?,
+              ) !=
+              StatusCaixa.aberto) {
+        throw CaixaServiceException('Este caixa não está aberto.');
+      }
+
+      transaction.update(contaRef, {
+        'status': StatusContaPagar.pago.name,
+        'valorPago': valorPago,
+        'desconto': desconto,
+        'jurosMulta': jurosMulta,
+        'dataPagamento': Timestamp.fromDate(dataPagamento),
+        'formaPagamento': formaPagamento,
+        'observacao': observacao,
+        'pagoPorUid': staffUid,
+        'pagoPorNome': staffNome,
+        'movimentacaoCaixaId': movRef.id,
+        'atualizadoEm': FieldValue.serverTimestamp(),
+      });
+
+      transaction.set(
+        movRef,
+        CaixaMovimentacao(
+          tipo: TipoMovimentacaoCaixa.pagamentoContaPagar,
+          valor: -valorPago.abs(),
+          formaPagamento: formaPagamento,
+          descricao: observacao,
+          contaPagarId: contaPagarId,
           staffUid: staffUid,
           staffNome: staffNome,
         ).toFirestore(),

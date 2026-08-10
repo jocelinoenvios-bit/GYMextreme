@@ -4,6 +4,7 @@ import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/caixa_service.dart';
 import '../services/cargo_service.dart';
+import '../services/conta_pagar_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/plano_service.dart';
 import '../services/storage_service.dart';
@@ -21,6 +22,7 @@ class GymExtremeApp extends StatelessWidget {
     final alunoService = AlunoService();
     final caixaService = CaixaService();
     final cargoService = CargoService();
+    final contaPagarService = ContaPagarService();
     final funcionarioService = FuncionarioService();
     final planoService = PlanoService();
     final storageService = StorageService();
@@ -35,6 +37,7 @@ class GymExtremeApp extends StatelessWidget {
         alunoService: alunoService,
         caixaService: caixaService,
         cargoService: cargoService,
+        contaPagarService: contaPagarService,
         funcionarioService: funcionarioService,
         planoService: planoService,
         storageService: storageService,

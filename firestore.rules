@@ -112,16 +112,58 @@ service cloud.firestore {
         // uma operacao sensivel sem tela propria ainda (nao pedida entre
         // as 6 permissoes granulares desta fase) — reservada pro ADM ate
         // ganhar uma permissao dedicada num proximo modulo.
+        // "pagamentoContaPagar" (Fase 1D) so nasce junto com o pagamento de
+        // uma ContaPagar (`CaixaService.registrarPagamentoContaPagar`),
+        // por isso usa a mesma permissao "pagarContasPagar" que ja
+        // autoriza aquela transacao (ver /contasPagar abaixo).
         allow create: if
           (request.resource.data.tipo == 'retirada' && temPermissao('realizarRetiradas')) ||
           (request.resource.data.tipo == 'suprimento' && temPermissao('realizarSuprimentos')) ||
           (request.resource.data.tipo == 'recebimento' && temPermissao('receberContasReceber')) ||
+          (request.resource.data.tipo == 'pagamentoContaPagar' && temPermissao('pagarContasPagar')) ||
           (request.resource.data.tipo == 'ajuste' && ehAdm());
 
         // Movimentacao lancada e definitiva — nunca editada nem apagada
         // (mesma logica de imutabilidade ja usada em pagamentos/contasReceber).
         allow update, delete: if false;
       }
+    }
+
+    match /contasPagar/{contaId} {
+      // Contas a Pagar (Fase 1D): despesas da academia (fornecedor,
+      // aluguel, contas de consumo etc.) — nao pertence a nenhum aluno,
+      // mesmo padrao de `planos`/`caixas` (ao contrario de
+      // `contasReceber`, que vive dentro de /alunos/{uid}).
+      allow read: if temPermissao('acessarContasPagar');
+
+      // Toda despesa nasce pendente — nunca criada ja como paga (isso e
+      // sempre responsabilidade de `registrarPagamentoSemCaixa` ou
+      // `CaixaService.registrarPagamentoContaPagar`, nunca da criacao
+      // direta).
+      allow create: if temPermissao('cadastrarContasPagar') &&
+        request.resource.data.status == 'pendente';
+
+      // Cada permissao granular so pode alterar os campos da propria
+      // acao — mesma tecnica de `diff().affectedKeys().hasOnly([...])`
+      // ja usada em `contasReceber`, pra impedir que "pagar" vire uma
+      // porta aberta pra editar fornecedor/valor, ou que "excluir" faca
+      // mais que cancelar.
+      allow update: if
+        (temPermissao('alterarContasPagar') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'fornecedor', 'descricao', 'categoria', 'valorOriginal', 'desconto',
+            'jurosMulta', 'vencimento', 'observacao', 'atualizadoEm'
+          ])) ||
+        (temPermissao('pagarContasPagar') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'valorPago', 'desconto', 'jurosMulta', 'dataPagamento',
+            'formaPagamento', 'observacao', 'pagoPorUid', 'pagoPorNome',
+            'movimentacaoCaixaId', 'atualizadoEm'
+          ])) ||
+        (temPermissao('excluirContasPagar') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm']));
+
+      allow delete: if false;
     }
 
     match /alunos/{uid} {

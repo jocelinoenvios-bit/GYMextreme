@@ -182,6 +182,72 @@ void main() {
     });
   });
 
+  group('registrarPagamentoContaPagar', () {
+    test('registra a movimentacao do tipo pagamentoContaPagar como saida (valor negativo)', () async {
+      final service = FakeCaixaService();
+      final id = await service.abrirCaixa(valorInicial: 100, staffUid: 's1', staffNome: 'Ana');
+
+      final movId = await service.registrarPagamentoContaPagar(
+        caixaId: id,
+        contaPagarId: 'conta1',
+        valorPago: 60,
+        desconto: 0,
+        jurosMulta: 0,
+        dataPagamento: DateTime(2026, 8, 10),
+        formaPagamento: 'PIX',
+        staffUid: 's1',
+        staffNome: 'Ana',
+      );
+
+      final mov = service.movimentacoes.single;
+      expect(mov.id, movId);
+      expect(mov.tipo, TipoMovimentacaoCaixa.pagamentoContaPagar);
+      expect(mov.valor, -60);
+      expect(mov.contaPagarId, 'conta1');
+      expect(
+        service.ultimoPagamentoViaCaixa,
+        (caixaId: id, contaPagarId: 'conta1', valorPago: 60),
+      );
+    });
+
+    test('recusa pagar de novo a mesma conta (duplicidade)', () async {
+      final service = FakeCaixaService()..lancarErroAoRegistrarPagamento = true;
+      final id = await service.abrirCaixa(valorInicial: 100, staffUid: 's1', staffNome: 'Ana');
+
+      expect(
+        () => service.registrarPagamentoContaPagar(
+          caixaId: id,
+          contaPagarId: 'conta1',
+          valorPago: 60,
+          desconto: 0,
+          jurosMulta: 0,
+          dataPagamento: DateTime(2026, 8, 10),
+          staffUid: 's1',
+          staffNome: 'Ana',
+        ),
+        throwsA(isA<CaixaServiceException>()),
+      );
+    });
+
+    test('recusa pagar num caixa que nao esta aberto', () async {
+      final service = FakeCaixaService();
+
+      expect(
+        () => service.registrarPagamentoContaPagar(
+          caixaId: 'caixa-fechado',
+          contaPagarId: 'conta1',
+          valorPago: 60,
+          desconto: 0,
+          jurosMulta: 0,
+          dataPagamento: DateTime(2026, 8, 10),
+          staffUid: 's1',
+          staffNome: 'Ana',
+        ),
+        throwsA(isA<CaixaServiceException>()),
+      );
+    });
+  });
+
   group('fecharCaixa', () {
     test('calcula o saldo esperado como valor inicial + soma das movimentacoes', () async {
       final service = FakeCaixaService();

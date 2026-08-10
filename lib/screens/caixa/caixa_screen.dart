@@ -388,6 +388,7 @@ class _MovimentacaoTile extends StatelessWidget {
       case TipoMovimentacaoCaixa.suprimento:
         return mov.valor >= 0 ? _corAberto : AppColors.error;
       case TipoMovimentacaoCaixa.retirada:
+      case TipoMovimentacaoCaixa.pagamentoContaPagar:
         return AppColors.error;
       case TipoMovimentacaoCaixa.ajuste:
         return mov.valor >= 0 ? _corAberto : AppColors.error;

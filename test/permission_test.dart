@@ -330,4 +330,72 @@ void main() {
       expect(permissoes, contains(Permission.consultarRelatorioCaixa));
     });
   });
+
+  group('Permission — Contas a Pagar (Fase 1D)', () {
+    test('cobre as 5 permissoes granulares', () {
+      expect(Permission.values, contains(Permission.acessarContasPagar));
+      expect(Permission.values, contains(Permission.cadastrarContasPagar));
+      expect(Permission.values, contains(Permission.alterarContasPagar));
+      expect(Permission.values, contains(Permission.excluirContasPagar));
+      expect(Permission.values, contains(Permission.pagarContasPagar));
+    });
+
+    test('ADM tem as 5 automaticamente, mesmo sem nada gravado', () {
+      const adm = AppUser(
+        uid: 'adm1',
+        nome: 'Dono',
+        email: 'adm@gymextreme.com.br',
+        role: UserRole.adm,
+      );
+      expect(PermissionService.has(adm, Permission.acessarContasPagar), isTrue);
+      expect(PermissionService.has(adm, Permission.cadastrarContasPagar), isTrue);
+      expect(PermissionService.has(adm, Permission.alterarContasPagar), isTrue);
+      expect(PermissionService.has(adm, Permission.excluirContasPagar), isTrue);
+      expect(PermissionService.has(adm, Permission.pagarContasPagar), isTrue);
+    });
+
+    test(
+      'funcionario com so acessarContasPagar nao consegue cadastrar, '
+      'alterar, excluir nem pagar',
+      () {
+        const funcionario = AppUser(
+          uid: 'func1',
+          nome: 'Financeiro',
+          email: 'financeiro@gymextreme.com.br',
+          role: UserRole.funcionario,
+          permissoes: {Permission.acessarContasPagar},
+        );
+
+        expect(PermissionService.has(funcionario, Permission.acessarContasPagar), isTrue);
+        expect(PermissionService.has(funcionario, Permission.cadastrarContasPagar), isFalse);
+        expect(PermissionService.has(funcionario, Permission.alterarContasPagar), isFalse);
+        expect(PermissionService.has(funcionario, Permission.excluirContasPagar), isFalse);
+        expect(PermissionService.has(funcionario, Permission.pagarContasPagar), isFalse);
+      },
+    );
+
+    test('aluno nunca tem nenhuma das 5, mesmo com o campo corrompido', () {
+      const aluno = AppUser(
+        uid: 'aluno1',
+        nome: 'Aluno Teste',
+        email: 'aluno@gymextreme.com.br',
+        role: UserRole.aluno,
+        permissoes: {
+          Permission.acessarContasPagar,
+          Permission.cadastrarContasPagar,
+          Permission.pagarContasPagar,
+        },
+      );
+
+      expect(PermissionService.has(aluno, Permission.acessarContasPagar), isFalse);
+      expect(PermissionService.has(aluno, Permission.pagarContasPagar), isFalse);
+    });
+
+    test('cargo padrao de recepcionista nao ganha contas a pagar por padrao', () {
+      final permissoes = CargosPadrao.recepcionista.permissoesPadrao;
+
+      expect(permissoes, isNot(contains(Permission.acessarContasPagar)));
+      expect(permissoes, isNot(contains(Permission.pagarContasPagar)));
+    });
+  });
 }

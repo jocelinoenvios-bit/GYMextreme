@@ -46,7 +46,11 @@ enum Permission {
 
   // Financeiro
   financeiro(PermissaoCategoria.financeiro, 'Financeiro'),
-  contasPagar(PermissaoCategoria.financeiro, 'Contas a pagar'),
+  acessarContasPagar(PermissaoCategoria.financeiro, 'Acessar contas a pagar'),
+  cadastrarContasPagar(PermissaoCategoria.financeiro, 'Cadastrar contas a pagar'),
+  alterarContasPagar(PermissaoCategoria.financeiro, 'Alterar contas a pagar'),
+  excluirContasPagar(PermissaoCategoria.financeiro, 'Excluir contas a pagar'),
+  pagarContasPagar(PermissaoCategoria.financeiro, 'Pagar contas a pagar'),
   acessarContasReceber(PermissaoCategoria.financeiro, 'Acessar contas a receber'),
   cadastrarContasReceber(PermissaoCategoria.financeiro, 'Cadastrar contas a receber'),
   alterarContasReceber(PermissaoCategoria.financeiro, 'Alterar contas a receber'),

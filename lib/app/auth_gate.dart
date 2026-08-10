@@ -7,6 +7,7 @@ import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/caixa_service.dart';
 import '../services/cargo_service.dart';
+import '../services/conta_pagar_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/plano_service.dart';
 import '../services/storage_service.dart';
@@ -23,6 +24,7 @@ class AuthGate extends StatelessWidget {
     required this.alunoService,
     required this.caixaService,
     required this.cargoService,
+    required this.contaPagarService,
     required this.funcionarioService,
     required this.planoService,
     required this.storageService,
@@ -33,6 +35,7 @@ class AuthGate extends StatelessWidget {
   final AlunoService alunoService;
   final CaixaService caixaService;
   final CargoService cargoService;
+  final ContaPagarService contaPagarService;
   final FuncionarioService funcionarioService;
   final PlanoService planoService;
   final StorageService storageService;
@@ -62,6 +65,7 @@ class AuthGate extends StatelessWidget {
           alunoService: alunoService,
           caixaService: caixaService,
           cargoService: cargoService,
+          contaPagarService: contaPagarService,
           funcionarioService: funcionarioService,
           planoService: planoService,
           storageService: storageService,

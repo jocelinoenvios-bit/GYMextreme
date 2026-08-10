@@ -4,7 +4,7 @@ import 'package:gymextreme_app/models/caixa_movimentacao.dart';
 
 void main() {
   group('TipoMovimentacaoCaixa', () {
-    test('fromFirestoreValue reconhece os 4 tipos', () {
+    test('fromFirestoreValue reconhece os 5 tipos', () {
       expect(
         TipoMovimentacaoCaixa.fromFirestoreValue('recebimento'),
         TipoMovimentacaoCaixa.recebimento,
@@ -18,6 +18,10 @@ void main() {
         TipoMovimentacaoCaixa.retirada,
       );
       expect(TipoMovimentacaoCaixa.fromFirestoreValue('ajuste'), TipoMovimentacaoCaixa.ajuste);
+      expect(
+        TipoMovimentacaoCaixa.fromFirestoreValue('pagamentoContaPagar'),
+        TipoMovimentacaoCaixa.pagamentoContaPagar,
+      );
     });
 
     test('fromFirestoreValue com valor desconhecido/nulo cai em ajuste', () {
@@ -60,6 +64,20 @@ void main() {
       final dados = retirada.toFirestore();
       expect(dados['tipo'], 'retirada');
       expect(dados['valor'], -50);
+    });
+
+    test('fromFirestore le a referencia a ContaPagar', () {
+      final mov = CaixaMovimentacao.fromFirestore('mov2', {
+        'tipo': 'pagamentoContaPagar',
+        'valor': -60,
+        'contaPagarId': 'conta1',
+        'staffUid': 'staff1',
+        'staffNome': 'Recepção Ana',
+      });
+
+      expect(mov.tipo, TipoMovimentacaoCaixa.pagamentoContaPagar);
+      expect(mov.valor, -60);
+      expect(mov.contaPagarId, 'conta1');
     });
   });
 }

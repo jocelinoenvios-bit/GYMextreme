@@ -5,13 +5,15 @@ enum TipoMovimentacaoCaixa {
   recebimento,
   suprimento,
   retirada,
-  ajuste;
+  ajuste,
+  pagamentoContaPagar;
 
   String get label => switch (this) {
     TipoMovimentacaoCaixa.recebimento => 'Recebimento',
     TipoMovimentacaoCaixa.suprimento => 'Suprimento',
     TipoMovimentacaoCaixa.retirada => 'Retirada',
     TipoMovimentacaoCaixa.ajuste => 'Ajuste',
+    TipoMovimentacaoCaixa.pagamentoContaPagar => 'Pagamento de conta',
   };
 
   static TipoMovimentacaoCaixa fromFirestoreValue(String? value) {
@@ -42,6 +44,7 @@ class CaixaMovimentacao {
     this.descricao,
     this.contaReceberAlunoId,
     this.contaReceberId,
+    this.contaPagarId,
     required this.staffUid,
     required this.staffNome,
     this.criadoEm,
@@ -61,6 +64,13 @@ class CaixaMovimentacao {
   final String? contaReceberAlunoId;
   final String? contaReceberId;
 
+  /// Referência pra rastrear a origem quando o movimento veio do
+  /// pagamento de uma `ContaPagar` — ver
+  /// `CaixaService.registrarPagamentoContaPagar`. `ContaPagar.
+  /// movimentacaoCaixaId` aponta de volta pra este documento, mesmo
+  /// raciocínio de `contaReceberId` acima.
+  final String? contaPagarId;
+
   final String staffUid;
   final String staffNome;
   final DateTime? criadoEm;
@@ -78,6 +88,7 @@ class CaixaMovimentacao {
       descricao: data['descricao'] as String?,
       contaReceberAlunoId: data['contaReceberAlunoId'] as String?,
       contaReceberId: data['contaReceberId'] as String?,
+      contaPagarId: data['contaPagarId'] as String?,
       staffUid: data['staffUid'] as String? ?? '',
       staffNome: data['staffNome'] as String? ?? '',
       criadoEm: criadoEm is Timestamp ? criadoEm.toDate() : null,
@@ -92,6 +103,7 @@ class CaixaMovimentacao {
       'descricao': descricao,
       'contaReceberAlunoId': contaReceberAlunoId,
       'contaReceberId': contaReceberId,
+      'contaPagarId': contaPagarId,
       'staffUid': staffUid,
       'staffNome': staffNome,
       'criadoEm': criadoEm != null

@@ -8,6 +8,7 @@ import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
 import '../services/caixa_service.dart';
 import '../services/cargo_service.dart';
+import '../services/conta_pagar_service.dart';
 import '../services/funcionario_service.dart';
 import '../services/permission_service.dart';
 import '../services/plano_service.dart';
@@ -19,6 +20,7 @@ import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'area_aluno/meus_treinos_screen.dart';
 import 'caixa/caixa_screen.dart';
+import 'contas_pagar/contas_pagar_list_screen.dart';
 import 'contas_receber/contas_receber_list_screen.dart';
 import 'exercicios/exercicios_list_screen.dart';
 import 'funcionarios/funcionarios_list_screen.dart';
@@ -38,6 +40,7 @@ class WelcomeScreen extends StatelessWidget {
     required this.alunoService,
     required this.caixaService,
     required this.cargoService,
+    required this.contaPagarService,
     required this.funcionarioService,
     required this.planoService,
     required this.storageService,
@@ -49,6 +52,7 @@ class WelcomeScreen extends StatelessWidget {
   final AlunoService alunoService;
   final CaixaService caixaService;
   final CargoService cargoService;
+  final ContaPagarService contaPagarService;
   final FuncionarioService funcionarioService;
   final PlanoService planoService;
   final StorageService storageService;
@@ -215,6 +219,22 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.point_of_sale_outlined),
                 label: const Text('CONTROLE DE CAIXA'),
+              ),
+            ],
+            if (PermissionService.has(user, Permission.acessarContasPagar)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ContasPagarListScreen(
+                      contaPagarService: contaPagarService,
+                      caixaService: caixaService,
+                      staffAtual: user,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.request_quote_outlined),
+                label: const Text('CONTAS A PAGAR'),
               ),
             ],
             // Permission.bibliotecaExercicios é uma permissão de staff (o

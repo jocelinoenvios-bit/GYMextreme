@@ -75,6 +75,18 @@ class AlunoService {
         );
   }
 
+  /// Todas as fichas de aluno (coleção `alunos`, um documento por uid) —
+  /// usado pelos relatórios/dashboard pra cruzar `proximoVencimento`/
+  /// `ativo` de todo mundo de uma vez, sem precisar de uma leitura por
+  /// aluno. Sem `.where()`/`.orderBy()` no Firestore, mesmo motivo de
+  /// [watchAlunos]: evita depender de índice composto.
+  Stream<List<Aluno>> watchTodosAlunos() {
+    return _alunos.snapshots().map(
+      (snapshot) =>
+          snapshot.docs.map((doc) => Aluno.fromFirestore(doc.id, doc.data())).toList(),
+    );
+  }
+
   Stream<Aluno?> watchAluno(String uid) {
     return _alunos.doc(uid).snapshots().map((snapshot) {
       final data = snapshot.data();

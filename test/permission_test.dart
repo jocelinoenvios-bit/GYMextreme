@@ -484,4 +484,59 @@ void main() {
       expect(permissoes, isNot(contains(Permission.movimentarEstoque)));
     });
   });
+
+  group('Permission — Relatórios (Fase 1F)', () {
+    test('Permission.relatorios existe (reaproveitada, nao criada nesta fase)', () {
+      expect(Permission.values, contains(Permission.relatorios));
+    });
+
+    test('ADM tem relatorios automaticamente, mesmo sem nada gravado', () {
+      const adm = AppUser(
+        uid: 'adm1',
+        nome: 'Dono',
+        email: 'adm@gymextreme.com.br',
+        role: UserRole.adm,
+      );
+      expect(PermissionService.has(adm, Permission.relatorios), isTrue);
+    });
+
+    test('funcionario so tem relatorios se a permissao for concedida explicitamente', () {
+      const semRelatorios = AppUser(
+        uid: 'func1',
+        nome: 'Recepção',
+        email: 'recepcao@gymextreme.com.br',
+        role: UserRole.funcionario,
+        permissoes: {Permission.gerenciarAlunos},
+      );
+      const comRelatorios = AppUser(
+        uid: 'func2',
+        nome: 'Gerente',
+        email: 'gerente@gymextreme.com.br',
+        role: UserRole.funcionario,
+        permissoes: {Permission.relatorios},
+      );
+
+      expect(PermissionService.has(semRelatorios, Permission.relatorios), isFalse);
+      expect(PermissionService.has(comRelatorios, Permission.relatorios), isTrue);
+    });
+
+    test('aluno nunca tem relatorios, mesmo com o campo corrompido', () {
+      const aluno = AppUser(
+        uid: 'aluno1',
+        nome: 'Aluno Teste',
+        email: 'aluno@gymextreme.com.br',
+        role: UserRole.aluno,
+        permissoes: {Permission.relatorios},
+      );
+
+      expect(PermissionService.has(aluno, Permission.relatorios), isFalse);
+    });
+
+    test('cargo padrao de recepcionista nao ganha relatorios por padrao', () {
+      expect(
+        CargosPadrao.recepcionista.permissoesPadrao,
+        isNot(contains(Permission.relatorios)),
+      );
+    });
+  });
 }

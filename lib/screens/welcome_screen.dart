@@ -28,6 +28,7 @@ import 'funcionarios/funcionarios_list_screen.dart';
 import 'matriculas/matriculas_list_screen.dart';
 import 'planos/planos_list_screen.dart';
 import 'produtos/produtos_list_screen.dart';
+import 'relatorios/dashboard_screen.dart';
 
 /// Tela pos-login: cada botao aparece de acordo com as permissoes
 /// individuais do usuario logado (ver `PermissionService`), nao mais um
@@ -147,6 +148,24 @@ class WelcomeScreen extends StatelessWidget {
               style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
             ),
             Text(user.email, style: const TextStyle(color: AppColors.textSecondary)),
+            if (PermissionService.has(user, Permission.relatorios)) ...[
+              const SizedBox(height: 28),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DashboardScreen(
+                      alunoService: alunoService,
+                      caixaService: caixaService,
+                      contaPagarService: contaPagarService,
+                      produtoService: produtoService,
+                      staffAtual: user,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.dashboard_outlined),
+                label: const Text('PAINEL E RELATÓRIOS'),
+              ),
+            ],
             if (PermissionService.has(user, Permission.gerenciarAlunos)) ...[
               const SizedBox(height: 28),
               ElevatedButton.icon(

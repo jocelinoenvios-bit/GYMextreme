@@ -22,6 +22,7 @@ class FakeAlunoService implements AlunoService {
     this.avaliacoes = const [],
     this.treinos = const [],
     this.alunos = const [],
+    this.fichasAlunos = const [],
     this.matriculas = const [],
     this.contasReceber = const [],
   });
@@ -32,6 +33,11 @@ class FakeAlunoService implements AlunoService {
   List<AvaliacaoFisica> avaliacoes;
   List<Treino> treinos;
   List<AppUser> alunos;
+
+  /// Fichas (`Aluno`) de vários alunos — usado por [watchTodosAlunos],
+  /// diferente do campo [aluno] singular (que só serve pros testes que já
+  /// existiam, focados em UM aluno por vez).
+  List<Aluno> fichasAlunos;
   List<Matricula> matriculas;
   List<ContaReceber> contasReceber;
 
@@ -46,6 +52,9 @@ class FakeAlunoService implements AlunoService {
 
   @override
   Stream<List<AppUser>> watchAlunos() => Stream.value(alunos);
+
+  @override
+  Stream<List<Aluno>> watchTodosAlunos() => Stream.value(fichasAlunos);
 
   @override
   Stream<Aluno?> watchAluno(String uid) => Stream.value(aluno);

@@ -226,9 +226,13 @@ por grupo muscular e abrir o detalhe de um exercicio (gif, instrucoes).
 3. Toque em Compartilhar > **Adicionar a Tela de Inicio**.
 4. O icone e o nome "GymExtreme" devem aparecer corretamente.
 
-Lembrete para modulos futuros: notificacao push via PWA no iOS so
-funciona a partir do iOS 16.4 e somente depois que o usuario adicionou
-o app a tela inicial — nao ha nada disso implementado ainda.
+Notificacao push de mensalidade (Cloud Function `enviarNotificacoesMensalidade`
++ `NotificacaoService` no app) ja esta preparada para Android — falta so
+o dispositivo real de teste, ver `functions/README.md`. No PWA do iOS a
+notificacao push so funciona a partir do iOS 16.4 e somente depois que o
+usuario adicionou o app a tela inicial, e ainda precisa de uma VAPID key +
+service worker do FCM pra Web — isso continua pendente, fora do escopo
+desta primeira versao.
 
 ## 5. Trocar o icone pelo logo oficial
 

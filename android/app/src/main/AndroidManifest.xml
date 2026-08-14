@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Obrigatoria a partir do Android 13 (API 33) pra qualquer notificacao
+         aparecer, inclusive as de mensalidade via FCM. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="GymXtreme"
         android:name="${applicationName}"

@@ -10,6 +10,7 @@ import '../services/caixa_service.dart';
 import '../services/cargo_service.dart';
 import '../services/conta_pagar_service.dart';
 import '../services/funcionario_service.dart';
+import '../services/notificacao_service.dart';
 import '../services/permission_service.dart';
 import '../services/plano_service.dart';
 import '../services/produto_service.dart';
@@ -45,6 +46,7 @@ class WelcomeScreen extends StatelessWidget {
     required this.cargoService,
     required this.contaPagarService,
     required this.funcionarioService,
+    required this.notificacaoService,
     required this.planoService,
     required this.produtoService,
     required this.storageService,
@@ -58,6 +60,7 @@ class WelcomeScreen extends StatelessWidget {
   final CargoService cargoService;
   final ContaPagarService contaPagarService;
   final FuncionarioService funcionarioService;
+  final NotificacaoService notificacaoService;
   final PlanoService planoService;
   final ProdutoService produtoService;
   final StorageService storageService;
@@ -71,7 +74,13 @@ class WelcomeScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Sair',
             icon: const Icon(Icons.logout),
-            onPressed: () => authService.signOut(),
+            onPressed: () async {
+              // Remove o token FCM deste aparelho ANTES de sair — depois
+              // do signOut() o Firestore ja nao autoriza mais essa escrita
+              // (regra exige request.auth.uid == uid).
+              await notificacaoService.removerTokenDoAparelho(uid);
+              await authService.signOut();
+            },
           ),
         ],
       ),

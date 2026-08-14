@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -9,6 +11,7 @@ import '../services/caixa_service.dart';
 import '../services/cargo_service.dart';
 import '../services/conta_pagar_service.dart';
 import '../services/funcionario_service.dart';
+import '../services/notificacao_service.dart';
 import '../services/plano_service.dart';
 import '../services/produto_service.dart';
 import '../services/storage_service.dart';
@@ -27,6 +30,7 @@ class AuthGate extends StatelessWidget {
     required this.cargoService,
     required this.contaPagarService,
     required this.funcionarioService,
+    required this.notificacaoService,
     required this.planoService,
     required this.produtoService,
     required this.storageService,
@@ -39,6 +43,7 @@ class AuthGate extends StatelessWidget {
   final CargoService cargoService;
   final ContaPagarService contaPagarService;
   final FuncionarioService funcionarioService;
+  final NotificacaoService notificacaoService;
   final PlanoService planoService;
   final ProdutoService produtoService;
   final StorageService storageService;
@@ -61,6 +66,11 @@ class AuthGate extends StatelessWidget {
           return LoginScreen(authService: authService);
         }
 
+        // Prepara o recebimento de notificacoes de mensalidade (permissao +
+        // token FCM) assim que sabemos que ha um usuario logado — nao
+        // bloqueia a navegacao pra tela de boas-vindas.
+        unawaited(notificacaoService.registrarTokenDoAparelho(user.uid));
+
         return WelcomeScreen(
           uid: user.uid,
           authService: authService,
@@ -70,6 +80,7 @@ class AuthGate extends StatelessWidget {
           cargoService: cargoService,
           contaPagarService: contaPagarService,
           funcionarioService: funcionarioService,
+          notificacaoService: notificacaoService,
           planoService: planoService,
           produtoService: produtoService,
           storageService: storageService,

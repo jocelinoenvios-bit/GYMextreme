@@ -43,8 +43,16 @@ service cloud.firestore {
         (request.resource.data.role == 'aluno' || temPermissao('gerenciarFuncionarios'));
 
       // Editar/apagar o documento de outra pessoa (ex.: ajustar permissoes
-      // de um funcionario) exige "gerenciarFuncionarios".
-      allow update, delete: if temPermissao('gerenciarFuncionarios');
+      // de um funcionario) exige "gerenciarFuncionarios". Exceção: o
+      // próprio usuário (qualquer role, inclusive aluno) pode atualizar
+      // SÓ o próprio `fcmTokens` — é o que registra o token de push do
+      // aparelho pra notificação de mensalidade
+      // (`NotificacaoService.registrarTokenDoAparelho`), sem abrir a porta
+      // pra se autopromover ou editar mais nada do próprio documento.
+      allow update: if temPermissao('gerenciarFuncionarios') ||
+        (request.auth != null && request.auth.uid == uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmTokens', 'atualizadoEm']));
+      allow delete: if temPermissao('gerenciarFuncionarios');
     }
 
     match /cargos/{cargoId} {
@@ -249,6 +257,17 @@ service cloud.firestore {
       match /pagamentos/{pagamentoId} {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('receberMensalidades');
+      }
+
+      // Auditoria das notificacoes automaticas de mensalidade (Cloud
+      // Function `enviarNotificacoesMensalidade`) — o proprio aluno le o
+      // proprio historico, staff le de qualquer aluno. Mesmo padrao de
+      // `credenciais`/`autorizacoesAcesso`: só a Cloud Function (Admin
+      // SDK, que ignora estas regras) grava aqui, o app cliente nunca
+      // escreve.
+      match /notificacoesMensalidade/{notificacaoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if false;
       }
 
       // Fichas de treino: o proprio aluno le a propria (pra ver o treino

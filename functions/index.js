@@ -7,6 +7,10 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { calcularStatusAcesso, mensagemNotificacaoMensalidade } = require('./lib/status-acesso');
+const {
+  construirRegistroNotificacao,
+  idNotificacaoDoDia,
+} = require('./lib/notificacao-mensalidade');
 
 initializeApp();
 const db = getFirestore();
@@ -92,40 +96,79 @@ exports.solicitarAutorizacaoAcesso = onCall(async (request) => {
 });
 
 /**
- * Notificacoes automaticas de mensalidade — roda uma vez por dia e manda,
- * pra cada aluno com matricula ativa, a mensagem do fluxo combinado (7/3/0
- * dias antes do vencimento, aviso do 1o dia de atraso, contagem regressiva
- * diaria da tolerancia, ultimo dia, e aviso do bloqueio).
+ * Identifica a mensalidade de um aluno e, se hoje for dia de notificar
+ * (7/3/0 dias antes do vencimento, avisos de tolerancia, bloqueio),
+ * registra a notificacao em
+ * `alunos/{alunoUid}/notificacoesMensalidade/{AAAA-MM-DD}` e tenta o envio
+ * push pros tokens salvos em `usuarios/{alunoUid}.fcmTokens`.
  *
- * Depende de `usuarios/{uid}.fcmTokens` (array) — ainda nao populado pelo
- * app Flutter nesta primeira versao (falta adicionar firebase_messaging
- * no cliente e testar em um dispositivo real antes de habilitar isso pra
- * valer).
+ * Idempotente por dia: se o documento de hoje ja existe (reexecucao do
+ * agendador, retry, reprocessamento manual), nao registra de novo nem
+ * reenvia o push. Sem token nenhum, ainda registra a notificacao (auditoria
+ * de que ela foi gerada) marcada como `erro: 'sem_token_fcm'`, sem chamar o
+ * Messaging.
+ *
+ * @param {string} alunoUid
+ * @param {FirebaseFirestore.DocumentData} aluno dados de `alunos/{alunoUid}`
+ * @param {Date} [agora]
+ */
+async function processarNotificacaoMensalidade(alunoUid, aluno, agora) {
+  const proximoVencimento = aluno.proximoVencimento ? aluno.proximoVencimento.toDate() : null;
+  const status = calcularStatusAcesso(proximoVencimento, agora);
+  const mensagem = mensagemNotificacaoMensalidade(status);
+  if (!mensagem) return;
+
+  const notifRef = db
+    .collection('alunos')
+    .doc(alunoUid)
+    .collection('notificacoesMensalidade')
+    .doc(idNotificacaoDoDia(agora));
+
+  const jaRegistrada = await notifRef.get();
+  if (jaRegistrada.exists) return;
+
+  const usuarioSnap = await db.collection('usuarios').doc(alunoUid).get();
+  const tokens = (usuarioSnap.data() || {}).fcmTokens || [];
+  const registro = construirRegistroNotificacao(status, mensagem, tokens.length);
+
+  if (tokens.length === 0) {
+    await notifRef.set({ ...registro, geradaEm: FieldValue.serverTimestamp() });
+    return;
+  }
+
+  try {
+    const resposta = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: { title: 'GYM XTREME', body: mensagem },
+    });
+    registro.enviada = resposta.successCount > 0;
+    registro.tokensComFalha = resposta.failureCount;
+  } catch (err) {
+    console.error(`Erro ao notificar aluno ${alunoUid}:`, err);
+    registro.erro = String((err && err.message) || err);
+  }
+
+  await notifRef.set({ ...registro, geradaEm: FieldValue.serverTimestamp() });
+}
+
+/**
+ * Notificacoes automaticas de mensalidade — roda uma vez por dia e, pra
+ * cada aluno com matricula ativa, identifica quem esta proximo do
+ * vencimento ou ja vencido e processa a notificacao correspondente (ver
+ * `processarNotificacaoMensalidade`).
  */
 exports.enviarNotificacoesMensalidade = onSchedule(
   { schedule: '0 8 * * *', timeZone: 'America/Sao_Paulo' },
   async () => {
     const alunosSnap = await db.collection('alunos').where('ativo', '==', true).get();
+    const agora = new Date();
 
     for (const doc of alunosSnap.docs) {
-      const aluno = doc.data();
-      const proximoVencimento = aluno.proximoVencimento ? aluno.proximoVencimento.toDate() : null;
-      const status = calcularStatusAcesso(proximoVencimento);
-      const mensagem = mensagemNotificacaoMensalidade(status);
-      if (!mensagem) continue;
-
-      const usuarioSnap = await db.collection('usuarios').doc(doc.id).get();
-      const tokens = (usuarioSnap.data() || {}).fcmTokens || [];
-      if (tokens.length === 0) continue;
-
-      try {
-        await getMessaging().sendEachForMulticast({
-          tokens,
-          notification: { title: 'GYM XTREME', body: mensagem },
-        });
-      } catch (err) {
-        console.error(`Erro ao notificar aluno ${doc.id}:`, err);
-      }
+      await processarNotificacaoMensalidade(doc.id, doc.data(), agora);
     }
   },
 );
+
+// Exportado só pra teste (ver test/notificacao-mensalidade.emulator.js, que
+// roda contra o Firestore Emulator) — nao faz parte da API publica das functions.
+exports._processarNotificacaoMensalidade = processarNotificacaoMensalidade;

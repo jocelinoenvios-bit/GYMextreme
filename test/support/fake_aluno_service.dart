@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:gymextreme_app/models/aluno.dart';
 import 'package:gymextreme_app/models/anamnese.dart';
 import 'package:gymextreme_app/models/app_user.dart';
@@ -50,8 +52,22 @@ class FakeAlunoService implements AlunoService {
   ContaReceber? ultimaContaAtualizada;
   ContaReceber? ultimoRecebimentoRegistrado;
 
+  final _alunosController = StreamController<List<AppUser>>.broadcast();
+
+  /// Simula o Firestore emitindo uma lista nova pro mesmo listener (ex.:
+  /// um aluno foi excluído/cadastrado enquanto a tela já estava aberta) —
+  /// os testes que fazem widget rebuild usam isso; os que só leem o valor
+  /// inicial nem precisam chamar.
+  void emitirAlunos(List<AppUser> novaLista) {
+    alunos = novaLista;
+    _alunosController.add(novaLista);
+  }
+
   @override
-  Stream<List<AppUser>> watchAlunos() => Stream.value(alunos);
+  Stream<List<AppUser>> watchAlunos() async* {
+    yield alunos;
+    yield* _alunosController.stream;
+  }
 
   @override
   Stream<List<Aluno>> watchTodosAlunos() => Stream.value(fichasAlunos);

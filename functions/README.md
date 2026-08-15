@@ -47,6 +47,28 @@ npm run test:emulator
 Isso não faz deploy nem exige `firebase login` — `firebase emulators:exec`
 sobe e derruba o emulador sozinho, contra um projeto local (`demo-*`).
 
+### Testando `firestore.rules` (permissões de ADM/aluno/deslogado)
+
+`test/firestore-rules-admin.emulator.js` comprova, com
+`@firebase/rules-unit-testing` contra o Firestore Emulator (não bypassa
+regra nenhuma — autentica de verdade como cada papel), que:
+
+- **ADM** lê e grava nos 5 módulos administrativos (planos, produtos,
+  contas a pagar, contas a receber, controle de caixa), usando exatamente
+  os formatos de documento que `PlanoService`/`ProdutoService`/
+  `ContaPagarService`/`AlunoService`/`CaixaService` enviam de verdade —
+  inclusive o recebimento de uma cobrança com um caixa aberto
+  (`CaixaService.registrarRecebimentoContaReceber`, que também grava
+  `movimentacaoCaixaId`).
+- **Aluno/usuário comum** continua bloqueado nesses mesmos 5 módulos, e só
+  lê a própria `contasReceber` (nunca a de outro aluno, nem via
+  `collectionGroup`).
+- **Visitante deslogado** não lê nada.
+
+```
+npm run test:rules
+```
+
 ## Antes de implantar (ainda não implantado)
 
 1. **Plano Blaze do Firebase** — `enviarNotificacoesMensalidade` é uma função

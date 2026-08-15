@@ -194,15 +194,52 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                   StreamBuilder<List<AppUser>>(
                     stream: widget.alunoService.watchAlunos(),
                     builder: (context, snapshot) {
-                      final alunos = snapshot.data ?? [];
-                      return DropdownButtonFormField<AppUser>(
-                        initialValue: _alunoSelecionado,
+                      if (snapshot.connectionState ==
+                              ConnectionState.waiting &&
+                          !snapshot.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: LinearProgressIndicator(
+                            color: AppColors.gold,
+                          ),
+                        );
+                      }
+
+                      // Deduplica por uid e usa o uid (String, com
+                      // igualdade de valor natural) como valor do
+                      // dropdown — comparar o AppUser inteiro quebrava
+                      // ("Either zero or 2 or more DropdownMenuItems...")
+                      // toda vez que o stream emitia uma nova instância do
+                      // mesmo aluno, já que AppUser não tem == própria e a
+                      // instância antiga selecionada parava de "bater" com
+                      // a nova lista.
+                      final alunosPorUid = <String, AppUser>{};
+                      for (final aluno in snapshot.data ?? const <AppUser>[]) {
+                        alunosPorUid[aluno.uid] = aluno;
+                      }
+                      final alunos = alunosPorUid.values.toList();
+                      // Se o aluno selecionado não existir mais na lista
+                      // atual (removido/renomeado uid, ou stream ainda não
+                      // trouxe os dados), cai pra null em vez de manter um
+                      // valor órfão — outro jeito de disparar o mesmo erro.
+                      final uidSelecionado =
+                          alunosPorUid.containsKey(_alunoSelecionado?.uid)
+                          ? _alunoSelecionado?.uid
+                          : null;
+
+                      return DropdownButtonFormField<String>(
+                        initialValue: uidSelecionado,
                         isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Aluno'),
+                        decoration: InputDecoration(
+                          labelText: 'Aluno',
+                          helperText: alunos.isEmpty
+                              ? 'Nenhum aluno cadastrado'
+                              : null,
+                        ),
                         items: alunos
                             .map(
                               (aluno) => DropdownMenuItem(
-                                value: aluno,
+                                value: aluno.uid,
                                 child: Text(
                                   aluno.nome,
                                   overflow: TextOverflow.ellipsis,
@@ -210,8 +247,11 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                               ),
                             )
                             .toList(),
-                        onChanged: (aluno) =>
-                            setState(() => _alunoSelecionado = aluno),
+                        onChanged: alunos.isEmpty
+                            ? null
+                            : (uid) => setState(
+                                () => _alunoSelecionado = alunosPorUid[uid],
+                              ),
                       );
                     },
                   ),

@@ -54,7 +54,7 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, planoService));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<AppUser>, 'Aluno'));
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Carlos Souza').last);
     await tester.pumpAndSettle();
@@ -93,6 +93,88 @@ void main() {
     expect(alunoService.matriculas, isEmpty);
   });
 
+  testWidgets('mostra carregamento antes do primeiro valor do stream de alunos', (tester) async {
+    final alunoService = FakeAlunoService(alunos: const [_carlos]);
+    final planoService = FakePlanoService(planos: const [_planoMensal]);
+
+    // Antes de qualquer pump adicional (e antes do stream entregar o
+    // primeiro valor) a tela já deve mostrar carregamento em vez de um
+    // dropdown vazio ou quebrado.
+    await tester.pumpWidget(_wrap(alunoService, planoService));
+
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('lista de alunos vazia desabilita o dropdown em vez de quebrar', (tester) async {
+    final alunoService = FakeAlunoService(alunos: const []);
+    final planoService = FakePlanoService(planos: const [_planoMensal]);
+
+    await tester.pumpWidget(_wrap(alunoService, planoService));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Nenhum aluno cadastrado'), findsOneWidget);
+
+    final dropdown = tester.widget<DropdownButtonFormField<String>>(
+      find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'),
+    );
+    expect(dropdown.onChanged, isNull);
+  });
+
+  testWidgets('lista de alunos com uid duplicado nao quebra o dropdown', (tester) async {
+    final carlosDuplicado = AppUser(
+      uid: _carlos.uid,
+      nome: _carlos.nome,
+      email: _carlos.email,
+      role: UserRole.aluno,
+    );
+    final alunoService = FakeAlunoService(alunos: [_carlos, carlosDuplicado]);
+    final planoService = FakePlanoService(planos: const [_planoMensal]);
+
+    await tester.pumpWidget(_wrap(alunoService, planoService));
+    await tester.pumpAndSettle();
+
+    // O ponto do teste: isto não pode lançar "Either zero or 2 or more
+    // DropdownMenuItems were detected with the same value" (a lista foi
+    // deduplicada por uid antes de virar os itens do dropdown).
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Carlos Souza'), findsOneWidget);
+  });
+
+  testWidgets('aluno selecionado que some da lista depois nao quebra o dropdown', (tester) async {
+    final alunoService = FakeAlunoService(alunos: const [_carlos]);
+    final planoService = FakePlanoService(planos: const [_planoMensal]);
+
+    await tester.pumpWidget(_wrap(alunoService, planoService));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carlos Souza').last);
+    await tester.pumpAndSettle();
+
+    // Carlos foi excluído (ou desativado) enquanto a tela de matrícula
+    // continuava aberta — o stream emite uma lista nova sem ele.
+    alunoService.emitirAlunos(const []);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    // Sem nenhum aluno válido selecionado (o valor órfão foi descartado),
+    // tentar salvar continua barrado pela validação.
+    await _tocar(tester, find.text('CRIAR MATRÍCULA'));
+    await tester.pump();
+    expect(alunoService.matriculas, isEmpty);
+  });
+
   testWidgets('fluxo de renovacao pre-preenche aluno e plano e nao mostra dropdown de aluno', (
     tester,
   ) async {
@@ -125,7 +207,7 @@ void main() {
 
     expect(find.text('Renovar matrícula'), findsOneWidget);
     expect(find.text('Carlos Souza'), findsOneWidget);
-    expect(find.byType(DropdownButtonFormField<AppUser>), findsNothing);
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
 
     await _tocar(tester, find.text('CONFIRMAR RENOVAÇÃO'));
     await tester.pump();

@@ -316,7 +316,15 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'status', 'valorPago', 'desconto', 'jurosMulta', 'dataPagamento',
               'formaPagamento', 'observacao', 'recebidoPorUid', 'recebidoPorNome',
-              'atualizadoEm'
+              // `movimentacaoCaixaId` só é gravado quando o recebimento
+              // acontece com um caixa aberto (CaixaService.
+              // registrarRecebimentoContaReceber, que toca este campo na
+              // mesma transação) — faltava aqui, mesmo campo já presente
+              // no equivalente de `contasPagar`/`pagarContasPagar` logo
+              // abaixo; sem ele essa gravação caía em permission-denied
+              // pra qualquer papel, inclusive ADM (a restrição de campos
+              // vale independente de permissão).
+              'movimentacaoCaixaId', 'atualizadoEm'
             ])) ||
           (temPermissao('excluirContasReceber') &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm']));

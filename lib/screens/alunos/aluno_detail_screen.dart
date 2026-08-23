@@ -48,8 +48,9 @@ class AlunoDetailScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
+        body: SafeArea(
+          child: TabBarView(
+            children: [
             DadosTab(
               aluno: aluno,
               alunoService: alunoService,
@@ -65,7 +66,8 @@ class AlunoDetailScreen extends StatelessWidget {
                 alunoService: alunoService,
                 staffAtual: staffAtual,
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

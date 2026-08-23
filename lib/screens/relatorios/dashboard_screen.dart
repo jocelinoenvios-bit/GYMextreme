@@ -108,7 +108,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<DashboardResumo>(
+      body: SafeArea(
+        child: FutureBuilder<DashboardResumo>(
         future: _resumoFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -258,6 +259,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }

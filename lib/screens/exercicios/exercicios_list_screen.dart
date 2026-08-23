@@ -175,8 +175,17 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                   ),
                                   onTap: () {
                                     if (widget.onSelecionar != null) {
+                                      // Quem passou onSelecionar já é
+                                      // responsável por fechar esta tela
+                                      // (ver TreinoFormScreen._adicionarExercicio,
+                                      // que faz Navigator.pop(exercicio) dentro
+                                      // do próprio callback) — um pop() extra
+                                      // aqui fechava DUAS telas de uma vez
+                                      // (a lista de exercícios e a tela por
+                                      // baixo dela, ex.: "Editar treino"),
+                                      // porque a primeira pop() já deixava
+                                      // essa tela no topo da pilha.
                                       widget.onSelecionar!(exercicio);
-                                      Navigator.of(context).pop();
                                       return;
                                     }
                                     Navigator.of(context).push(

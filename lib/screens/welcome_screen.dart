@@ -84,7 +84,8 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<AppUser?>(
+      body: SafeArea(
+        child: StreamBuilder<AppUser?>(
         stream: userService.watchUser(uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -332,6 +333,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

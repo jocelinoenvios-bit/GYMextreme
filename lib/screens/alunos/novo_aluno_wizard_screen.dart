@@ -298,7 +298,7 @@ class _TelaCheiaPasso extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(titulo)),
-      body: child,
+      body: SafeArea(child: child),
     );
   }
 }

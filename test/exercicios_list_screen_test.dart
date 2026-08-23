@@ -97,40 +97,67 @@ void main() {
     expect(find.byType(ExercicioDetailScreen), findsOneWidget);
   });
 
-  testWidgets('modo seletor devolve o ExerciseModel escolhido e fecha a tela', (tester) async {
-    ExerciseModel? selecionado;
-    // Empurra o seletor a partir de uma tela "host", igual ao uso real
-    // (TreinoFormScreen empurra a lista) — o pop() do seletor precisa
-    // de uma rota anterior pra voltar.
-    await tester.pumpWidget(
-      _wrap(
-        Builder(
-          builder: (context) => ElevatedButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ExerciciosListScreen(
-                  repository: const _FakeExerciseRepository(),
-                  onSelecionar: (e) => selecionado = e,
+  testWidgets(
+    'modo seletor devolve o ExerciseModel escolhido e fecha só a tela do seletor',
+    (tester) async {
+      ExerciseModel? selecionado;
+      // Reproduz a pilha de navegação real (aluno detail -> TreinoFormScreen
+      // -> seletor): uma tela "host" empurra o seletor por cima de si mesma,
+      // e o onSelecionar fecha o seletor sozinho (Navigator.pop dentro do
+      // próprio callback, igual TreinoFormScreen._adicionarExercicio) — sem
+      // nenhum pop() extra dentro do ExerciciosListScreen. Antes da correção,
+      // um pop() redundante ali fechava a tela host por baixo dele também
+      // (o "Editar treino" sumia assim que um exercício era escolhido, antes
+      // do usuário conseguir preencher os parâmetros e salvar).
+      await tester.pumpWidget(
+        _wrap(
+          Builder(
+            builder: (rootContext) => ElevatedButton(
+              onPressed: () => Navigator.of(rootContext).push(
+                MaterialPageRoute(
+                  builder: (hostContext) => Scaffold(
+                    appBar: AppBar(title: const Text('Editar treino (host)')),
+                    body: ElevatedButton(
+                      onPressed: () => Navigator.of(hostContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => ExerciciosListScreen(
+                            repository: const _FakeExerciseRepository(),
+                            onSelecionar: (e) {
+                              selecionado = e;
+                              Navigator.of(hostContext).pop(e);
+                            },
+                          ),
+                        ),
+                      ),
+                      child: const Text('abrir seletor'),
+                    ),
+                  ),
                 ),
               ),
+              child: const Text('abrir host'),
             ),
-            child: const Text('abrir seletor'),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('abrir seletor'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('abrir host'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('abrir seletor'));
+      await tester.pumpAndSettle();
 
-    for (var i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 20));
-      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
-    }
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 20));
+        if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
+      }
 
-    await tester.tap(find.text('lever chest press'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('lever chest press'));
+      await tester.pumpAndSettle();
 
-    expect(selecionado?.id, '0577');
-  });
+      expect(selecionado?.id, '0577');
+      // O ponto do teste: a tela host ("Editar treino") continua aberta —
+      // só o seletor fechou.
+      expect(find.text('Editar treino (host)'), findsOneWidget);
+      expect(find.byType(ExerciciosListScreen), findsNothing);
+    },
+  );
 }

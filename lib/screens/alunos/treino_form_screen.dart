@@ -155,11 +155,11 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
         staffNome: widget.staffAtual.nome,
       );
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro ao salvar o treino. Tente novamente.'),
+          SnackBar(
+            content: Text('Erro ao salvar o treino: $e'),
             backgroundColor: AppColors.error,
           ),
         );

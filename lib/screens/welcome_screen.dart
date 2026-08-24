@@ -135,6 +135,7 @@ class WelcomeScreen extends StatelessWidget {
           return _buildConteudoPadrao(context, user);
         },
       ),
+      ),
     );
   }
 
@@ -333,7 +334,6 @@ class WelcomeScreen extends StatelessWidget {
             ],
           ],
         ),
-      ),
       ),
     );
   }

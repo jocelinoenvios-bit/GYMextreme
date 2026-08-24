@@ -200,7 +200,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.acessarPlanos)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => PlanosListScreen(
@@ -215,7 +215,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.matriculas)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => MatriculasListScreen(
@@ -231,7 +231,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.acessarContasReceber)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ContasReceberListScreen(
@@ -247,7 +247,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.acessarControleCaixa)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => CaixaScreen(
@@ -262,7 +262,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.acessarContasPagar)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ContasPagarListScreen(
@@ -278,7 +278,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.acessarProdutos)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ProdutosListScreen(
@@ -300,7 +300,7 @@ class WelcomeScreen extends StatelessWidget {
             if (user.role == UserRole.aluno ||
                 PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const ExerciciosListScreen(),
@@ -312,7 +312,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (user.role == UserRole.aluno) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => MeusTreinosScreen(uid: uid, alunoService: alunoService),
@@ -324,7 +324,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
             if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => FuncionariosListScreen(

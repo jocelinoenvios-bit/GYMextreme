@@ -140,7 +140,12 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildConteudoPadrao(BuildContext context, AppUser user) {
-    return Center(
+    // SingleChildScrollView (em vez de Center) porque a lista de botões
+    // varia com as permissões do usuário — um ADM com todas as permissões
+    // tem 9 botões, que não cabem na tela em muitos aparelhos. Sem
+    // rolagem aqui, o conteúdo mais embaixo (ex.: "GERENCIAR
+    // FUNCIONÁRIOS") ficava cortado ou disparava overflow.
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

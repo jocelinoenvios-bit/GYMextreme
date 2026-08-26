@@ -26,34 +26,44 @@ Cadastro/Ficha do aluno, e Biblioteca de exercicios**.
 - PWA configurado (`web/manifest.json`, `web/index.html`) para o
   "adicionar a tela de inicio" funcionar no Safari/iOS.
 
-### Modulo 2 — Cadastro completo de aluno
-Replica a ficha em papel "GYM X-TREME" (avaliacao fisica + anamnese +
-regulamento/termo de responsabilidade) que voces ja usam. Acessivel
-pela tela de boas-vindas de ADM/Personal, botao **"Gerenciar alunos"**
-(`lib/screens/alunos/`):
+### Modulo 2 — Cadastro digital completo do aluno
+Substitui 100% a ficha em papel "GYM XTREME" (dados cadastrais +
+anamnese + regulamento/termo de responsabilidade + avaliacao fisica +
+ficha de treino). Acessivel pela tela de boas-vindas, botao
+**"Gerenciar alunos"** (`lib/screens/alunos/`):
 
-- **Cadastro** — cria o login do aluno (Firebase Auth com senha
-  inicial) + nome, idade, data de inicio e dia de vencimento
-  (`AlunoFormScreen`, aba "Dados" na ficha).
+- **Cadastro guiado (`NovoAlunoWizardScreen`)** — fluxo em etapas
+  (Dados → Anamnese → Regulamento → Avaliacao fisica → opcao de ja
+  prescrever o Treino), reaproveitando os mesmos widgets usados depois
+  na ficha do aluno ja cadastrado. Dados pessoais completos: foto
+  (Firebase Storage), sexo, data de nascimento (idade calculada
+  automaticamente), CPF/RG, telefone/WhatsApp, endereco, contato de
+  emergencia, observacoes, alem do login (Firebase Auth) e vinculo com
+  a academia (data de inicio, dia de vencimento).
 - **Anamnese** — as 13 perguntas da ficha em papel, ponto a ponto
   (`AnamneseTab`).
 - **Termo de responsabilidade** — as 15 regras do "REGULAMENTO" em
-  papel, com aceite digital (nome, data/hora e campo opcional de
-  responsavel para menores de idade) no lugar da assinatura manuscrita
-  (`TermoTab`).
-- **Avaliacao fisica** — peso, altura (com IMC calculado e
-  classificado automaticamente) e as 16 medidas de circunferencia da
-  ficha, com historico de avaliacoes ao longo do tempo
+  papel, com aceite digital (nome, data/hora, responsavel opcional pra
+  menores de idade e qual funcionario da recepcao registrou o aceite)
+  no lugar da assinatura manuscrita (`TermoTab`).
+- **Avaliacao fisica** — peso, altura (IMC calculado e classificado
+  automaticamente) e as 16 medidas de circunferencia da ficha, com
+  historico completo ao longo do tempo, nunca apagado
   (`AvaliacoesTab` + `AvaliacaoFisicaFormScreen`).
+- **Ficha de treino (`TreinosTab` + `TreinoFormScreen`)** — treinos
+  A-F, cada um com lista de exercicios (sempre referenciando a
+  biblioteca do Modulo 3, nunca digitados a mao): series, repeticoes,
+  carga, descanso, observacoes e ordem. Da pra criar, editar, excluir,
+  duplicar e copiar um treino pronto de outro aluno. Aba visivel so
+  com a permissao `prescricaoTreinos`; criar/editar exige
+  `criarTreinos`/`editarTreinos` (checado ate no Firestore, nao so na
+  UI).
 
-Quem preenche e o ADM/Personal (o fluxo hoje e em papel na recepcao —
-mantive esse mesmo padrao: o aluno ainda nao tem area propria no app,
-isso fica para um modulo futuro de auto-atendimento).
+Quem preenche e o staff (ADM/Recepcionista/Personal, conforme a
+permissao de cada um) — o aluno ainda nao tem area propria no app,
+isso fica para um modulo futuro de auto-atendimento.
 
 **Pontos que assumi e que valem uma conferencia sua:**
-- A tabela "GRUPO MUSCULAR INFERIOR" (treino de cardio/coxa/gluteo) que
-  vem na mesma folha da ficha de avaliacao **nao entrou neste modulo**
-  — e ficha de treino, escopo do modulo de sistema de treino.
 - `lib/constants/regulamento.dart` tem um `regulamentoToleranciaDias =
   5` (regra 3, "tolerancia de ___ dias") — na ficha em papel esse
   numero fica em branco pra preencher a caneta; usei 5 como placeholder
@@ -61,6 +71,13 @@ isso fica para um modulo futuro de auto-atendimento).
 - O texto do regulamento foi digitado a partir da foto; vale uma
   conferencia final antes de publicar (principalmente se ele tiver
   qualquer validade juridica formal).
+- Graficos/fotos de evolucao (peso, medidas, carga ao longo do tempo)
+  ainda nao tem tela — o banco ja esta preparado (`AvaliacaoFisica.
+  fotoUrls`, historico por data), fica pra um proximo modulo.
+- Foto do aluno exige `firebase_storage` configurado no projeto
+  (bucket ja existe, `storage.rules` novo neste commit — publique
+  manualmente no Firebase Console, mesmo processo ja usado pro
+  `firestore.rules`).
 
 ### Modulo 3 — Biblioteca de exercicios
 Tela somente leitura (`lib/screens/exercicios/`) que le a colecao
@@ -106,7 +123,7 @@ lib/
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install/windows) (canal stable)
 - [Android Studio](https://developer.android.com/studio) com o Android SDK (para rodar/testar o app Android localmente; o build de release roda no Codemagic)
-- Node.js so e necessario se for mexer no `importar-exercicios.js` (script separado, nao faz parte do app Flutter)
+- Node.js so e necessario se for mexer nos scripts separados (`seed-alunos-teste.js`, `functions/`, `catraca-servico-local/`) — nao fazem parte do app Flutter
 
 Depois de clonar o repositorio:
 
@@ -122,7 +139,7 @@ cadastrados via `flutterfire configure`). Ambos os arquivos **nao
 contem segredos** (sao chaves publicas de cliente, restritas por
 regras do Firebase), por isso ficam versionados no Git normalmente —
 o que nunca deve ir para o repositorio e o `firebase-key.json`
-(service account, usado so pelo script Node `importar-exercicios.js`),
+(service account, usado pelos scripts Node como `seed-alunos-teste.js`),
 que ja esta no `.gitignore`.
 
 Se o projeto Firebase mudar (nova chave, novo app), regenere assim:
@@ -194,11 +211,11 @@ um aluno novo, preencher a anamnese, aceitar o termo de
 responsabilidade e registrar uma avaliacao fisica — e tudo isso
 aparecer salvo ao reabrir a ficha do aluno.
 
-Criterio de pronto do Modulo 3: com a colecao `exercicios` populada
-(veja `importar-exercicios.js`, ou o novo script/import quando a API
-trocar), logado como ADM ou Personal, abrir "Biblioteca de
-exercicios", buscar por nome, filtrar por grupo muscular e abrir o
-detalhe de um exercicio (gif, instrucoes).
+Criterio de pronto do Modulo 3: a Biblioteca Oficial de Exercicios
+(ExerciseDB, 1.394 exercicios com GIFs 180/360, 100% local/offline —
+sem colecao no Firestore) ja vem empacotada com o app. Logado como ADM
+ou Personal, abrir "Biblioteca de exercicios", buscar por nome, filtrar
+por grupo muscular e abrir o detalhe de um exercicio (gif, instrucoes).
 
 ### Testar "adicionar a tela de inicio" no iPhone
 
@@ -209,9 +226,13 @@ detalhe de um exercicio (gif, instrucoes).
 3. Toque em Compartilhar > **Adicionar a Tela de Inicio**.
 4. O icone e o nome "GymExtreme" devem aparecer corretamente.
 
-Lembrete para modulos futuros: notificacao push via PWA no iOS so
-funciona a partir do iOS 16.4 e somente depois que o usuario adicionou
-o app a tela inicial — nao ha nada disso implementado ainda.
+Notificacao push de mensalidade (Cloud Function `enviarNotificacoesMensalidade`
++ `NotificacaoService` no app) ja esta preparada para Android — falta so
+o dispositivo real de teste, ver `functions/README.md`. No PWA do iOS a
+notificacao push so funciona a partir do iOS 16.4 e somente depois que o
+usuario adicionou o app a tela inicial, e ainda precisa de uma VAPID key +
+service worker do FCM pra Web — isso continua pendente, fora do escopo
+desta primeira versao.
 
 ## 5. Trocar o icone pelo logo oficial
 
@@ -277,7 +298,7 @@ abrir o arquivo, se ainda nao estiver liberada.
 - Catalogo de equipamentos fisicos da academia (esteiras, maquinas
   etc.) como algo separado do exercicio em si — nao entrou neste
   modulo; hoje o "equipamento" e so um campo dentro de cada exercicio.
-- Trocar a fonte dos exercicios pela API que sera comprada (a
-  WorkoutX usada em `importar-exercicios.js` era so um ponto de
-  partida) — a tela em si (`lib/screens/exercicios/`) nao deve
-  precisar mudar, so o script/import.
+- Enriquecer a Biblioteca Oficial com a API V2 (ExerciseDB) quando
+  houver internet — arquitetura ja preparada
+  (`RemoteExerciseRepository`/`HybridExerciseRepository`, ainda nao
+  implementadas), local continua sendo a fonte principal.

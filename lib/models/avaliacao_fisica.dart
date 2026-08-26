@@ -13,6 +13,7 @@ class AvaliacaoFisica {
     this.alturaM,
     this.circunferenciasCm = const {},
     this.observacoes,
+    this.fotoUrls = const [],
   });
 
   final String? id;
@@ -24,6 +25,11 @@ class AvaliacaoFisica {
   final Map<String, double?> circunferenciasCm;
 
   final String? observacoes;
+
+  /// Fotos de evolucao desta avaliacao. Campo reservado pro banco ja
+  /// suportar isso — captura/exibicao ainda nao tem tela (fica pra um
+  /// modulo futuro de "evolucao").
+  final List<String> fotoUrls;
 
   double? get imc => calcularImc(pesoKg: pesoKg, alturaM: alturaM);
 
@@ -41,6 +47,7 @@ class AvaliacaoFisica {
         (key, value) => MapEntry(key, (value as num?)?.toDouble()),
       ),
       observacoes: data['observacoes'] as String?,
+      fotoUrls: List<String>.from(data['fotoUrls'] ?? const []),
     );
   }
 
@@ -51,6 +58,7 @@ class AvaliacaoFisica {
       'alturaM': alturaM,
       'circunferenciasCm': circunferenciasCm,
       'observacoes': observacoes,
+      'fotoUrls': fotoUrls,
       'criadoEm': FieldValue.serverTimestamp(),
     };
   }

@@ -1,7 +1,7 @@
-/// As 10 categorias de "grupoMuscular" (bodyPart) que o importador
-/// (`importar-exercicios.js`) grava em cada exercicio, na mesma
-/// taxonomia da API de origem. Usado pra montar os filtros da
-/// biblioteca sem depender de digitar o nome certo em ingles.
+/// As 10 categorias de "bodyPart" que a Biblioteca Oficial de
+/// Exercícios (ExerciseDB) usa em cada exercicio. Usado pra montar os
+/// filtros da biblioteca sem depender de digitar o nome certo em
+/// ingles.
 const Map<String, String> gruposMuscularesLabels = {
   'back': 'Costas',
   'cardio': 'Cardio',

@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../services/aluno_service.dart';
+import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import 'aluno_detail_screen.dart';
-import 'aluno_form_screen.dart';
+import 'novo_aluno_wizard_screen.dart';
 
 /// Lista de alunos cadastrados, ponto de entrada do ADM/Personal para a
-/// ficha completa (dados, anamnese, termo e avaliacoes fisicas).
+/// ficha completa (dados, anamnese, termo, avaliacoes fisicas e treino).
 class AlunosListScreen extends StatefulWidget {
-  const AlunosListScreen({super.key, required this.alunoService});
+  const AlunosListScreen({
+    super.key,
+    required this.alunoService,
+    required this.storageService,
+    required this.staffAtual,
+  });
 
   final AlunoService alunoService;
+  final StorageService storageService;
+  final AppUser staffAtual;
 
   @override
   State<AlunosListScreen> createState() => _AlunosListScreenState();
@@ -34,7 +42,11 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => AlunoFormScreen(alunoService: widget.alunoService),
+            builder: (_) => NovoAlunoWizardScreen(
+              alunoService: widget.alunoService,
+              storageService: widget.storageService,
+              staffAtual: widget.staffAtual,
+            ),
           ),
         ),
         tooltip: 'Novo aluno',
@@ -46,7 +58,8 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _busca = value.trim().toLowerCase()),
+              onChanged: (value) =>
+                  setState(() => _busca = value.trim().toLowerCase()),
               decoration: const InputDecoration(
                 hintText: 'Buscar aluno pelo nome',
                 prefixIcon: Icon(Icons.search),
@@ -61,16 +74,31 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return const Center(
-                    child: Text(
-                      'Erro ao carregar os alunos.',
-                      style: TextStyle(color: AppColors.error),
+                  // Mostra o erro real (não só uma mensagem genérica): a
+                  // causa mais provável é o Firestore exigir um índice
+                  // composto pra essa consulta (where + orderBy em campos
+                  // diferentes) — o erro do Firestore normalmente já vem
+                  // com um link direto pra criar o índice que falta.
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          'Erro ao carregar os alunos.\n\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.error),
+                        ),
+                      ),
                     ),
                   );
                 }
 
                 final alunos = (snapshot.data ?? [])
-                    .where((a) => _busca.isEmpty || a.nome.toLowerCase().contains(_busca))
+                    .where(
+                      (a) =>
+                          _busca.isEmpty ||
+                          a.nome.toLowerCase().contains(_busca),
+                    )
                     .toList();
 
                 if (alunos.isEmpty) {
@@ -99,16 +127,27 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                     return ListTile(
                       leading: const CircleAvatar(
                         backgroundColor: AppColors.surfaceHigh,
-                        child: Icon(Icons.fitness_center_outlined, color: AppColors.gold),
+                        child: Icon(
+                          Icons.fitness_center_outlined,
+                          color: AppColors.gold,
+                        ),
                       ),
                       title: Text(aluno.nome),
-                      subtitle: Text(aluno.email, style: const TextStyle(color: AppColors.textSecondary)),
-                      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                      subtitle: Text(
+                        aluno.email,
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textSecondary,
+                      ),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => AlunoDetailScreen(
                             aluno: aluno,
                             alunoService: widget.alunoService,
+                            storageService: widget.storageService,
+                            staffAtual: widget.staffAtual,
                           ),
                         ),
                       ),

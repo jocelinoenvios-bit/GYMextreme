@@ -1,0 +1,13 @@
+{
+  "name": "gymextreme-catraca-servico-local",
+  "description": "Servico local (roda no computador da academia): unico componente que fala com o hardware da catraca. Escuta autorizacoes de acesso em tempo real e aciona o solenoide.",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "firebase": "^12.17.0"
+  }
+}

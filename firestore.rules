@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// Regras para os Modulos 1 (login + perfil) e 2 (cadastro/ficha do aluno).
+// Regras para os Modulos 1 (login + perfil), 2 (cadastro/ficha do aluno) e
+// o sistema de cargos/permissoes (gestao de funcionarios).
 // Aplique em Firebase Console > Firestore Database > Regras, ou via
 // `firebase deploy --only firestore:rules` depois de rodar `firebase init`.
 service cloud.firestore {
@@ -8,19 +9,235 @@ service cloud.firestore {
 
     function ehStaff() {
       return request.auth != null &&
-        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['adm', 'personal'];
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['adm', 'personal', 'funcionario'];
+    }
+
+    function ehAdm() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'adm';
+    }
+
+    // ADM sempre tem a permissao; funcionario/personal so se `perm` estiver
+    // na lista `permissoes` do proprio documento (`.get(..., [])` evita erro
+    // em contas legadas que ainda nao tem esse campo). Exige `ehStaff()`
+    // além de checar a lista — blindagem pra um aluno nunca conseguir
+    // acesso mesmo que o campo `permissoes` do documento dele seja
+    // corrompido/preenchido por engano.
+    function temPermissao(perm) {
+      return ehAdm() || (
+        ehStaff() &&
+        perm in get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('permissoes', [])
+      );
     }
 
     match /usuarios/{uid} {
       // Qualquer usuario autenticado pode ler o PROPRIO documento
       // (e o que a tela de boas-vindas usa para saber o "role").
-      // ADM/Personal tambem podem ler a lista de alunos.
+      // Staff tambem pode ler a lista de alunos/funcionarios.
       allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
 
-      // So ADM/Personal cadastram usuarios pelo app (fluxo de "novo
-      // aluno" no Modulo 2). Criar um ADM/Personal continua manual, via
-      // Firebase Console ou SDK Admin.
-      allow write: if ehStaff();
+      // Cadastrar um aluno continua liberado pra qualquer staff (fluxo de
+      // "novo aluno" do Modulo 2). Cadastrar outro membro da equipe
+      // (ADM/funcionario) exige a permissao "gerenciarFuncionarios".
+      allow create: if ehStaff() &&
+        (request.resource.data.role == 'aluno' || temPermissao('gerenciarFuncionarios'));
+
+      // Editar/apagar o documento de outra pessoa (ex.: ajustar permissoes
+      // de um funcionario) exige "gerenciarFuncionarios". Exceção: o
+      // próprio usuário (qualquer role, inclusive aluno) pode atualizar
+      // SÓ o próprio `fcmTokens` — é o que registra o token de push do
+      // aparelho pra notificação de mensalidade
+      // (`NotificacaoService.registrarTokenDoAparelho`), sem abrir a porta
+      // pra se autopromover ou editar mais nada do próprio documento.
+      allow update: if temPermissao('gerenciarFuncionarios') ||
+        (request.auth != null && request.auth.uid == uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmTokens', 'atualizadoEm']));
+      allow delete: if temPermissao('gerenciarFuncionarios');
+    }
+
+    match /cargos/{cargoId} {
+      // Qualquer staff pode ver os cargos customizados (ex.: dropdown na
+      // tela de novo funcionario). So quem gerencia funcionarios cria/edita.
+      allow read: if ehStaff();
+      allow write: if temPermissao('gerenciarFuncionarios');
+    }
+
+    match /planos/{planoId} {
+      // Catalogo de planos da academia (nao pertence a nenhum aluno).
+      allow read: if temPermissao('acessarPlanos');
+      allow create: if temPermissao('cadastrarPlanos');
+      // "Excluir" um plano (PlanoService.excluirPlano) na pratica so seta
+      // `ativo: false` — nunca apaga o documento (preserva o historico
+      // das matriculas que ja o referenciam) — por isso quem so tem
+      // excluirPlanos (sem alterarPlanos) ainda pode fazer essa alteracao
+      // pontual, mas nao mexer em nenhum outro campo.
+      allow update: if temPermissao('alterarPlanos') ||
+        (temPermissao('excluirPlanos') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm']));
+      allow delete: if false;
+    }
+
+    match /caixas/{caixaId} {
+      // Controle de Caixa (Fase 1C): nao pertence a nenhum aluno, e uma
+      // colecao de nivel de academia, como `planos`. Leitura exige a
+      // permissao geral de acesso ao modulo OU (pra quem so consulta
+      // relatorios/historico, sem mexer no dia a dia) a permissao de
+      // relatorio — nunca "qualquer staff" generico, conforme pedido.
+      allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa');
+
+      // Abrir um caixa novo sempre nasce com status "aberto" —
+      // `CaixaService.abrirCaixa` e quem garante (via transacao, com
+      // leitura previa) que nao existe outro caixa aberto ao mesmo tempo;
+      // a regra so cuida da permissao e do estado inicial do documento.
+      allow create: if temPermissao('abrirCaixa') && request.resource.data.status == 'aberto';
+
+      // Fechar so pode partir de um caixa que ainda esta "aberto" e so
+      // pode tocar nos campos do proprio fechamento. Depois de fechado
+      // (`resource.data.status` deixa de ser 'aberto'), nenhuma condicao
+      // abaixo bate mais, entao o documento fica travado — cumpre "depois
+      // de fechado, o caixa nao deve ser alterado livremente".
+      allow update: if temPermissao('fecharCaixa') &&
+        resource.data.status == 'aberto' &&
+        request.resource.data.status == 'fechado' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'valorContado', 'valorEsperadoNoFechamento', 'diferenca',
+          'fechadoPorUid', 'fechadoPorNome', 'fechadoEm', 'observacaoFechamento'
+        ]);
+
+      // Nunca apagar uma sessao de caixa — preserva o historico financeiro.
+      allow delete: if false;
+
+      match /movimentacoes/{movimentacaoId} {
+        // Mesma leitura do caixa-pai.
+        allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa');
+
+        // Cada tipo de movimentacao exige a sua propria permissao granular
+        // — nunca "qualquer staff". "recebimento" so nasce junto com o
+        // recebimento de uma ContaReceber
+        // (`CaixaService.registrarRecebimentoContaReceber`), por isso usa
+        // a mesma permissao "receberContasReceber" que ja autoriza aquela
+        // transacao (ver /alunos/{uid}/contasReceber abaixo). "ajuste" e
+        // uma operacao sensivel sem tela propria ainda (nao pedida entre
+        // as 6 permissoes granulares desta fase) — reservada pro ADM ate
+        // ganhar uma permissao dedicada num proximo modulo.
+        // "pagamentoContaPagar" (Fase 1D) so nasce junto com o pagamento de
+        // uma ContaPagar (`CaixaService.registrarPagamentoContaPagar`),
+        // por isso usa a mesma permissao "pagarContasPagar" que ja
+        // autoriza aquela transacao (ver /contasPagar abaixo).
+        allow create: if
+          (request.resource.data.tipo == 'retirada' && temPermissao('realizarRetiradas')) ||
+          (request.resource.data.tipo == 'suprimento' && temPermissao('realizarSuprimentos')) ||
+          (request.resource.data.tipo == 'recebimento' && temPermissao('receberContasReceber')) ||
+          (request.resource.data.tipo == 'pagamentoContaPagar' && temPermissao('pagarContasPagar')) ||
+          (request.resource.data.tipo == 'ajuste' && ehAdm());
+
+        // Movimentacao lancada e definitiva — nunca editada nem apagada
+        // (mesma logica de imutabilidade ja usada em pagamentos/contasReceber).
+        allow update, delete: if false;
+      }
+    }
+
+    match /contasPagar/{contaId} {
+      // Contas a Pagar (Fase 1D): despesas da academia (fornecedor,
+      // aluguel, contas de consumo etc.) — nao pertence a nenhum aluno,
+      // mesmo padrao de `planos`/`caixas` (ao contrario de
+      // `contasReceber`, que vive dentro de /alunos/{uid}).
+      allow read: if temPermissao('acessarContasPagar');
+
+      // Toda despesa nasce pendente — nunca criada ja como paga (isso e
+      // sempre responsabilidade de `registrarPagamentoSemCaixa` ou
+      // `CaixaService.registrarPagamentoContaPagar`, nunca da criacao
+      // direta).
+      allow create: if temPermissao('cadastrarContasPagar') &&
+        request.resource.data.status == 'pendente';
+
+      // Cada permissao granular so pode alterar os campos da propria
+      // acao — mesma tecnica de `diff().affectedKeys().hasOnly([...])`
+      // ja usada em `contasReceber`, pra impedir que "pagar" vire uma
+      // porta aberta pra editar fornecedor/valor, ou que "excluir" faca
+      // mais que cancelar.
+      allow update: if
+        (temPermissao('alterarContasPagar') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'fornecedor', 'descricao', 'categoria', 'valorOriginal', 'desconto',
+            'jurosMulta', 'vencimento', 'observacao', 'atualizadoEm'
+          ])) ||
+        (temPermissao('pagarContasPagar') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'valorPago', 'desconto', 'jurosMulta', 'dataPagamento',
+            'formaPagamento', 'observacao', 'pagoPorUid', 'pagoPorNome',
+            'movimentacaoCaixaId', 'atualizadoEm'
+          ])) ||
+        (temPermissao('excluirContasPagar') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm']));
+
+      allow delete: if false;
+    }
+
+    match /produtos/{produtoId} {
+      // Produtos e Estoque (Fase 1E): catálogo interno da academia — não
+      // pertence a nenhum aluno, mesmo padrão de `planos`/`caixas`/
+      // `contasPagar`. Sem nenhum vínculo com venda/PDV/pagamento —
+      // módulo deliberadamente independente do financeiro.
+      allow read: if temPermissao('acessarProdutos');
+
+      // Todo produto nasce ativo — "excluir" (`ProdutoService.definirAtivo`)
+      // nunca apaga o documento, só alterna esse campo. `estoqueAtual >= 0`
+      // também é checado aqui — defesa extra, além da validação do
+      // formulário e de `ProdutoService.criarProduto`, contra estoque
+      // inicial negativo.
+      allow create: if temPermissao('cadastrarProdutos') &&
+        request.resource.data.ativo == true &&
+        request.resource.data.estoqueAtual >= 0;
+
+      // Cada permissão granular só pode alterar os campos da própria
+      // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`
+      // já usada em `contasPagar`. `movimentarEstoque` só pode tocar em
+      // `estoqueAtual` (a escrita real acontece dentro da transação de
+      // `ProdutoService.registrarEntrada`/`registrarSaida`/
+      // `registrarAjuste`, que também cria a movimentação); nunca pode
+      // editar nome/preço/categoria por essa via. A checagem
+      // `estoqueAtual >= 0` aqui é defesa em profundidade — o serviço já
+      // recusa qualquer movimentação que deixaria o estoque negativo,
+      // mas a regra também barra uma escrita direta via SDK que
+      // contornasse o app.
+      allow update: if
+        (temPermissao('alterarProdutos') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'nome', 'codigo', 'categoria', 'descricao', 'unidadeMedida', 'precoCusto',
+            'precoVenda', 'estoqueMinimo', 'fornecedor', 'atualizadoEm'
+          ])) ||
+        (temPermissao('excluirProdutos') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm'])) ||
+        (temPermissao('movimentarEstoque') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estoqueAtual', 'atualizadoEm']) &&
+          request.resource.data.estoqueAtual >= 0);
+
+      // Produtos com histórico de movimentações nunca são apagados
+      // fisicamente — preserva a rastreabilidade completa.
+      allow delete: if false;
+
+      match /movimentacoes/{movimentacaoId} {
+        // Leitura do histórico/quantidades exige especificamente
+        // `acessarEstoque` — separada de `acessarProdutos`, que só cobre
+        // o cadastro (nome, código, categoria, preços). As duas são
+        // permissões independentes, conforme pedido.
+        allow read: if temPermissao('acessarEstoque');
+
+        // Entrada, saída e ajuste usam a mesma permissão
+        // `movimentarEstoque` — não existe uma permissão dedicada só
+        // para ajuste no catálogo pedido; o requisito "ajustes exigem
+        // permissão apropriada" é cumprido por não deixar nenhuma
+        // movimentação passar sem essa permissão. `estoquePosterior >= 0`
+        // é a mesma defesa em profundidade contra estoque negativo do
+        // documento pai, aplicada aqui à movimentação em si.
+        allow create: if temPermissao('movimentarEstoque') &&
+          request.resource.data.estoquePosterior >= 0;
+
+        // Movimentação lançada é definitiva — nunca editada nem apagada,
+        // preserva o histórico de estoque por completo.
+        allow update, delete: if false;
+      }
     }
 
     match /alunos/{uid} {
@@ -33,13 +250,133 @@ service cloud.firestore {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if ehStaff();
       }
+
+      // Historico de pagamentos de mensalidade — so quem tem a permissao
+      // especifica de receber mensalidade pode registrar (nao basta ser
+      // staff generico); o proprio aluno so le, nunca escreve.
+      match /pagamentos/{pagamentoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if temPermissao('receberMensalidades');
+      }
+
+      // Auditoria das notificacoes automaticas de mensalidade (Cloud
+      // Function `enviarNotificacoesMensalidade`) — o proprio aluno le o
+      // proprio historico, staff le de qualquer aluno. Mesmo padrao de
+      // `credenciais`/`autorizacoesAcesso`: só a Cloud Function (Admin
+      // SDK, que ignora estas regras) grava aqui, o app cliente nunca
+      // escreve.
+      match /notificacoesMensalidade/{notificacaoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if false;
+      }
+
+      // Fichas de treino: o proprio aluno le a propria (pra ver o treino
+      // do dia); staff le qualquer uma; escrever exige a permissao
+      // especifica de treino (nao basta ser staff generico).
+      match /treinos/{treinoId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
+      }
+
+      // Historico de matriculas do aluno — mesmo padrao de pagamentos: o
+      // proprio aluno so le a propria, staff generico tambem le, e so
+      // quem tem a permissao especifica de matriculas escreve (cria,
+      // renova, cancela).
+      match /matriculas/{matriculaId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if temPermissao('matriculas');
+      }
+
+      // Contas a receber: diferente de pagamentos/matriculas/treinos acima,
+      // a leitura AQUI não usa `ehStaff()` genérico — exige a permissão
+      // granular `acessarContasReceber` mesmo pra visualizar, conforme
+      // pedido explicitamente na Fase 1B (não repetir "qualquer staff").
+      match /contasReceber/{contaId} {
+        allow read: if request.auth != null &&
+          (request.auth.uid == uid || temPermissao('acessarContasReceber'));
+
+        // Toda cobrança nasce pendente — nunca criada já como paga (isso é
+        // sempre responsabilidade de `registrarRecebimento`, nunca da
+        // criação direta).
+        allow create: if temPermissao('cadastrarContasReceber') &&
+          request.resource.data.status == 'pendente';
+
+        // Cada permissão granular só pode alterar os campos da própria
+        // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`
+        // já usada em `planos`, pra impedir que "receber" vire uma porta
+        // aberta pra editar descrição/valor, ou que "excluir" faça mais
+        // que cancelar.
+        allow update: if
+          (temPermissao('alterarContasReceber') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'matriculaId', 'descricao', 'valorOriginal', 'desconto',
+              'jurosMulta', 'vencimento', 'observacao', 'atualizadoEm'
+            ])) ||
+          (temPermissao('receberContasReceber') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'valorPago', 'desconto', 'jurosMulta', 'dataPagamento',
+              'formaPagamento', 'observacao', 'recebidoPorUid', 'recebidoPorNome',
+              // `movimentacaoCaixaId` só é gravado quando o recebimento
+              // acontece com um caixa aberto (CaixaService.
+              // registrarRecebimentoContaReceber, que toca este campo na
+              // mesma transação) — faltava aqui, mesmo campo já presente
+              // no equivalente de `contasPagar`/`pagarContasPagar` logo
+              // abaixo; sem ele essa gravação caía em permission-denied
+              // pra qualquer papel, inclusive ADM (a restrição de campos
+              // vale independente de permissão).
+              'movimentacaoCaixaId', 'atualizadoEm'
+            ])) ||
+          (temPermissao('excluirContasReceber') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'atualizadoEm']));
+
+        allow delete: if false;
+      }
     }
 
-    match /exercicios/{exercicioId} {
-      // Biblioteca somente leitura pelo app; o cadastro continua fora
-      // dele (script/import direto no Firestore com credencial de admin).
+    // Collection group query sobre `matriculas` (AlunoService.watchTodasMatriculas,
+    // usada pela tela administrativa "Matrículas") — uma regra normal em
+    // /alunos/{uid}/matriculas so autoriza acesso ao path exato; consultas
+    // "collection group" (que cruzam todas as subcolecoes matriculas de
+    // todos os alunos de uma vez) exigem esta regra com wildcard recursivo
+    // à parte. So leitura — toda escrita de matricula sempre passa pelo
+    // path completo (regra acima), nunca por uma query deste tipo.
+    match /{path=**}/matriculas/{matriculaId} {
+      allow read: if ehStaff();
+    }
+
+    // Mesma justificativa acima, só que para `contasReceber`
+    // (AlunoService.watchTodasContasReceber) — aqui a permissão exigida é
+    // a granular `acessarContasReceber`, não `ehStaff()`.
+    match /{path=**}/contasReceber/{contaId} {
+      allow read: if temPermissao('acessarContasReceber');
+    }
+
+    // Controle de acesso da catraca (identificacao, autorizacao e
+    // acionamento desacoplados — ver functions/README.md). Estas colecoes
+    // so sao criadas pela Cloud Function `solicitarAutorizacaoAcesso`, via
+    // Admin SDK (que ignora estas regras) — o app cliente nunca escreve.
+    match /credenciais/{credencialId} {
       allow read: if ehStaff();
       allow write: if false;
+    }
+
+    match /academias/{academiaId} {
+      allow read: if ehStaff();
+      allow write: if false;
+
+      // O servico local (rodando no computador da academia) le esta fila
+      // autenticado como uma conta de staff dedicada, sem permissoes de
+      // tela nenhuma — so precisa passar em `ehStaff()`. So pode marcar
+      // uma autorizacao como consumida depois de acionar (ou nao) o
+      // solenoide — nunca cria uma autorizacao nem altera se foi
+      // aprovada, isso e responsabilidade exclusiva da Cloud Function.
+      match /autorizacoesAcesso/{autorizacaoId} {
+        allow read: if ehStaff();
+        allow create: if false;
+        allow update: if ehStaff() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['consumida', 'processadoEm']);
+        allow delete: if false;
+      }
     }
   }
 }

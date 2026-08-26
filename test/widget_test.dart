@@ -4,7 +4,7 @@ import 'package:gymextreme_app/theme/app_theme.dart';
 import 'package:gymextreme_app/widgets/gymextreme_logo.dart';
 
 void main() {
-  testWidgets('GymExtremeLogo mostra o nome da marca', (tester) async {
+  testWidgets('GymExtremeLogo mostra a imagem oficial da marca', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark,
@@ -18,13 +18,7 @@ void main() {
             widget is Image &&
             widget.image is AssetImage &&
             (widget.image as AssetImage).assetName ==
-                'assets/branding/logo_leao.png',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is RichText && widget.text.toPlainText() == 'GYM X-TREME',
+                'assets/branding/logo_gym_xtreme.png',
       ),
       findsOneWidget,
     );

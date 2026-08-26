@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -5,7 +7,14 @@ import '../screens/login_screen.dart';
 import '../screens/welcome_screen.dart';
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
-import '../services/exercicio_service.dart';
+import '../services/caixa_service.dart';
+import '../services/cargo_service.dart';
+import '../services/conta_pagar_service.dart';
+import '../services/funcionario_service.dart';
+import '../services/notificacao_service.dart';
+import '../services/plano_service.dart';
+import '../services/produto_service.dart';
+import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 
@@ -17,13 +26,27 @@ class AuthGate extends StatelessWidget {
     required this.authService,
     required this.userService,
     required this.alunoService,
-    required this.exercicioService,
+    required this.caixaService,
+    required this.cargoService,
+    required this.contaPagarService,
+    required this.funcionarioService,
+    required this.notificacaoService,
+    required this.planoService,
+    required this.produtoService,
+    required this.storageService,
   });
 
   final AuthService authService;
   final UserService userService;
   final AlunoService alunoService;
-  final ExercicioService exercicioService;
+  final CaixaService caixaService;
+  final CargoService cargoService;
+  final ContaPagarService contaPagarService;
+  final FuncionarioService funcionarioService;
+  final NotificacaoService notificacaoService;
+  final PlanoService planoService;
+  final ProdutoService produtoService;
+  final StorageService storageService;
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +66,24 @@ class AuthGate extends StatelessWidget {
           return LoginScreen(authService: authService);
         }
 
+        // Prepara o recebimento de notificacoes de mensalidade (permissao +
+        // token FCM) assim que sabemos que ha um usuario logado — nao
+        // bloqueia a navegacao pra tela de boas-vindas.
+        unawaited(notificacaoService.registrarTokenDoAparelho(user.uid));
+
         return WelcomeScreen(
           uid: user.uid,
           authService: authService,
           userService: userService,
           alunoService: alunoService,
-          exercicioService: exercicioService,
+          caixaService: caixaService,
+          cargoService: cargoService,
+          contaPagarService: contaPagarService,
+          funcionarioService: funcionarioService,
+          notificacaoService: notificacaoService,
+          planoService: planoService,
+          produtoService: produtoService,
+          storageService: storageService,
         );
       },
     );

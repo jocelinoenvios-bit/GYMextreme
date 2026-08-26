@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants/regulamento.dart';
+import '../../../models/aluno.dart';
 import '../../../models/app_user.dart';
 import '../../../models/termo_aceite.dart';
 import '../../../services/aluno_service.dart';
@@ -9,21 +10,43 @@ import '../../../theme/app_colors.dart';
 /// Replica o "REGULAMENTO" / Termo de Responsabilidade em papel, com
 /// aceite digital no lugar da assinatura manuscrita.
 class TermoTab extends StatefulWidget {
-  const TermoTab({super.key, required this.aluno, required this.alunoService});
+  const TermoTab({
+    super.key,
+    required this.aluno,
+    required this.alunoService,
+    required this.staffAtual,
+  });
 
   final AppUser aluno;
   final AlunoService alunoService;
+
+  /// Funcionario da recepcao logado, registrado no aceite (diferente de
+  /// quem assina — aluno ou responsavel).
+  final AppUser staffAtual;
 
   @override
   State<TermoTab> createState() => _TermoTabState();
 }
 
 class _TermoTabState extends State<TermoTab> {
+  /// Criados uma única vez — se fossem recriados a cada `build()` (chamando
+  /// watchAluno/watchTermoAceite direto no StreamBuilder), qualquer
+  /// setState local (ex.: marcar o checkbox) resetaria os StreamBuilders
+  /// pra "carregando", piscando o spinner por cima do formulário.
+  late final Stream<Aluno?> _alunoStream = widget.alunoService.watchAluno(widget.aluno.uid);
+  late final Stream<TermoAceite> _termoStream = widget.alunoService.watchTermoAceite(
+    widget.aluno.uid,
+  );
+
   final _nomeController = TextEditingController();
   final _responsavelController = TextEditingController();
   bool _declaraCiencia = false;
   bool _isSaving = false;
   bool _nomePreenchido = false;
+
+  /// Atualizado a cada rebuild a partir do [Aluno.idade] mais recente
+  /// (ver regra 07 do regulamento: só maior de idade assina sozinho).
+  bool _menorDeIdade = false;
 
   @override
   void dispose() {
@@ -43,6 +66,18 @@ class _TermoTabState extends State<TermoTab> {
       return;
     }
 
+    if (_menorDeIdade && _responsavelController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aluno menor de idade: informe o nome do responsável que está assinando.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       await widget.alunoService.salvarTermoAceite(
@@ -54,6 +89,8 @@ class _TermoTabState extends State<TermoTab> {
               ? null
               : _responsavelController.text.trim(),
           versaoRegulamento: regulamentoVersaoAtual,
+          registradoPorUid: widget.staffAtual.uid,
+          registradoPorNome: widget.staffAtual.nome,
         ),
       );
     } catch (_) {
@@ -72,8 +109,19 @@ class _TermoTabState extends State<TermoTab> {
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<Aluno?>(
+      stream: _alunoStream,
+      builder: (context, alunoSnapshot) {
+        final idade = alunoSnapshot.data?.idade;
+        _menorDeIdade = idade != null && idade < 18;
+        return _buildTermo(context);
+      },
+    );
+  }
+
+  Widget _buildTermo(BuildContext context) {
     return StreamBuilder<TermoAceite>(
-      stream: widget.alunoService.watchTermoAceite(widget.aluno.uid),
+      stream: _termoStream,
       builder: (context, snapshot) {
         final termo = snapshot.data;
 
@@ -126,6 +174,7 @@ class _TermoTabState extends State<TermoTab> {
                 responsavelController: _responsavelController,
                 declaraCiencia: _declaraCiencia,
                 isSaving: _isSaving,
+                menorDeIdade: _menorDeIdade,
                 onDeclaraCienciaChanged: (v) => setState(() => _declaraCiencia = v ?? false),
                 onSubmit: (_declaraCiencia && !_isSaving) ? _handleAceitar : null,
               ),
@@ -201,6 +250,7 @@ class _AceiteForm extends StatelessWidget {
     required this.responsavelController,
     required this.declaraCiencia,
     required this.isSaving,
+    required this.menorDeIdade,
     required this.onDeclaraCienciaChanged,
     required this.onSubmit,
   });
@@ -209,6 +259,10 @@ class _AceiteForm extends StatelessWidget {
   final TextEditingController responsavelController;
   final bool declaraCiencia;
   final bool isSaving;
+
+  /// Regra 07 do regulamento: só o aluno maior de idade assina sozinho —
+  /// menor de idade precisa do nome do responsável aqui.
+  final bool menorDeIdade;
   final ValueChanged<bool?> onDeclaraCienciaChanged;
   final VoidCallback? onSubmit;
 
@@ -232,13 +286,40 @@ class _AceiteForm extends StatelessWidget {
           decoration: const InputDecoration(labelText: 'Assinatura (nome completo)'),
         ),
         const SizedBox(height: 14),
-        TextField(
+        if (menorDeIdade)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: AppColors.gold, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Aluno menor de idade — o responsável precisa assinar '
+                    'por ele (regra 07 do regulamento).',
+                    style: TextStyle(color: AppColors.gold, fontSize: 12.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        TextFormField(
           controller: responsavelController,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Responsável',
-            helperText: 'Preencher apenas se o aluno for menor de idade',
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: InputDecoration(
+            labelText: menorDeIdade ? 'Responsável *' : 'Responsável',
+            helperText: menorDeIdade
+                ? 'Obrigatório — aluno menor de idade'
+                : 'Preencher apenas se o aluno for menor de idade',
           ),
+          validator: (value) {
+            if (menorDeIdade && (value == null || value.trim().isEmpty)) {
+              return 'Obrigatório para aluno menor de idade.';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 14),
         CheckboxListTile(

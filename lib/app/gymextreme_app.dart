@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../services/aluno_service.dart';
 import '../services/auth_service.dart';
-import '../services/exercicio_service.dart';
+import '../services/caixa_service.dart';
+import '../services/cargo_service.dart';
+import '../services/conta_pagar_service.dart';
+import '../services/funcionario_service.dart';
+import '../services/notificacao_service.dart';
+import '../services/plano_service.dart';
+import '../services/produto_service.dart';
+import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
 import 'auth_gate.dart';
@@ -15,17 +22,31 @@ class GymExtremeApp extends StatelessWidget {
     final authService = AuthService();
     final userService = UserService();
     final alunoService = AlunoService();
-    final exercicioService = ExercicioService();
+    final caixaService = CaixaService();
+    final cargoService = CargoService();
+    final contaPagarService = ContaPagarService();
+    final funcionarioService = FuncionarioService();
+    final notificacaoService = NotificacaoService();
+    final planoService = PlanoService();
+    final produtoService = ProdutoService();
+    final storageService = StorageService();
 
     return MaterialApp(
-      title: 'GymExtreme',
+      title: 'GymXtreme',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       home: AuthGate(
         authService: authService,
         userService: userService,
         alunoService: alunoService,
-        exercicioService: exercicioService,
+        caixaService: caixaService,
+        cargoService: cargoService,
+        contaPagarService: contaPagarService,
+        funcionarioService: funcionarioService,
+        notificacaoService: notificacaoService,
+        planoService: planoService,
+        produtoService: produtoService,
+        storageService: storageService,
       ),
     );
   }

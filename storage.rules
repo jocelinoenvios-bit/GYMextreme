@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Regras do Firebase Storage — hoje so guarda a foto de perfil do aluno
+// (`alunos/{uid}/foto.jpg`, ver StorageService.enviarFotoAluno).
+// Aplique em Firebase Console > Storage > Regras, ou via
+// `firebase deploy --only storage` depois de rodar `firebase init`.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function ehStaff() {
+      return request.auth != null &&
+        firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.role
+          in ['adm', 'personal', 'funcionario'];
+    }
+
+    match /alunos/{uid}/{arquivo} {
+      // O proprio aluno ve a propria foto; staff ve a de qualquer aluno.
+      allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+
+      // Upload continua sendo feito pela recepcao/staff no cadastro (mesmo
+      // padrao "100% staff-entered" do resto do Modulo 2), limitado a
+      // 5 MB e a arquivos de imagem.
+      allow write: if ehStaff() &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+}

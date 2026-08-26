@@ -1,11 +1,11 @@
 {
-    "name": "GymExtreme",
-    "short_name": "GymExtreme",
+    "name": "GymXtreme",
+    "short_name": "GymXtreme",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0A0A0A",
     "theme_color": "#0A0A0A",
-    "description": "GymExtreme - App da academia para alunos, personais e administracao.",
+    "description": "GymXtreme - App da academia para alunos, personais e administracao.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

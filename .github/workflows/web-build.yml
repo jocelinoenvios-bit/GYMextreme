@@ -1,0 +1,68 @@
+name: Web build (versão para computador)
+
+# Builda a versao Web do GymExtreme (pra abrir num navegador, ex.: no
+# computador da administracao da academia) e disponibiliza pra download —
+# como artefato do workflow (Actions > essa execucao > Artifacts) e
+# tambem como asset compactado de uma Release fixa "web-latest" (link
+# estavel), no mesmo espirito do workflow "Android debug APK".
+#
+# Isso NAO publica o site em lugar nenhum (Firebase Hosting, GitHub
+# Pages etc.) — so gera o build e disponibiliza o .zip pra download.
+# `firebase.json` ja tem a secao "hosting" pronta; publicar de fato
+# exige rodar `firebase deploy --only hosting` com credenciais do
+# projeto (fora do escopo deste workflow).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Analisar codigo
+        run: flutter analyze
+
+      - name: Rodar testes
+        run: flutter test
+
+      - name: Build Web (release)
+        run: flutter build web --release
+
+      - name: Compactar build
+        run: cd build/web && zip -r ../../gymextreme-web.zip .
+
+      - name: Publicar como artefato do workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: gymextreme-web
+          path: build/web
+          retention-days: 30
+
+      - name: Publicar como asset da Release "web-latest"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: web-latest
+          name: GymExtreme — build Web mais recente
+          body: |
+            Build Web (release) gerado automaticamente a partir do commit
+            ${{ github.sha }} (branch `${{ github.ref_name }}`).
+
+            Baixe `gymextreme-web.zip`, extraia e sirva a pasta com
+            qualquer servidor de arquivos estaticos (ou publique no
+            Firebase Hosting do projeto) pra abrir o app num navegador,
+            ex.: no computador da administracao.
+          prerelease: true
+          make_latest: false
+          files: gymextreme-web.zip

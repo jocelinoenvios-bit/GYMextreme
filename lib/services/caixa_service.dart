@@ -4,6 +4,7 @@ import '../models/caixa.dart';
 import '../models/caixa_movimentacao.dart';
 import '../models/conta_pagar.dart';
 import '../models/conta_receber.dart';
+import '../utils/mensalidade_utils.dart';
 
 /// Controle de caixa da academia (coleção `caixas`, nível de academia —
 /// não pertence a nenhum aluno, mesmo padrão de `PlanoService`). Cada
@@ -188,11 +189,8 @@ class CaixaService {
     required String staffUid,
     required String staffNome,
   }) {
-    final contaRef = _firestore
-        .collection('alunos')
-        .doc(alunoUid)
-        .collection('contasReceber')
-        .doc(contaReceberId);
+    final alunoRef = _firestore.collection('alunos').doc(alunoUid);
+    final contaRef = alunoRef.collection('contasReceber').doc(contaReceberId);
     final caixaRef = _caixas.doc(caixaId);
     final movRef = _movimentacoes(caixaId).doc();
 
@@ -244,6 +242,18 @@ class CaixaService {
           staffNome: staffNome,
         ).toFirestore(),
       );
+
+      // Cobrança vinculada a uma matrícula (mensalidade) — também avança o
+      // vencimento do aluno, liberando o acesso no mesmo passo (mesma
+      // regra de `AlunoService.registrarRecebimento`, ver docstring dela).
+      final matriculaId = contaSnap.data()?['matriculaId'] as String?;
+      final vencimentoData = contaSnap.data()?['vencimento'];
+      final vencimentoOriginal = vencimentoData is Timestamp ? vencimentoData.toDate() : null;
+      if (matriculaId != null && vencimentoOriginal != null) {
+        transaction.set(alunoRef, {
+          'proximoVencimento': Timestamp.fromDate(adicionarUmMes(vencimentoOriginal)),
+        }, SetOptions(merge: true));
+      }
 
       return movRef.id;
     });

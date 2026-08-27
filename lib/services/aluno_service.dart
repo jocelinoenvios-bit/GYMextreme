@@ -15,6 +15,7 @@ import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
 import '../models/user_role.dart';
+import '../utils/mensalidade_utils.dart';
 
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
 /// `alunos`), anamnese e termo de responsabilidade (campos dentro do
@@ -168,7 +169,7 @@ class AlunoService {
     required String staffNome,
   }) async {
     final base = vencimentoAtual ?? DateTime.now();
-    final novoVencimento = _adicionarUmMes(base);
+    final novoVencimento = adicionarUmMes(base);
 
     await _alunos.doc(uid).set({
       'proximoVencimento': Timestamp.fromDate(novoVencimento),
@@ -193,14 +194,19 @@ class AlunoService {
     }, SetOptions(merge: true));
   }
 
-  /// Mesmo dia do mes, um mes a frente — com fallback pro ultimo dia do
-  /// mes de destino quando ele for mais curto (ex.: 31/01 -> 28 ou 29/02).
-  DateTime _adicionarUmMes(DateTime data) {
-    final novoMes = data.month == 12 ? 1 : data.month + 1;
-    final novoAno = data.month == 12 ? data.year + 1 : data.year;
-    final ultimoDiaDoNovoMes = DateTime(novoAno, novoMes + 1, 0).day;
-    final dia = data.day > ultimoDiaDoNovoMes ? ultimoDiaDoNovoMes : data.day;
-    return DateTime(novoAno, novoMes, dia);
+  /// Avança `Aluno.proximoVencimento` em 1 mês a partir de [vencimentoOriginal]
+  /// (o vencimento da cobrança que acabou de ser paga) — usado por
+  /// [registrarRecebimento] só quando a cobrança recebida está vinculada a
+  /// uma matrícula (mensalidade), pra que confirmar o pagamento pela tela
+  /// "Contas a Receber" também libere o acesso do aluno — antes disso só a
+  /// seção "Mensalidade" da aba Dados fazia esse avanço, deixando as duas
+  /// telas dessincronizadas. `CaixaService.registrarRecebimentoContaReceber`
+  /// faz o mesmo avanço (mesma função [adicionarUmMes]), só que dentro da
+  /// própria transação do caixa em vez de chamar este método privado.
+  Future<void> _avancarProximoVencimento(String uid, DateTime vencimentoOriginal) {
+    return _alunos.doc(uid).set({
+      'proximoVencimento': Timestamp.fromDate(adicionarUmMes(vencimentoOriginal)),
+    }, SetOptions(merge: true));
   }
 
   /// Histórico de matrículas de UM aluno, mais recente primeiro. Usada
@@ -412,6 +418,13 @@ class AlunoService {
   /// lançou continua em `criadoPor*`, quem recebeu fica em
   /// `recebidoPor*`). Desconto/juros podem ser ajustados aqui mesmo (ex.:
   /// desconto concedido só na hora de pagar).
+  ///
+  /// Se [matriculaId] e [vencimentoOriginal] forem informados (a cobrança
+  /// paga está vinculada a uma matrícula — ver `ContaReceberFormScreen`),
+  /// também avança `Aluno.proximoVencimento`, liberando o acesso do aluno
+  /// no mesmo passo. Cobranças avulsas (produto, sessão extra etc., sem
+  /// matrícula vinculada) nunca mexem no vencimento — só a mensalidade
+  /// controla o acesso.
   Future<void> registrarRecebimento(
     String alunoUid,
     String contaId, {
@@ -423,8 +436,10 @@ class AlunoService {
     String? observacao,
     required String staffUid,
     required String staffNome,
-  }) {
-    return _contasReceber(alunoUid).doc(contaId).set({
+    String? matriculaId,
+    DateTime? vencimentoOriginal,
+  }) async {
+    await _contasReceber(alunoUid).doc(contaId).set({
       'status': StatusContaReceber.pago.name,
       'valorPago': valorPago,
       'desconto': desconto,
@@ -436,6 +451,10 @@ class AlunoService {
       'recebidoPorNome': staffNome,
       'atualizadoEm': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    if (matriculaId != null && vencimentoOriginal != null) {
+      await _avancarProximoVencimento(alunoUid, vencimentoOriginal);
+    }
   }
 
   /// "Exclui" uma cobrança sem apagar o documento — marca `cancelado`,

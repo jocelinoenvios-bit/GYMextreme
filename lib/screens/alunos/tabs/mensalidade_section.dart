@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/app_user.dart';
 import '../../../models/permission.dart';
@@ -6,6 +7,7 @@ import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/status_acesso.dart';
+import '../../../utils/whatsapp.dart';
 
 /// Situação da mensalidade do aluno + ação da recepção pra confirmar um
 /// pagamento recebido fora do app (dinheiro, PIX, cartão, transferência —
@@ -17,12 +19,18 @@ class MensalidadeSection extends StatefulWidget {
     required this.proximoVencimento,
     required this.alunoService,
     required this.staffAtual,
+    this.whatsapp,
   });
 
   final String alunoUid;
   final DateTime? proximoVencimento;
   final AlunoService alunoService;
   final AppUser staffAtual;
+
+  /// Número de WhatsApp cadastrado na ficha do aluno (só dígitos, sem
+  /// código do país) — quando presente e a mensalidade não está em dia,
+  /// mostra o botão "Chamar no WhatsApp" (ver [linkWhatsapp]).
+  final String? whatsapp;
 
   @override
   State<MensalidadeSection> createState() => _MensalidadeSectionState();
@@ -56,6 +64,26 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
         staffNome: widget.staffAtual.nome,
       ),
     );
+  }
+
+  Future<void> _chamarNoWhatsapp() async {
+    final whatsapp = widget.whatsapp;
+    if (whatsapp == null || whatsapp.isEmpty) return;
+    final uri = Uri.parse(linkWhatsapp(whatsapp));
+    var abriu = false;
+    try {
+      abriu = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      abriu = false;
+    }
+    if (!abriu && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível abrir o WhatsApp.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _executar(Future<void> Function() acao) async {
@@ -167,6 +195,20 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
                             ? 'DEFINIR PRIMEIRO VENCIMENTO'
                             : 'MARCAR PAGAMENTO RECEBIDO',
                       ),
+              ),
+            ),
+          ],
+          if (widget.whatsapp != null &&
+              widget.whatsapp!.isNotEmpty &&
+              (status.status == StatusMensalidade.tolerancia ||
+                  status.status == StatusMensalidade.bloqueado)) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _chamarNoWhatsapp,
+                icon: const Icon(Icons.chat_outlined),
+                label: const Text('CHAMAR NO WHATSAPP'),
               ),
             ),
           ],

@@ -11,6 +11,7 @@ import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/termo_aceite.dart';
 import 'package:gymextreme_app/models/treino.dart';
 import 'package:gymextreme_app/services/aluno_service.dart';
+import 'package:gymextreme_app/utils/mensalidade_utils.dart';
 
 /// Dublê de teste do [AlunoService] — implementa a mesma interface pública
 /// sem tocar o Firestore de verdade (mesmo padrão já usado para
@@ -51,6 +52,11 @@ class FakeAlunoService implements AlunoService {
   String? ultimaContaExcluidaId;
   ContaReceber? ultimaContaAtualizada;
   ContaReceber? ultimoRecebimentoRegistrado;
+
+  /// Preenchido só quando [registrarRecebimento] recebeu `matriculaId` +
+  /// `vencimentoOriginal` — simula o avanço de `Aluno.proximoVencimento`
+  /// que o serviço real faz nesse caso (ver `AlunoService.registrarRecebimento`).
+  DateTime? proximoVencimentoAvancadoPara;
 
   final _alunosController = StreamController<List<AppUser>>.broadcast();
 
@@ -276,6 +282,8 @@ class FakeAlunoService implements AlunoService {
     String? observacao,
     required String staffUid,
     required String staffNome,
+    String? matriculaId,
+    DateTime? vencimentoOriginal,
   }) async {
     contasReceber = [
       for (final conta in contasReceber)
@@ -295,6 +303,9 @@ class FakeAlunoService implements AlunoService {
           conta,
     ];
     ultimoRecebimentoRegistrado = contasReceber.firstWhere((c) => c.id == contaId);
+    if (matriculaId != null && vencimentoOriginal != null) {
+      proximoVencimentoAvancadoPara = adicionarUmMes(vencimentoOriginal);
+    }
   }
 
   @override

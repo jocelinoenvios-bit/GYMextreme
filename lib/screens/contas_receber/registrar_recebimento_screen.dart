@@ -141,6 +141,8 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
           observacao: observacao,
           staffUid: widget.staffAtual.uid,
           staffNome: widget.staffAtual.nome,
+          matriculaId: widget.conta.matriculaId,
+          vencimentoOriginal: widget.conta.vencimento,
         );
       }
       if (mounted) Navigator.of(context).pop();
@@ -186,6 +188,14 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
                             'movimentação de caixa.',
                   style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
+                if (widget.conta.matriculaId != null) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Cobrança vinculada a uma matrícula — confirmar aqui também '
+                    'libera o acesso do aluno (avança o próximo vencimento).',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _valorPagoController,

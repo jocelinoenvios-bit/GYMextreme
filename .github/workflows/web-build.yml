@@ -20,6 +20,8 @@ permissions:
 jobs:
   build-web:
     runs-on: ubuntu-latest
+    env:
+      TEM_FIREBASE_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,7 +70,7 @@ jobs:
           files: gymextreme-web.zip
 
       - name: Publicar no Firebase Hosting (se o secret estiver configurado)
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+        if: ${{ env.TEM_FIREBASE_SECRET == 'true' }}
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'

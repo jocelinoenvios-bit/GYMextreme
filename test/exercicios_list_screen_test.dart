@@ -92,7 +92,12 @@ void main() {
     await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
 
     await tester.tap(find.text('3/4 sit-up'));
-    await tester.pumpAndSettle();
+    // Sem pumpAndSettle: o GIF do detalhe roda em loop infinito
+    // (autostart automático), então nunca "assenta" — mesmo motivo de
+    // exercicio_media_stage_test.dart usar só pump(). Duas bombeadas
+    // bastam pra concluir a transição de rota (300ms padrão).
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(ExercicioDetailScreen), findsOneWidget);
   });

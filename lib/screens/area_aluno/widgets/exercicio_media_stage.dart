@@ -11,12 +11,11 @@ import 'exercicio_media_controls.dart';
 /// fundo dos ativos 3D reais da Biblioteca de Exercícios, então um card
 /// escuro por trás pareceria um recorte quebrado, não uma escolha.
 ///
-/// Renderiza o GIF oficial (`ExerciseModel.gif180Url`) via
-/// `AssetImage` — resolvido/decodificado sob demanda pelo próprio
-/// Flutter só quando este widget entra em tela (nenhum carregamento em
-/// lote). A variante 360° (`gif360Url`) fica reservada para a tela
-/// cheia, onde o zoom é maior — a troca é automática e nunca aparece
-/// como opção pro aluno.
+/// Renderiza o GIF oficial (`ExerciseModel.gif360Url`, com fallback pro
+/// `gif180Url` caso a variante maior não exista) via `AssetImage` —
+/// resolvido/decodificado sob demanda pelo próprio Flutter só quando
+/// este widget entra em tela (nenhum carregamento em lote). A troca de
+/// resolução é automática e nunca aparece como opção pro aluno.
 class ExercicioMediaStage extends StatefulWidget {
   const ExercicioMediaStage({super.key, required this.exercise});
 
@@ -97,7 +96,7 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage>
               child: Center(
                 child: Gif(
                   key: ValueKey(widget.exercise.id),
-                  image: AssetImage(widget.exercise.gif180Url),
+                  image: AssetImage(widget.exercise.gif360Url ?? widget.exercise.gif180Url),
                   controller: _loopController,
                   autostart: reduceMotion ? Autostart.no : Autostart.loop,
                   fit: BoxFit.contain,

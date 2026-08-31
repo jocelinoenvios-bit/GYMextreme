@@ -24,17 +24,38 @@ Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: Scaffold(b
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('palco principal usa o GIF 180 e nao expoe nenhum seletor de angulo', (tester) async {
+  testWidgets('palco principal usa o GIF 360 (maior resolucao) quando disponivel', (tester) async {
     await tester.pumpWidget(_wrap(const ExercicioMediaStage(exercise: _exercicio)));
     await tester.pump();
 
     final gif = tester.widget<Gif>(find.byType(Gif));
-    expect((gif.image as AssetImage).assetName, 'assets/exercicios/gifs/0001.gif');
+    expect((gif.image as AssetImage).assetName, 'assets/exercicios/gifs_360/0001.gif');
 
     // O seletor "Frontal/Lateral" foi removido — a troca de resolução é
     // sempre automática, nunca uma escolha exposta ao aluno.
     expect(find.text('Frontal'), findsNothing);
     expect(find.text('Lateral'), findsNothing);
+  });
+
+  testWidgets('palco principal cai pro GIF 180 se, por algum motivo, nao houver variante 360', (
+    tester,
+  ) async {
+    const semVariante360 = ExerciseModel(
+      id: '9999',
+      nome: 'exercicio sem 360',
+      bodyPart: 'waist',
+      equipmentCategory: 'bodyweight',
+      equipamentoTexto: 'body weight',
+      dificuldade: 'beginner',
+      categoria: 'strength',
+      movementFamily: 'sit up',
+      gif180Url: 'assets/exercicios/gifs/0001.gif',
+    );
+    await tester.pumpWidget(_wrap(const ExercicioMediaStage(exercise: semVariante360)));
+    await tester.pump();
+
+    final gif = tester.widget<Gif>(find.byType(Gif));
+    expect((gif.image as AssetImage).assetName, 'assets/exercicios/gifs/0001.gif');
   });
 
   testWidgets('tela cheia usa o GIF 360 automaticamente, sem escolha do usuario', (tester) async {

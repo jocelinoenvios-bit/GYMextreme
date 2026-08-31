@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gif/gif.dart';
 
 import '../../constants/dificuldade_exercicio.dart';
 import '../../constants/equipamentos.dart';
@@ -10,13 +11,39 @@ import '../../theme/app_colors.dart';
 /// Ficha de referência de um exercício da Biblioteca Oficial — usada ao
 /// navegar a biblioteca (fora do fluxo de execução do treino, que tem
 /// sua própria tela dedicada com player/controles).
-class ExercicioDetailScreen extends StatelessWidget {
+///
+/// Mostra o GIF animado de verdade (`gif360Url`, com fallback pro
+/// `gif180Url`), não só o primeiro quadro — mesmo padrão de
+/// `ExercicioMediaStage`/`ExercicioFullscreenScreen`.
+class ExercicioDetailScreen extends StatefulWidget {
   const ExercicioDetailScreen({super.key, required this.exercicio});
 
   final ExerciseModel exercicio;
 
   @override
+  State<ExercicioDetailScreen> createState() => _ExercicioDetailScreenState();
+}
+
+class _ExercicioDetailScreenState extends State<ExercicioDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late final GifController _loopController;
+
+  @override
+  void initState() {
+    super.initState();
+    _loopController = GifController(vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _loopController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final exercicio = widget.exercicio;
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     return Scaffold(
       appBar: AppBar(title: Text(exercicio.nomeExibicao, overflow: TextOverflow.ellipsis)),
       body: ListView(
@@ -28,10 +55,12 @@ class ExercicioDetailScreen extends StatelessWidget {
               aspectRatio: 1,
               child: Container(
                 color: AppColors.stage,
-                child: Image.asset(
-                  exercicio.gif180Url,
+                child: Gif(
+                  image: AssetImage(exercicio.gif360Url ?? exercicio.gif180Url),
+                  controller: _loopController,
+                  autostart: reduceMotion ? Autostart.no : Autostart.loop,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const _GifIndisponivel(),
+                  placeholder: (_) => const Center(child: CircularProgressIndicator()),
                 ),
               ),
             ),
@@ -106,19 +135,6 @@ class _InfoChip extends StatelessWidget {
         label,
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
-    );
-  }
-}
-
-class _GifIndisponivel extends StatelessWidget {
-  const _GifIndisponivel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      alignment: Alignment.center,
-      child: const Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary, size: 40),
     );
   }
 }

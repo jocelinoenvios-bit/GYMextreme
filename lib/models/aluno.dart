@@ -46,6 +46,8 @@ class Aluno {
     this.diaVencimento,
     this.proximoVencimento,
     this.ativo = true,
+    this.bloqueado = false,
+    this.unidadeId,
     this.cadastradoPorUid,
     this.cadastradoPorNome,
   });
@@ -88,6 +90,20 @@ class Aluno {
   /// só o campo).
   final bool ativo;
 
+  /// Bloqueio manual de acesso (independente de mensalidade em dia) —
+  /// ex.: recepção suspende o acesso de um aluno por algum motivo
+  /// administrativo, mesmo com o pagamento em dia. Usado pela
+  /// autorização de acesso da integração com dispositivos faciais
+  /// (`AccessAuthorizationService`, Cloud Function
+  /// `controlIdNewUserIdentified`); ainda não tem tela pra alternar, só
+  /// o campo.
+  final bool bloqueado;
+
+  /// Unidade/filial à qual este aluno pertence — usado pela validação de
+  /// "unidade permitida" na autorização de acesso. Nulo em academias de
+  /// unidade única (nunca bloqueia, mesmo padrão de `proximoVencimento`).
+  final String? unidadeId;
+
   /// Auditoria: qual funcionario cadastrou este aluno.
   final String? cadastradoPorUid;
   final String? cadastradoPorNome;
@@ -122,6 +138,8 @@ class Aluno {
       diaVencimento: (data['diaVencimento'] as num?)?.toInt(),
       proximoVencimento: proximoVencimento is Timestamp ? proximoVencimento.toDate() : null,
       ativo: data['ativo'] as bool? ?? true,
+      bloqueado: data['bloqueado'] as bool? ?? false,
+      unidadeId: data['unidadeId'] as String?,
       cadastradoPorUid: data['cadastradoPorUid'] as String?,
       cadastradoPorNome: data['cadastradoPorNome'] as String?,
     );
@@ -149,6 +167,8 @@ class Aluno {
           ? Timestamp.fromDate(proximoVencimento!)
           : null,
       'ativo': ativo,
+      'bloqueado': bloqueado,
+      'unidadeId': unidadeId,
       if (cadastradoPorUid != null) 'cadastradoPorUid': cadastradoPorUid,
       if (cadastradoPorNome != null) 'cadastradoPorNome': cadastradoPorNome,
     };
@@ -171,6 +191,8 @@ class Aluno {
     int? diaVencimento,
     DateTime? proximoVencimento,
     bool? ativo,
+    bool? bloqueado,
+    String? unidadeId,
     String? cadastradoPorUid,
     String? cadastradoPorNome,
   }) {
@@ -193,6 +215,8 @@ class Aluno {
       diaVencimento: diaVencimento ?? this.diaVencimento,
       proximoVencimento: proximoVencimento ?? this.proximoVencimento,
       ativo: ativo ?? this.ativo,
+      bloqueado: bloqueado ?? this.bloqueado,
+      unidadeId: unidadeId ?? this.unidadeId,
       cadastradoPorUid: cadastradoPorUid ?? this.cadastradoPorUid,
       cadastradoPorNome: cadastradoPorNome ?? this.cadastradoPorNome,
     );

@@ -378,5 +378,43 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    // Integracao com dispositivos de controle de acesso facial (ex.:
+    // iDFace Pro/Control iD) — pipeline separado do bloco acima
+    // (`academias`/`autorizacoesAcesso`/`credenciais`), que e um desenho
+    // antigo pra solenoide generico via servico local. Aqui o proprio
+    // dispositivo fala HTTP direto com a Cloud Function
+    // `controlIdNewUserIdentified` (nao passa pelo app cliente, nao usa
+    // Firebase Auth) — por isso todas estas colecoes so sao escritas
+    // via Admin SDK (que ignora estas regras); o app cliente so le, pra
+    // uma futura tela de administracao (dispositivos cadastrados,
+    // historico de acessos).
+    match /unidades/{unidadeId} {
+      allow read: if ehStaff();
+      allow write: if temPermissao('gerenciarFuncionarios');
+    }
+
+    match /dispositivosAcesso/{dispositivoId} {
+      allow read: if ehStaff();
+      allow write: if false;
+
+      // Mapeamento "user_id que o dispositivo enviou" -> aluno do Gym
+      // Xtreme, um dispositivo pode ter sua propria numeracao interna,
+      // por isso o mapeamento e por dispositivo, nao global. Escrito
+      // pelo `DeviceSyncService` (ainda nao implementado).
+      match /credenciais/{userIdDispositivo} {
+        allow read: if ehStaff();
+        allow write: if false;
+      }
+    }
+
+    // Log de toda tentativa de acesso (liberada ou negada) recebida via
+    // `controlIdNewUserIdentified` — nunca editado nem apagado depois de
+    // criado, mesma logica de imutabilidade ja usada em
+    // pagamentos/contasReceber/movimentacoes de caixa.
+    match /eventosAcesso/{eventoId} {
+      allow read: if ehStaff();
+      allow write: if false;
+    }
   }
 }

@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('node:crypto');
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
@@ -11,6 +11,7 @@ const {
   construirRegistroNotificacao,
   idNotificacaoDoDia,
 } = require('./lib/notificacao-mensalidade');
+const { processarEventoIdentificacao } = require('./lib/access/access-request-handler');
 
 initializeApp();
 const db = getFirestore();
@@ -172,3 +173,36 @@ exports.enviarNotificacoesMensalidade = onSchedule(
 // Exportado só pra teste (ver test/notificacao-mensalidade.emulator.js, que
 // roda contra o Firestore Emulator) — nao faz parte da API publica das functions.
 exports._processarNotificacaoMensalidade = processarNotificacaoMensalidade;
+
+/**
+ * Endpoint chamado pelo iDFace Pro (Control iD) a cada identificação
+ * facial — equivalente, do ponto de vista do dispositivo, ao
+ * `new_user_identified.fcgi` da Access API. Ver
+ * `lib/access/access-request-handler.js` pra toda a lógica de
+ * autenticação do dispositivo, decisão de acesso e registro do evento
+ * — este arquivo só faz a ponte HTTP (ler o corpo/token da requisição,
+ * responder com o status/corpo que o handler decidiu).
+ *
+ * Exposto via Firebase Hosting em
+ * `/api/integrations/controlid/events/new-user-identified` (ver rewrite
+ * em `firebase.json`) — a URL "crua" da própria Cloud Function também
+ * funciona, mas o rewrite dá um caminho estável, independente da região
+ * de deploy.
+ *
+ * Autenticação do dispositivo: token secreto em `X-Device-Token` (header)
+ * OU `?token=` (query string) — ver docstring de
+ * `lib/access/device-auth.js` pra por que os dois caminhos existem
+ * (A CONFIRMAR NO EQUIPAMENTO qual o "Modo Pro/Online" do iDFace
+ * realmente suporta).
+ */
+exports.controlIdNewUserIdentified = onRequest(async (req, res) => {
+  const deviceToken = req.get('X-Device-Token') || req.query.token || null;
+  const payload = req.body && typeof req.body === 'object' ? req.body : {};
+
+  const { httpStatus, corpo } = await processarEventoIdentificacao(db, {
+    payload,
+    deviceToken,
+  });
+
+  res.status(httpStatus).json(corpo);
+});

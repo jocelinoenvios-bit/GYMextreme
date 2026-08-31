@@ -184,10 +184,26 @@ async function processarEventoIdentificacao(db, { payload, deviceToken, provider
       return negarDireto(db, { provider, evento, dispositivo, motivo: motivoForcado, inicio });
     }
 
+    // Horario de acesso (schedule-service.js): so busca plano/unidade se
+    // de fato vai avaliar um aluno — nenhum dos dois e usado em nenhum
+    // outro ponto da decisao.
+    let plano = null;
+    if (matriculaAtiva && matriculaAtiva.planoId) {
+      const planoSnap = await db.collection('planos').doc(matriculaAtiva.planoId).get();
+      if (planoSnap.exists) plano = planoSnap.data();
+    }
+    let unidade = null;
+    if (dispositivo.data.unidadeId) {
+      const unidadeSnap = await db.collection('unidades').doc(dispositivo.data.unidadeId).get();
+      if (unidadeSnap.exists) unidade = unidadeSnap.data();
+    }
+
     const decisao = avaliarAcesso({
       aluno,
       matriculaAtiva,
       dispositivo: dispositivo.data,
+      plano,
+      unidade,
       agora: new Date(),
     });
 

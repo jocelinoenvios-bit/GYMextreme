@@ -2,6 +2,7 @@
 
 const { calcularStatusAcesso } = require('../status-acesso');
 const { MOTIVO_NEGACAO, RESULTADO } = require('./motivos');
+const { resolverHorariosPermitidos, estaDentroDoHorarioPermitido } = require('./schedule-service');
 
 function negar(motivo) {
   return { resultado: RESULTADO.DENY, motivo };
@@ -21,11 +22,12 @@ const PERMITIR = Object.freeze({ resultado: RESULTADO.ALLOW, motivo: null });
  * financeiro → horário → unidade) — a primeira que falhar já decide,
  * sem checar o resto.
  *
- * Horário de acesso: AINDA NÃO EXISTE nenhuma tela/config de restrição
- * de horário no app (nem por aluno, nem por plano) — então essa
- * checagem é, por enquanto, sempre "sem restrição" (nunca bloqueia). O
- * dia em que essa configuração existir, a lógica entra aqui, sem mudar
- * a assinatura da função.
+ * Horário de acesso: configurável por aluno, por plano ou por unidade
+ * (ver `schedule-service.js`) — nenhum documento real tem esse campo
+ * preenchido hoje, então na prática esta checagem continua sempre "sem
+ * restrição" até alguém cadastrar um horário de verdade em algum dos
+ * três níveis (o dia que isso acontecer, passa a valer sozinho, sem
+ * precisar mudar nada aqui).
  *
  * @param {{
  *   aluno: (Record<string, unknown> & {
@@ -33,16 +35,23 @@ const PERMITIR = Object.freeze({ resultado: RESULTADO.ALLOW, motivo: null });
  *     bloqueado?: boolean,
  *     proximoVencimento?: {toDate: () => Date} | null,
  *     unidadeId?: string | null,
+ *     horariosPermitidos?: Record<string, Array<{inicio: string, fim: string}>>,
  *   }) | null,
  *   matriculaAtiva: (Record<string, unknown> & {
  *     dataVencimento?: {toDate: () => Date},
  *   }) | null,
  *   dispositivo: { unidadeId?: string | null },
+ *   plano?: (Record<string, unknown> & {
+ *     horariosPermitidos?: Record<string, Array<{inicio: string, fim: string}>>,
+ *   }) | null,
+ *   unidade?: (Record<string, unknown> & {
+ *     horariosPermitidos?: Record<string, Array<{inicio: string, fim: string}>>,
+ *   }) | null,
  *   agora?: Date,
  * }} input
  * @returns {{ resultado: 'ALLOW'|'DENY', motivo: string|null }}
  */
-function avaliarAcesso({ aluno, matriculaAtiva, dispositivo, agora }) {
+function avaliarAcesso({ aluno, matriculaAtiva, dispositivo, plano, unidade, agora }) {
   agora = agora || new Date();
   dispositivo = dispositivo || {};
 
@@ -79,8 +88,13 @@ function avaliarAcesso({ aluno, matriculaAtiva, dispositivo, agora }) {
     return negar(MOTIVO_NEGACAO.PAYMENT_OVERDUE);
   }
 
-  // Horário — ver docstring acima: sem-op de propósito, ainda não existe
-  // essa configuração no app.
+  // Horário: aluno > plano > unidade > sem restrição (ver
+  // resolverHorariosPermitidos). Continua sendo sem-op na prática hoje
+  // (nenhum dos três documentos tem o campo preenchido no banco real).
+  const horariosPermitidos = resolverHorariosPermitidos({ aluno, plano, unidade });
+  if (!estaDentroDoHorarioPermitido({ horariosPermitidos, agora })) {
+    return negar(MOTIVO_NEGACAO.OUTSIDE_ALLOWED_HOURS);
+  }
 
   // Unidade: só bloqueia se o aluno tiver uma unidade definida E ela for
   // diferente da unidade do dispositivo. Aluno sem `unidadeId` (cadastro

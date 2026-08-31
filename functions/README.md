@@ -42,10 +42,32 @@ Três funções:
   - `rate-limit.js` — guard-rail opcional (desligado por padrão) contra
     chamadas rápidas demais do mesmo dispositivo — liga configurando
     `CONTROLID_INTERVALO_MINIMO_MS`.
+  - `schedule-service.js` — horário de acesso: configurável por aluno,
+    por plano ou por unidade (precedência nessa ordem), por dia da
+    semana, com uma ou mais faixas `{inicio, fim}` por dia. Puro, converte
+    corretamente pro fuso de São Paulo (nunca o fuso do processo Node).
+    **Nenhum horário é assumido por padrão** — sem nenhuma configuração em
+    nenhum dos três níveis (situação de 100% dos documentos reais hoje),
+    o acesso nunca é bloqueado por horário.
+  - `offline-access-policy.js` — política de acesso pra quando o
+    dispositivo não consegue falar com o Gym Xtreme (seção 17 do
+    briefing original). **Importante**: essa decisão, quando acontece de
+    verdade, é tomada PELO PRÓPRIO DISPOSITIVO offline — o Gym Xtreme
+    nunca executa este código nesse momento (um dispositivo genuinamente
+    offline nunca chega a chamar `controlIdNewUserIdentified`). Serve pra
+    guardar/ler qual política está configurada
+    (`configuracaoAcesso/politicaOffline`) e simular o que ela decidiria
+    (`avaliarPoliticaOffline`), pra quando existir um jeito de aplicá-la
+    de verdade no aparelho. Padrão `DENY_ALL` (o Gym Xtreme é a
+    autoridade de autorização; sem conseguir confirmar situação
+    financeira/plano/bloqueio, a decisão segura é nunca liberar sozinho).
+    `ALLOW_SYNCHRONIZED_ACTIVE_USERS` implementado; `HYBRID` existe só
+    como valor válido — chamar `avaliarPoliticaOffline` com ele lança um
+    erro explícito, de propósito (comportamento ainda não definido).
   - `access-request-handler.js` — orquestra os módulos acima pra cada
     requisição: valida o payload (400 se não for utilizável), resolve o
-    dispositivo, aplica o rate limit, resolve o aluno, decide e registra.
-    Recebe o `AccessControlProvider` por parâmetro (usa
+    dispositivo, aplica o rate limit, resolve o aluno + plano + unidade,
+    decide e registra. Recebe o `AccessControlProvider` por parâmetro (usa
     `controlIdAccessProvider` por padrão) — o resto do domínio nunca
     depende do Control iD diretamente.
   - `device-sync-service.js` — `DeviceSyncService`, ver seção própria
@@ -156,18 +178,56 @@ npm run test:emulator:access   # fluxo completo: aluno em dia, atrasado,
                                 # nunca sincronizado, unidade errada,
                                 # dispositivo não autorizado, evento duplicado
                                 # + DeviceSyncService (cadastro/vínculo real)
+                                # + política offline (leitura da configuração)
 npm run test:rules:access      # regras das coleções dispositivosAcesso,
-                                # eventosAcesso e unidades
+                                # eventosAcesso, unidades e configuracaoAcesso
+npm run test:audit             # auditoria de ponta a ponta, 12 cenários
+                                # numerados — ver seção própria abaixo
 ```
 
 Os arquivos sem sufixo `.emulator.js` (`access-authorization-service.test.js`,
 `control-id-adapter.test.js`, `control-id-adapter-acoes.test.js`,
 `access-event-service.test.js`, `device-auth.test.js`, `rate-limit.test.js`,
-`access-request-handler.test.js`, `device-sync-service.test.js`) são
-unitários puros e já rodam no `npm test` normal — cobrem os testes 1 a 8
-do roteiro de integração (item por item, com comentário `// Teste N` no
-código), mais payload malformado, injeção do `AccessControlProvider` e
-validação de parâmetros do `DeviceSyncService`.
+`access-request-handler.test.js`, `device-sync-service.test.js`,
+`schedule-service.test.js`, `offline-access-policy.test.js`) são unitários
+puros e já rodam no `npm test` normal — cobrem os testes 1 a 8 do roteiro de
+integração (item por item, com comentário `// Teste N` no código), mais
+payload malformado, injeção do `AccessControlProvider`, validação de
+parâmetros do `DeviceSyncService` e a matriz completa de horário/política
+offline com datas fixas (determinístico, sem depender da hora em que os
+testes rodam).
+
+### Auditoria de ponta a ponta (12 cenários)
+
+`test/access/auditoria-fluxo-completo.emulator.js` roda o pipeline real
+(`processarEventoIdentificacao`) contra o Firestore Emulator pra cada um
+dos 12 cenários pedidos, numerados 1-12 no próprio código:
+
+1. aluno ativo e adimplente → ALLOW
+2. aluno inadimplente → DENY / `PAYMENT_OVERDUE`
+3. plano expirado → DENY / `PLAN_EXPIRED`
+4. aluno bloqueado → DENY / `STUDENT_BLOCKED`
+5. aluno inexistente (user_id nunca sincronizado) → DENY / `STUDENT_NOT_FOUND`
+6. fora do horário (fixture de horário **de teste**, nunca um horário real
+   de academia) → DENY / `OUTSIDE_ALLOWED_HOURS`
+7. unidade não permitida → DENY / `UNIT_NOT_ALLOWED`
+8. dispositivo não autorizado → DENY / `DEVICE_NOT_AUTHORIZED`
+9. evento duplicado (mesmo `uuid`) → não gera um segundo registro
+10. payload inválido → HTTP 400, nenhuma leitura no Firestore
+11. erro interno inesperado (Firestore simulado quebrando no meio do
+    processamento) → sempre DENY/`SYSTEM_ERROR`, nunca `ALLOW`, e o erro
+    fica registrado em `eventosAcesso`
+12. dispositivo offline → testado no nível da política
+    (`avaliarPoliticaOffline`), não via HTTP: um dispositivo genuinamente
+    offline nunca chega a chamar o endpoint, então não existe
+    "requisição de um dispositivo offline" pra simular — o que dá pra
+    testar é a política em si (`DENY_ALL` nega sempre,
+    `ALLOW_SYNCHRONIZED_ACTIVE_USERS` libera só quem já estava
+    sincronizado, `HYBRID` lança por não ter comportamento definido).
+
+```
+npm run test:audit
+```
 
 ### Simulando o iDFace Pro sem o equipamento físico
 

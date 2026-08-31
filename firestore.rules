@@ -401,11 +401,23 @@ service cloud.firestore {
       // Mapeamento "user_id que o dispositivo enviou" -> aluno do Gym
       // Xtreme, um dispositivo pode ter sua propria numeracao interna,
       // por isso o mapeamento e por dispositivo, nao global. Escrito
-      // pelo `DeviceSyncService` (ainda nao implementado).
+      // pelo `DeviceSyncService.vincularCredencial` (Admin SDK).
       match /credenciais/{userIdDispositivo} {
         allow read: if ehStaff();
         allow write: if false;
       }
+    }
+
+    // Politica de acesso offline (o que o dispositivo deveria fazer sem
+    // conseguir falar com o Gym Xtreme — ver
+    // functions/lib/access/offline-access-policy.js). So leitura pro
+    // app cliente (pra uma futura tela mostrar a politica atual);
+    // alterar exige a mesma permissao de `unidades` acima — pensado pra
+    // um dia virar uma configuracao trocavel pelo painel administrativo,
+    // sem precisar mexer em codigo.
+    match /configuracaoAcesso/{documento} {
+      allow read: if ehStaff();
+      allow write: if temPermissao('gerenciarFuncionarios');
     }
 
     // Log de toda tentativa de acesso (liberada ou negada) recebida via

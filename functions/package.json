@@ -10,8 +10,9 @@
     "test": "node --test test/",
     "test:emulator": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/notificacao-mensalidade.emulator.js\"",
     "test:rules": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-admin.emulator.js\"",
-    "test:emulator:access": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/controlid-new-user-identified.emulator.js && node test/access/device-sync-service.emulator.js\"",
+    "test:emulator:access": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/controlid-new-user-identified.emulator.js && node test/access/device-sync-service.emulator.js && node test/access/offline-access-policy.emulator.js\"",
     "test:rules:access": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/firestore-rules-access.emulator.js\"",
+    "test:audit": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/auditoria-fluxo-completo.emulator.js\"",
     "mock:idface": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node scripts/mock-idface.js\"",
     "deploy": "firebase deploy --only functions"
   },

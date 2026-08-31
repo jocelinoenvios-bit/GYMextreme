@@ -64,8 +64,9 @@ test('resposta de acesso liberado usa event=7 e inclui a ação de abertura', ()
   assert.equal(resposta.result.event, 7);
   assert.equal(resposta.result.user_id, '1528');
   assert.equal(resposta.result.message, 'Acesso liberado');
-  assert.equal(resposta.result.actions.length, 1);
-  assert.equal(resposta.result.actions[0].action, 'catra');
+  // A lista de acoes de abertura (rele) so vem preenchida se configurada
+  // via variavel de ambiente — ver control-id-adapter-acoes.test.js.
+  assert.ok(Array.isArray(resposta.result.actions));
 });
 
 test('resposta de acesso negado usa event=6 e não inclui nenhuma ação', () => {

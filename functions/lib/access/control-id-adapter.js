@@ -5,20 +5,51 @@ const { RESULTADO } = require('./motivos');
 const EVENT_ACESSO_LIBERADO = 7;
 const EVENT_ACESSO_NEGADO = 6;
 
-// A CONFIRMAR NO EQUIPAMENTO: o nome exato da ação de abertura e seus
-// parâmetros dependem de como o módulo de acionamento (relé) está
-// fisicamente ligado ao iDFace Pro — relé interno do próprio aparelho
-// usa a ação "door", relé externo via módulo MAE usa "sec_box", e uma
-// catraca com giro controlado usa "catra" (parâmetro `allow`:
-// "clockwise" | "anticlockwise" | "both"). O valor abaixo foi apurado
-// via busca (não confirmado na documentação primária — bloqueio de rede
-// impediu acessar controlid.com.br neste ambiente) e é só um ponto de
-// partida: a decisão final é da Fase 9 do roteiro, testando no
-// equipamento físico antes de ligar a solenoide de verdade (Fase 10).
-const ACAO_ABERTURA_PADRAO = Object.freeze({
-  action: 'catra',
-  parameters: Object.freeze({ allow: 'both' }),
-});
+/**
+ * Nome da variável de ambiente/configuração usada pra definir a ação de
+ * abertura enviada quando `event: 7` — ver `resolverAcoesAbertura`.
+ */
+const VARIAVEL_ACAO_ABERTURA = 'CONTROLID_ACAO_ABERTURA_JSON';
+
+/**
+ * Resolve a lista de `actions` enviada numa resposta de acesso liberado.
+ *
+ * A CONFIRMAR NO EQUIPAMENTO: o nome exato da ação de abertura e seus
+ * parâmetros dependem de como o módulo de acionamento (relé) está
+ * fisicamente ligado ao iDFace Pro — relé interno do próprio aparelho
+ * usa a ação "door", relé externo via módulo MAE usa "sec_box", e uma
+ * catraca com giro controlado usa "catra" (parâmetro `allow`:
+ * "clockwise" | "anticlockwise" | "both"). NENHUM desses foi confirmado
+ * na documentação primária (bloqueio de rede impediu acessar
+ * controlid.com.br neste ambiente) nem testado no equipamento físico —
+ * por isso esta função NUNCA assume um valor por padrão: sem a variável
+ * de ambiente `CONTROLID_ACAO_ABERTURA_JSON` configurada, retorna lista
+ * vazia (o dispositivo recebe `event: 7`, "pode passar", mas nenhuma
+ * instrução de acionamento — o comportamento do relé nesse caso também
+ * é algo a observar na Fase de validação física).
+ *
+ * Configuração esperada (só depois de confirmar no equipamento): um
+ * JSON de um array de `{action, parameters}`, ex.:
+ * `CONTROLID_ACAO_ABERTURA_JSON='[{"action":"catra","parameters":{"allow":"both"}}]'`.
+ *
+ * @returns {Array<{action: string, parameters: Record<string, unknown>}>}
+ */
+function resolverAcoesAbertura() {
+  const configuracao = process.env[VARIAVEL_ACAO_ABERTURA];
+  if (!configuracao) return [];
+
+  try {
+    const acoes = JSON.parse(configuracao);
+    return Array.isArray(acoes) ? acoes : [];
+  } catch (err) {
+    console.error(
+      `Valor invalido em ${VARIAVEL_ACAO_ABERTURA} (nao e um JSON de array valido) — ` +
+        'usando lista vazia. Corrija a configuracao depois de confirmar a acao no equipamento.',
+      err,
+    );
+    return [];
+  }
+}
 
 /**
  * `ControlIdAccessProvider` (metade "entrada"): traduz o payload bruto
@@ -74,9 +105,8 @@ function interpretarEventoIdentificacao(payload) {
  * formato que o iDFace Pro espera de volta do evento de identificação —
  * estrutura conceitual confirmada pelo usuário (seção 5 do briefing). O
  * campo `actions` segue o formato oficial da Access API
- * (`{action, parameters}`), mas o conteúdo exato de `ACAO_ABERTURA_PADRAO`
- * só fica 100% certo testando no equipamento físico (ver comentário
- * acima).
+ * (`{action, parameters}`), mas o conteúdo vem de `resolverAcoesAbertura`
+ * — vazio até ser confirmado no equipamento físico (ver docstring dela).
  *
  * @param {{
  *   resultado: 'ALLOW'|'DENY',
@@ -94,16 +124,36 @@ function construirRespostaIdentificacao({ resultado, userIdDispositivo, userName
       user_id: userIdDispositivo,
       user_name: userName,
       portal_id: portalId || '1',
-      actions: autorizado ? [ACAO_ABERTURA_PADRAO] : [],
+      actions: autorizado ? resolverAcoesAbertura() : [],
       message: mensagem,
     },
   };
 }
 
+/**
+ * `ControlIdAccessProvider` — implementação concreta do contrato
+ * `AccessControlProvider` (ver `access-control-provider.js`) pro
+ * fabricante Control iD/iDFace Pro. Todo o resto do domínio do Gym
+ * Xtreme (`AccessAuthorizationService`, `access-request-handler.js`)
+ * depende só desse objeto, nunca dos nomes de campo/formato do Control
+ * iD diretamente — trocar de fabricante no futuro significa escrever um
+ * novo objeto com essa mesma forma, sem tocar em nenhuma regra de
+ * negócio.
+ *
+ * @type {import('./access-control-provider').AccessControlProvider}
+ */
+const controlIdAccessProvider = Object.freeze({
+  id: 'control-id',
+  interpretarEvento: interpretarEventoIdentificacao,
+  construirResposta: construirRespostaIdentificacao,
+});
+
 module.exports = {
   EVENT_ACESSO_LIBERADO,
   EVENT_ACESSO_NEGADO,
-  ACAO_ABERTURA_PADRAO,
+  VARIAVEL_ACAO_ABERTURA,
+  resolverAcoesAbertura,
   interpretarEventoIdentificacao,
   construirRespostaIdentificacao,
+  controlIdAccessProvider,
 };

@@ -30,6 +30,8 @@ function mensagemParaMotivo(motivo) {
       return 'Acesso não permitido nesta unidade';
     case MOTIVO_NEGACAO.DEVICE_NOT_AUTHORIZED:
       return 'Dispositivo não autorizado';
+    case MOTIVO_NEGACAO.RATE_LIMITED:
+      return 'Aguarde um instante e tente novamente';
     case MOTIVO_NEGACAO.SYSTEM_ERROR:
       return 'Erro no sistema — tente novamente';
     default:

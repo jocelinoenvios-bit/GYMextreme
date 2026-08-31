@@ -103,7 +103,11 @@ test('Teste 1 — aluno em dia: ALLOW, event=7, registra o evento', async () => 
 
   assert.equal(httpStatus, 200);
   assert.equal(corpo.result.event, 7);
-  assert.ok(corpo.result.actions.length > 0);
+  // Sem CONTROLID_ACAO_ABERTURA_JSON configurada (não deve estar, neste
+  // teste), a lista de ações vem vazia de propósito — ver docstring de
+  // `resolverAcoesAbertura` em control-id-adapter.js: nunca assume o
+  // comando do relé sem confirmação no equipamento físico.
+  assert.deepEqual(corpo.result.actions, []);
 
   const eventos = await db.collection('eventosAcesso').where('uuid', '==', 'evento-1').get();
   assert.equal(eventos.size, 1);

@@ -196,13 +196,17 @@ exports._processarNotificacaoMensalidade = processarNotificacaoMensalidade;
  * realmente suporta).
  */
 exports.controlIdNewUserIdentified = onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
+  }
+
   const deviceToken = req.get('X-Device-Token') || req.query.token || null;
-  const payload = req.body && typeof req.body === 'object' ? req.body : {};
 
   const { httpStatus, corpo } = await processarEventoIdentificacao(db, {
-    payload,
+    payload: req.body,
     deviceToken,
   });
 
-  res.status(httpStatus).json(corpo);
+  res.status(httpStatus).json(corpo || { error: 'invalid_payload' });
 });

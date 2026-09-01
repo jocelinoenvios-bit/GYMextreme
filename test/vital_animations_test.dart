@@ -401,9 +401,16 @@ void main() {
         expect(fake.caminhosBaixados, isEmpty);
 
         // Vídeo termina de falhar (sem decoder real no teste) -- só
-        // agora, como fallback, o GIF é buscado.
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
+        // agora, como fallback, o GIF é buscado. O tempo exato até a
+        // falha do vídeo pode variar entre execuções (depende de
+        // quantos microtasks o video_player percorre até lançar
+        // MissingPluginException), então espera em passos curtos até
+        // o download acontecer, em vez de assumir um número fixo de
+        // pumps — mesmo padrão de espera usado em outras telas
+        // (ex.: exercicios_list_screen_test.dart).
+        for (var i = 0; i < 20 && fake.caminhosBaixados.isEmpty; i++) {
+          await tester.pump(const Duration(milliseconds: 20));
+        }
         await tester.pump();
 
         expect(fake.caminhosBaixados, contains('exercicios/gifs/0042.gif'));

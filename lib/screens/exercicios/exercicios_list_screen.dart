@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../constants/grupos_musculares.dart';
 import '../../models/exercise_model.dart';
 import '../../services/exercise_repository.dart';
+import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
 import 'exercicio_detail_screen.dart';
 
@@ -14,6 +15,7 @@ class ExerciciosListScreen extends StatefulWidget {
     super.key,
     this.repository = const LocalExerciseRepository(),
     this.onSelecionar,
+    this.gifCacheService,
   });
 
   final ExerciseRepository repository;
@@ -24,6 +26,10 @@ class ExerciciosListScreen extends StatefulWidget {
   /// este browser.
   final ValueChanged<ExerciseModel>? onSelecionar;
 
+  /// Injetável pra teste — em produção usa `FirebaseGifCacheService()`
+  /// por padrão.
+  final GifCacheService? gifCacheService;
+
   @override
   State<ExerciciosListScreen> createState() => _ExerciciosListScreenState();
 }
@@ -33,10 +39,12 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
   String _busca = '';
   String? _grupoMuscularSelecionado;
   late final Future<List<ExerciseModel>> _futureTodos;
+  late final GifCacheService _gifCacheService;
 
   @override
   void initState() {
     super.initState();
+    _gifCacheService = widget.gifCacheService ?? FirebaseGifCacheService();
     _futureTodos = widget.repository.buscarTodos();
   }
 
@@ -156,19 +164,7 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                     child: SizedBox(
                                       width: 52,
                                       height: 52,
-                                      child: exercicio.gif180Url == null
-                                          // Exercícios só-com-vídeo (Vital
-                                          // Animations) não têm GIF pra
-                                          // miniatura estática — gerar um
-                                          // frame do vídeo só pra 52x52
-                                          // não compensa o custo.
-                                          ? const _ThumbnailFallback()
-                                          : Image.asset(
-                                              exercicio.gif180Url!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) =>
-                                                  const _ThumbnailFallback(),
-                                            ),
+                                      child: _miniatura(exercicio),
                                     ),
                                   ),
                                   title: Text(exercicio.nomeExibicao),
@@ -212,6 +208,26 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Miniatura da lista — nunca baixa do Firebase Storage: rolar a
+  /// lista não conta como "abrir" o exercício (o download sob demanda
+  /// é reservado pra ficha/execução, ver `ExercicioMidia`). Só mostra
+  /// algo se já estiver no cache local (ou for um asset de teste);
+  /// caso contrário cai no ícone de reserva, igual sempre foi pra
+  /// qualquer GIF ausente/quebrado.
+  Widget _miniatura(ExerciseModel exercicio) {
+    final caminho = exercicio.gif180Url;
+    if (caminho == null) return const _ThumbnailFallback();
+
+    final imagem = _gifCacheService.resolverImagemDoCache(caminho);
+    if (imagem == null) return const _ThumbnailFallback();
+
+    return Image(
+      image: imagem,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const _ThumbnailFallback(),
     );
   }
 }

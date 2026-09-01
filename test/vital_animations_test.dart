@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gif/gif.dart';
@@ -5,6 +7,8 @@ import 'package:gymextreme_app/models/exercise_model.dart';
 import 'package:gymextreme_app/screens/area_aluno/widgets/exercicio_midia.dart';
 import 'package:gymextreme_app/services/exercise_repository.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
+
+import 'support/fake_gif_cache_service.dart';
 
 /// Cobre a integração dos 50 vídeos da Vital Animations: mesclagem no
 /// catálogo (sem colisão de id, sem duplicata, sem alterar o que já
@@ -187,5 +191,209 @@ void main() {
       final gif = tester.widget<Gif>(find.byType(Gif));
       expect(gif.autostart, Autostart.no);
     });
+  });
+
+  group('ExercicioMidia — GIF via Firebase Storage + cache (Fase 2)', () {
+    Widget wrap(Widget child) =>
+        MaterialApp(theme: AppTheme.dark, home: Scaffold(body: SizedBox(height: 300, child: child)));
+
+    const semVideoGifStorage = ExerciseModel(
+      id: '0577',
+      nome: 'lever chest press',
+      bodyPart: 'chest',
+      equipmentCategory: 'machine',
+      equipamentoTexto: 'leverage machine',
+      dificuldade: 'beginner',
+      categoria: 'strength',
+      movementFamily: 'chest press',
+      gif180Url: 'exercicios/gifs/0577.gif',
+      gif360Url: 'exercicios/gifs_360/0577.gif',
+    );
+
+    const comVideoEGifStorage = ExerciseModel(
+      id: '0042',
+      nome: 'barbell front squat',
+      bodyPart: 'upper legs',
+      equipmentCategory: 'free_weight',
+      equipamentoTexto: 'barbell',
+      dificuldade: 'intermediate',
+      categoria: 'strength',
+      movementFamily: 'squat',
+      gif180Url: 'exercicios/gifs/0042.gif',
+      gif360Url: 'exercicios/gifs_360/0042.gif',
+      videoUrl: 'assets/exercicios/videos/0042.mp4',
+    );
+
+    const _imagemFalsa = MemoryImage(Uint8List.fromList([0]));
+
+    testWidgets('b) GIF já no cache: usa direto, nunca chama o download do Storage', (tester) async {
+      final controller = ExercicioMidiaController(tocandoInicial: true);
+      addTearDown(controller.dispose);
+      final fake = FakeGifCacheService()..doCache['exercicios/gifs_360/0577.gif'] = _imagemFalsa;
+
+      await tester.pumpWidget(
+        wrap(
+          ExercicioMidia(
+            exercise: semVideoGifStorage,
+            controller: controller,
+            fit: BoxFit.contain,
+            gifCacheService: fake,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(Gif), findsOneWidget);
+      final gif = tester.widget<Gif>(find.byType(Gif));
+      expect(gif.image, _imagemFalsa);
+      expect(fake.caminhosBaixados, isEmpty, reason: 'já tinha no cache, não devia baixar de novo');
+    });
+
+    testWidgets('c) GIF não está no cache: baixa do Firebase Storage e depois exibe', (tester) async {
+      final controller = ExercicioMidiaController(tocandoInicial: true);
+      addTearDown(controller.dispose);
+      final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0577.gif'] = _imagemFalsa;
+
+      await tester.pumpWidget(
+        wrap(
+          ExercicioMidia(
+            exercise: semVideoGifStorage,
+            controller: controller,
+            fit: BoxFit.contain,
+            gifCacheService: fake,
+          ),
+        ),
+      );
+      // A fake resolve o download sem delay real (sem Future.delayed) —
+      // não há uma janela confiável de "ainda carregando" pra testar
+      // aqui (ao contrário do vídeo, que passa por um MethodChannel de
+      // verdade). O que importa é o resultado: cache vazio -> passou
+      // pelo download -> GIF exibido, sem quebrar.
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(Gif), findsOneWidget);
+      expect(tester.widget<Gif>(find.byType(Gif)).image, _imagemFalsa);
+      expect(fake.caminhosBaixados, contains('exercicios/gifs_360/0577.gif'));
+    });
+
+    testWidgets(
+      'd) falha ao baixar (ex.: arquivo não existe no Storage): mostra estado de indisponível, sem quebrar',
+      (tester) async {
+        final controller = ExercicioMidiaController(tocandoInicial: true);
+        addTearDown(controller.dispose);
+        final fake = FakeGifCacheService()..erroNoDownload.add('exercicios/gifs_360/0577.gif');
+
+        await tester.pumpWidget(
+          wrap(
+            ExercicioMidia(
+              exercise: semVideoGifStorage,
+              controller: controller,
+              fit: BoxFit.contain,
+              gifCacheService: fake,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(Gif), findsNothing);
+        expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+        expect(find.text('Mídia indisponível offline'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'e) sem internet (download nunca resolve com sucesso): mesmo estado de indisponível, sem travar',
+      (tester) async {
+        // Do ponto de vista do widget, "sem internet" e "Storage não tem
+        // o arquivo" são o mesmo contrato (resolverImagem devolve null)
+        // -- a diferenciação de causa fica dentro do
+        // FirebaseGifCacheService de verdade, que nunca deixa a exceção
+        // escapar. Aqui confirmamos que o widget trata os dois igual.
+        final controller = ExercicioMidiaController(tocandoInicial: true);
+        addTearDown(controller.dispose);
+        final fake = FakeGifCacheService(); // nem em doCache nem em doDownload = "não tem"
+
+        await tester.pumpWidget(
+          wrap(
+            ExercicioMidia(
+              exercise: semVideoGifStorage,
+              controller: controller,
+              fit: BoxFit.contain,
+              gifCacheService: fake,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'f) distingue "sem mídia nenhuma pro exercício" de "mídia existe mas indisponível agora"',
+      (tester) async {
+        final controller = ExercicioMidiaController(tocandoInicial: true);
+        addTearDown(controller.dispose);
+        final fake = FakeGifCacheService()..erroNoDownload.add('exercicios/gifs_360/0577.gif');
+
+        await tester.pumpWidget(
+          wrap(
+            ExercicioMidia(
+              exercise: semVideoGifStorage,
+              controller: controller,
+              fit: BoxFit.contain,
+              gifCacheService: fake,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        // Ícone diferente do "nem vídeo nem gif existem pra esse
+        // exercício" (Icons.image_not_supported_outlined, já coberto
+        // acima com comVideoSemGif) -- aqui o GIF existe, só não deu
+        // pra buscar agora.
+        expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+        expect(find.byIcon(Icons.image_not_supported_outlined), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'g) com vídeo local presente: não chama o serviço de GIF em paralelo, só depois do vídeo falhar',
+      (tester) async {
+        final controller = ExercicioMidiaController(tocandoInicial: true);
+        addTearDown(controller.dispose);
+        final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0042.gif'] = _imagemFalsa;
+
+        await tester.pumpWidget(
+          wrap(
+            ExercicioMidia(
+              exercise: comVideoEGifStorage,
+              controller: controller,
+              fit: BoxFit.contain,
+              gifCacheService: fake,
+            ),
+          ),
+        );
+        // Logo após montar (vídeo ainda tentando inicializar): nenhum
+        // download de GIF foi disparado em paralelo.
+        expect(fake.caminhosBaixados, isEmpty);
+
+        // Vídeo termina de falhar (sem decoder real no teste) -- só
+        // agora, como fallback, o GIF é buscado.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+
+        expect(fake.caminhosBaixados, contains('exercicios/gifs_360/0042.gif'));
+        expect(find.byType(Gif), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

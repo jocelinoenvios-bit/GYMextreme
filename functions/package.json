@@ -14,6 +14,7 @@
     "test:rules:access": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/firestore-rules-access.emulator.js\"",
     "test:audit": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/auditoria-fluxo-completo.emulator.js\"",
     "mock:idface": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node scripts/mock-idface.js\"",
+    "upload:gifs": "node scripts/upload-gifs-storage.js",
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {

@@ -183,15 +183,24 @@ class ExerciseModel {
 
   /// Loop em destaque — caminho resolvido a partir do [id] (ver
   /// `LocalExerciseRepository`), nomenclatura oficial da ExerciseDB, sem
-  /// renomeação. Nulo para os exercícios que só têm vídeo (Vital
-  /// Animations, sem GIF correspondente na ExerciseDB) — nesse caso
-  /// [videoUrl] é a única mídia disponível.
+  /// renomeação. A partir da Fase 2 (Firebase Storage + cache), este é
+  /// um caminho do Storage (`exercicios/gifs/{id}.gif`), não mais um
+  /// asset embutido no APK — resolvido sob demanda por
+  /// `GifCacheService` (ver `ExercicioMidia`), nunca lido diretamente
+  /// como `AssetImage`. A única exceção é um caminho começando com
+  /// `assets/` (usado por fixtures de teste que montam o objeto na
+  /// mão): esse prefixo é tratado como um asset local de verdade, sem
+  /// tocar rede — é assim que os testes existentes continuam
+  /// funcionando sem depender do Firebase. Nulo para os exercícios que
+  /// só têm vídeo (Vital Animations, sem GIF correspondente na
+  /// ExerciseDB) — nesse caso [videoUrl] é a única mídia disponível.
   final String? gif180Url;
 
   /// Mesmo loop em resolução maior — usado automaticamente em telas com
   /// mais zoom (tela cheia), nunca como escolha exposta ao aluno. Não é
   /// um ângulo de câmera diferente, é o mesmo conteúdo do [gif180Url]
-  /// em qualidade maior.
+  /// em qualidade maior. Mesma convenção Storage-ou-asset-de-teste de
+  /// [gif180Url].
   final String? gif360Url;
 
   /// Caminho local (asset) do vídeo de demonstração da Vital Animations,
@@ -282,16 +291,19 @@ class ExerciseModel {
     );
   }
 
-  /// Convenção de caminho dos GIFs — nomenclatura oficial da ExerciseDB
-  /// (o próprio `id`), sem renomeação, como definido. Centralizado aqui
-  /// de propósito: é o único lugar a ajustar se a convenção de pasta
-  /// mudar no futuro.
-  static String gif180PathPara(String id) => 'assets/exercicios/gifs/$id.gif';
+  /// Convenção de caminho dos GIFs no Firebase Storage — nomenclatura
+  /// oficial da ExerciseDB (o próprio `id`), sem renomeação, como
+  /// definido; só a raiz mudou de `assets/exercicios/` (bundle local)
+  /// pra `exercicios/` (Storage) na Fase 2. Centralizado aqui de
+  /// propósito: é o único lugar a ajustar se a convenção de pasta mudar
+  /// no futuro — e é exatamente o que `upload-gifs-storage.js` espelha
+  /// do lado do upload.
+  static String gif180PathPara(String id) => 'exercicios/gifs/$id.gif';
 
   /// Mesma convenção, para a variante 360° — usada automaticamente em
   /// telas de alta resolução (ex.: fullscreen) via
   /// `ExerciseModel.temVarianteAltaResolucao`.
-  static String gif360PathPara(String id) => 'assets/exercicios/gifs_360/$id.gif';
+  static String gif360PathPara(String id) => 'exercicios/gifs_360/$id.gif';
 }
 
 /// Um exercício prescrito dentro de uma sessão de execução — o par

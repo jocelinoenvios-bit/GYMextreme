@@ -3,6 +3,7 @@ import 'package:gif/gif.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../models/exercise_model.dart';
+import '../../../services/gif_cache_service.dart';
 import '../../../theme/app_colors.dart';
 
 /// Estado de reprodução (tocando/pausado) e comando de reinício,
@@ -38,13 +39,24 @@ class ExercicioMidiaController extends ChangeNotifier {
   }
 }
 
-/// Mídia de demonstração do exercício: vídeo da Vital Animations como
-/// PRIMEIRA opção (`exercise.videoUrl`), GIF da ExerciseDB como
-/// fallback automático — tanto quando o exercício não tem vídeo quanto
-/// quando o vídeo existe mas falha ao inicializar (arquivo
-/// corrompido/formato não suportado na plataforma). Se nem vídeo nem
-/// GIF estiverem disponíveis, mostra um indicador simples em vez de
-/// quebrar. Nunca expõe essa troca como escolha do aluno.
+/// Mídia de demonstração do exercício, nesta ordem de prioridade:
+///
+/// 1. Vídeo da Vital Animations (`exercise.videoUrl`), local — sempre
+///    funciona, mesmo offline.
+/// 2. GIF da ExerciseDB, quando o vídeo não existir ou falhar ao
+///    inicializar: primeiro checa o cache local (nunca toca rede);
+///    se não estiver cacheado, baixa do Firebase Storage agora e grava
+///    no cache pra próxima vez (ver `GifCacheService`). Só tenta baixar
+///    depois que o vídeo já foi tentado — nunca faz as duas coisas em
+///    paralelo, pra não gastar dado à toa quando o vídeo ia funcionar
+///    mesmo.
+/// 3. Se o GIF não estiver no cache nem puder ser baixado agora (sem
+///    internet, por exemplo), mostra um estado "indisponível offline"
+///    em vez de travar a tela.
+/// 4. Se o exercício não tiver vídeo nem GIF (não deveria acontecer no
+///    catálogo atual), mostra um indicador simples.
+///
+/// Nunca expõe essa cadeia como escolha do aluno.
 class ExercicioMidia extends StatefulWidget {
   const ExercicioMidia({
     super.key,
@@ -52,6 +64,7 @@ class ExercicioMidia extends StatefulWidget {
     required this.controller,
     required this.fit,
     this.reduceMotion = false,
+    this.gifCacheService,
   });
 
   final ExerciseModel exercise;
@@ -63,22 +76,34 @@ class ExercicioMidia extends StatefulWidget {
   /// existia antes do vídeo.
   final bool reduceMotion;
 
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa
+  /// `FirebaseGifCacheService()` por padrão.
+  final GifCacheService? gifCacheService;
+
   @override
   State<ExercicioMidia> createState() => _ExercicioMidiaState();
 }
 
 class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProviderStateMixin {
+  late final GifCacheService _gifCacheService;
   VideoPlayerController? _video;
   late final GifController _gifController;
   late int _ultimoReinicios;
 
+  ImageProvider? _gifImagem;
+
+  /// `true` só depois de tentar resolver o GIF (cache + Storage) sem
+  /// sucesso — distingue "ainda carregando" de "tentou e não tem".
+  bool _gifIndisponivelAgora = false;
+
   @override
   void initState() {
     super.initState();
+    _gifCacheService = widget.gifCacheService ?? FirebaseGifCacheService();
     _gifController = GifController(vsync: this);
     _ultimoReinicios = widget.controller.reinicios;
     widget.controller.addListener(_sincronizar);
-    _inicializarVideoSeHouver();
+    _carregarMidia();
   }
 
   @override
@@ -91,9 +116,33 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
     if (oldWidget.exercise.id != widget.exercise.id) {
       _video?.dispose();
       _video = null;
+      _gifImagem = null;
+      _gifIndisponivelAgora = false;
       _gifController.reset();
-      _inicializarVideoSeHouver();
+      _carregarMidia();
     }
+  }
+
+  /// Orquestra a cadeia vídeo → GIF (cache → Storage) → indisponível,
+  /// nessa ordem — o download do GIF só é tentado depois que a
+  /// tentativa de vídeo já terminou (com ou sem sucesso).
+  Future<void> _carregarMidia() async {
+    final gifPath = widget.exercise.gif360Url ?? widget.exercise.gif180Url;
+
+    // Cache local nunca custa uma chamada de rede — tenta mostrar algo
+    // de cara, mesmo antes do vídeo, se esse GIF já tiver sido visto
+    // (ou for um asset de teste).
+    if (gifPath != null) {
+      final imagemDoCache = _gifCacheService.resolverImagemDoCache(gifPath);
+      if (imagemDoCache != null && mounted) {
+        setState(() => _gifImagem = imagemDoCache);
+      }
+    }
+
+    await _inicializarVideoSeHouver();
+
+    if (!mounted || _video != null || gifPath == null || _gifImagem != null) return;
+    await _baixarGifSeNecessario(gifPath);
   }
 
   Future<void> _inicializarVideoSeHouver() async {
@@ -119,6 +168,19 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       // GIF automaticamente, sem propagar o erro pra tela.
       await controller.dispose();
     }
+  }
+
+  Future<void> _baixarGifSeNecessario(String gifPath) async {
+    final exercicioAoIniciar = widget.exercise.id;
+    final imagem = await _gifCacheService.resolverImagem(gifPath);
+    if (!mounted || widget.exercise.id != exercicioAoIniciar) return;
+    setState(() {
+      if (imagem != null) {
+        _gifImagem = imagem;
+      } else {
+        _gifIndisponivelAgora = true;
+      }
+    });
   }
 
   void _sincronizar() {
@@ -193,12 +255,35 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       );
     }
 
-    return Gif(
-      image: AssetImage(gifPath),
-      controller: _gifController,
-      autostart: widget.reduceMotion ? Autostart.no : Autostart.loop,
-      fit: widget.fit,
-      placeholder: (_) => const Center(child: CircularProgressIndicator()),
-    );
+    final imagem = _gifImagem;
+    if (imagem != null) {
+      return Gif(
+        image: imagem,
+        controller: _gifController,
+        autostart: widget.reduceMotion ? Autostart.no : Autostart.loop,
+        fit: widget.fit,
+        placeholder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_gifIndisponivelAgora) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_outlined, color: AppColors.textSecondary, size: 40),
+            const SizedBox(height: 8),
+            const Text(
+              'Mídia indisponível offline',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Ainda checando o cache/baixando do Storage.
+    return const Center(child: CircularProgressIndicator());
   }
 }

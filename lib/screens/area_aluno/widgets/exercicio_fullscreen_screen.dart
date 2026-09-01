@@ -54,16 +54,20 @@ class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: InteractiveViewer(
-                minScale: 1,
-                maxScale: 4,
-                child: Center(
-                  child: ExercicioMidia(
-                    exercise: widget.exercise,
-                    controller: _midiaController,
-                    fit: BoxFit.contain,
-                    reduceMotion: reduceMotion,
-                    gifCacheService: widget.gifCacheService,
+              // RepaintBoundary isola a composição do vídeo/GIF do resto
+              // da tela — ver o mesmo comentário em ExercicioMediaStage.
+              child: RepaintBoundary(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Center(
+                    child: ExercicioMidia(
+                      exercise: widget.exercise,
+                      controller: _midiaController,
+                      fit: BoxFit.contain,
+                      reduceMotion: reduceMotion,
+                      gifCacheService: widget.gifCacheService,
+                    ),
                   ),
                 ),
               ),

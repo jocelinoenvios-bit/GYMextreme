@@ -83,17 +83,26 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: InteractiveViewer(
-              minScale: 1,
-              maxScale: 3,
-              child: Center(
-                child: ExercicioMidia(
-                  key: ValueKey(widget.exercise.id),
-                  exercise: widget.exercise,
-                  controller: _midiaController,
-                  fit: BoxFit.contain,
-                  reduceMotion: reduceMotion,
-                  gifCacheService: widget.gifCacheService,
+            // RepaintBoundary isola a composição do vídeo/GIF (textura
+            // nativa do Android) do resto da tela — sem isso, um vídeo
+            // tocando de verdade dentro do InteractiveViewer (zoom/pinça)
+            // pode corromper a composição de tudo ao redor num aparelho
+            // físico real (nunca detectado em CI/emulador, onde o vídeo
+            // sempre falha ao inicializar e cai pro GIF antes de chegar
+            // a tocar de verdade).
+            child: RepaintBoundary(
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 3,
+                child: Center(
+                  child: ExercicioMidia(
+                    key: ValueKey(widget.exercise.id),
+                    exercise: widget.exercise,
+                    controller: _midiaController,
+                    fit: BoxFit.contain,
+                    reduceMotion: reduceMotion,
+                    gifCacheService: widget.gifCacheService,
+                  ),
                 ),
               ),
             ),

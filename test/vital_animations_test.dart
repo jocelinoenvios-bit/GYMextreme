@@ -224,12 +224,12 @@ void main() {
       videoUrl: 'assets/exercicios/videos/0042.mp4',
     );
 
-    const _imagemFalsa = MemoryImage(Uint8List.fromList([0]));
+    final imagemFalsa = MemoryImage(Uint8List.fromList([0]));
 
     testWidgets('b) GIF já no cache: usa direto, nunca chama o download do Storage', (tester) async {
       final controller = ExercicioMidiaController(tocandoInicial: true);
       addTearDown(controller.dispose);
-      final fake = FakeGifCacheService()..doCache['exercicios/gifs_360/0577.gif'] = _imagemFalsa;
+      final fake = FakeGifCacheService()..doCache['exercicios/gifs_360/0577.gif'] = imagemFalsa;
 
       await tester.pumpWidget(
         wrap(
@@ -245,14 +245,14 @@ void main() {
 
       expect(find.byType(Gif), findsOneWidget);
       final gif = tester.widget<Gif>(find.byType(Gif));
-      expect(gif.image, _imagemFalsa);
+      expect(gif.image, imagemFalsa);
       expect(fake.caminhosBaixados, isEmpty, reason: 'já tinha no cache, não devia baixar de novo');
     });
 
     testWidgets('c) GIF não está no cache: baixa do Firebase Storage e depois exibe', (tester) async {
       final controller = ExercicioMidiaController(tocandoInicial: true);
       addTearDown(controller.dispose);
-      final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0577.gif'] = _imagemFalsa;
+      final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0577.gif'] = imagemFalsa;
 
       await tester.pumpWidget(
         wrap(
@@ -273,7 +273,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(Gif), findsOneWidget);
-      expect(tester.widget<Gif>(find.byType(Gif)).image, _imagemFalsa);
+      expect(tester.widget<Gif>(find.byType(Gif)).image, imagemFalsa);
       expect(fake.caminhosBaixados, contains('exercicios/gifs_360/0577.gif'));
     });
 
@@ -368,7 +368,7 @@ void main() {
       (tester) async {
         final controller = ExercicioMidiaController(tocandoInicial: true);
         addTearDown(controller.dispose);
-        final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0042.gif'] = _imagemFalsa;
+        final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0042.gif'] = imagemFalsa;
 
         await tester.pumpWidget(
           wrap(

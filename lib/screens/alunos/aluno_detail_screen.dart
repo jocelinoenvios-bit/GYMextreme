@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
-import '../../models/permission.dart';
 import '../../services/aluno_service.dart';
-import '../../services/permission_service.dart';
 import '../../services/storage_service.dart';
 import 'tabs/anamnese_tab.dart';
 import 'tabs/avaliacoes_tab.dart';
@@ -12,8 +10,11 @@ import 'tabs/termo_tab.dart';
 import 'tabs/treinos_tab.dart';
 
 /// Ficha completa do aluno, em abas: dados de cadastro, anamnese, termo
-/// de responsabilidade, historico de avaliacoes fisicas e (se o usuario
-/// logado tiver a permissao) fichas de treino.
+/// de responsabilidade, historico de avaliacoes fisicas e fichas de
+/// treino — a aba de Treinos é sempre visível pra qualquer staff, sem
+/// exigir a permissão `prescricaoTreinos` (decisão explícita: só a
+/// visibilidade da aba foi liberada; criar/editar treino continua
+/// exigindo `criarTreinos`/`editarTreinos`, ver `TreinosTab`).
 class AlunoDetailScreen extends StatelessWidget {
   const AlunoDetailScreen({
     super.key,
@@ -30,21 +31,19 @@ class AlunoDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mostrarTreino = PermissionService.has(staffAtual, Permission.prescricaoTreinos);
-
     return DefaultTabController(
-      length: mostrarTreino ? 5 : 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: Text(aluno.nome, overflow: TextOverflow.ellipsis),
-          bottom: TabBar(
+          bottom: const TabBar(
             isScrollable: true,
             tabs: [
-              const Tab(text: 'Dados'),
-              const Tab(text: 'Anamnese'),
-              const Tab(text: 'Termo'),
-              const Tab(text: 'Avaliações'),
-              if (mostrarTreino) const Tab(text: 'Treinos'),
+              Tab(text: 'Dados'),
+              Tab(text: 'Anamnese'),
+              Tab(text: 'Termo'),
+              Tab(text: 'Avaliações'),
+              Tab(text: 'Treinos'),
             ],
           ),
         ),
@@ -60,12 +59,11 @@ class AlunoDetailScreen extends StatelessWidget {
             AnamneseTab(uid: aluno.uid, alunoService: alunoService),
             TermoTab(aluno: aluno, alunoService: alunoService, staffAtual: staffAtual),
             AvaliacoesTab(uid: aluno.uid, alunoService: alunoService),
-            if (mostrarTreino)
-              TreinosTab(
-                uid: aluno.uid,
-                alunoService: alunoService,
-                staffAtual: staffAtual,
-              ),
+            TreinosTab(
+              uid: aluno.uid,
+              alunoService: alunoService,
+              staffAtual: staffAtual,
+            ),
             ],
           ),
         ),

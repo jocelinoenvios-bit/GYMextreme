@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gif/gif.dart';
@@ -8,6 +6,7 @@ import 'package:gymextreme_app/screens/area_aluno/widgets/exercicio_midia.dart';
 import 'package:gymextreme_app/services/exercise_repository.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
+import 'support/fake_gif_bytes.dart';
 import 'support/fake_gif_cache_service.dart';
 
 /// Cobre a integração dos 50 vídeos da Vital Animations: mesclagem no
@@ -49,7 +48,7 @@ void main() {
           expect(exercicio, isNotNull, reason: 'id ${entry.key} deveria continuar existindo');
           expect(exercicio!.nome, entry.value);
           expect(exercicio.videoUrl, 'assets/exercicios/videos/${entry.key}.mp4');
-          expect(exercicio.gif180Url, isNotNull, reason: 'GIF original não deveria ter sido removido');
+          expect(exercicio.gif360Url, isNotNull, reason: 'GIF original não deveria ter sido removido');
         }
       },
     );
@@ -72,7 +71,7 @@ void main() {
       final exercicio = await repo.buscarPorId('0001');
       expect(exercicio, isNotNull);
       expect(exercicio!.videoUrl, isNull);
-      expect(exercicio.gif180Url, isNotNull);
+      expect(exercicio.gif360Url, isNotNull);
     });
   });
 
@@ -89,8 +88,7 @@ void main() {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'sit up',
-      gif180Url: 'assets/exercicios/gifs/0001.gif',
-      gif360Url: 'assets/exercicios/gifs_360/0001.gif',
+      gif360Url: 'exercicios/gifs/0001.gif',
     );
 
     const comVideoEGif = ExerciseModel(
@@ -102,8 +100,7 @@ void main() {
       dificuldade: 'intermediate',
       categoria: 'strength',
       movementFamily: 'squat',
-      gif180Url: 'assets/exercicios/gifs/0042.gif',
-      gif360Url: 'assets/exercicios/gifs_360/0042.gif',
+      gif360Url: 'exercicios/gifs/0042.gif',
       videoUrl: 'assets/exercicios/videos/0042.mp4',
     );
 
@@ -122,9 +119,18 @@ void main() {
     testWidgets('sem videoUrl: usa o GIF direto, nunca tenta inicializar vídeo', (tester) async {
       final controller = ExercicioMidiaController(tocandoInicial: true);
       addTearDown(controller.dispose);
+      final fake = FakeGifCacheService()
+        ..doCache['exercicios/gifs/0001.gif'] = MemoryImage(gifDeTesteValido);
 
       await tester.pumpWidget(
-        wrap(ExercicioMidia(exercise: semVideo, controller: controller, fit: BoxFit.contain)),
+        wrap(
+          ExercicioMidia(
+            exercise: semVideo,
+            controller: controller,
+            fit: BoxFit.contain,
+            gifCacheService: fake,
+          ),
+        ),
       );
       await tester.pump();
 
@@ -137,9 +143,18 @@ void main() {
       (tester) async {
         final controller = ExercicioMidiaController(tocandoInicial: true);
         addTearDown(controller.dispose);
+        final fake = FakeGifCacheService()
+          ..doCache['exercicios/gifs/0042.gif'] = MemoryImage(gifDeTesteValido);
 
         await tester.pumpWidget(
-          wrap(ExercicioMidia(exercise: comVideoEGif, controller: controller, fit: BoxFit.contain)),
+          wrap(
+            ExercicioMidia(
+              exercise: comVideoEGif,
+              controller: controller,
+              fit: BoxFit.contain,
+              gifCacheService: fake,
+            ),
+          ),
         );
         // Dá tempo pro `VideoPlayerController.initialize()` falhar
         // (MissingPluginException, sem platform channel no teste) e o
@@ -175,6 +190,8 @@ void main() {
     ) async {
       final controller = ExercicioMidiaController(tocandoInicial: true);
       addTearDown(controller.dispose);
+      final fake = FakeGifCacheService()
+        ..doCache['exercicios/gifs/0042.gif'] = MemoryImage(gifDeTesteValido);
 
       await tester.pumpWidget(
         wrap(
@@ -183,6 +200,7 @@ void main() {
             controller: controller,
             fit: BoxFit.contain,
             reduceMotion: true,
+            gifCacheService: fake,
           ),
         ),
       );
@@ -206,8 +224,7 @@ void main() {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'chest press',
-      gif180Url: 'exercicios/gifs/0577.gif',
-      gif360Url: 'exercicios/gifs_360/0577.gif',
+      gif360Url: 'exercicios/gifs/0577.gif',
     );
 
     const comVideoEGifStorage = ExerciseModel(
@@ -219,17 +236,16 @@ void main() {
       dificuldade: 'intermediate',
       categoria: 'strength',
       movementFamily: 'squat',
-      gif180Url: 'exercicios/gifs/0042.gif',
-      gif360Url: 'exercicios/gifs_360/0042.gif',
+      gif360Url: 'exercicios/gifs/0042.gif',
       videoUrl: 'assets/exercicios/videos/0042.mp4',
     );
 
-    final imagemFalsa = MemoryImage(Uint8List.fromList([0]));
+    final imagemFalsa = MemoryImage(gifDeTesteValido);
 
     testWidgets('b) GIF já no cache: usa direto, nunca chama o download do Storage', (tester) async {
       final controller = ExercicioMidiaController(tocandoInicial: true);
       addTearDown(controller.dispose);
-      final fake = FakeGifCacheService()..doCache['exercicios/gifs_360/0577.gif'] = imagemFalsa;
+      final fake = FakeGifCacheService()..doCache['exercicios/gifs/0577.gif'] = imagemFalsa;
 
       await tester.pumpWidget(
         wrap(
@@ -252,7 +268,7 @@ void main() {
     testWidgets('c) GIF não está no cache: baixa do Firebase Storage e depois exibe', (tester) async {
       final controller = ExercicioMidiaController(tocandoInicial: true);
       addTearDown(controller.dispose);
-      final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0577.gif'] = imagemFalsa;
+      final fake = FakeGifCacheService()..doDownload['exercicios/gifs/0577.gif'] = imagemFalsa;
 
       await tester.pumpWidget(
         wrap(
@@ -274,7 +290,7 @@ void main() {
 
       expect(find.byType(Gif), findsOneWidget);
       expect(tester.widget<Gif>(find.byType(Gif)).image, imagemFalsa);
-      expect(fake.caminhosBaixados, contains('exercicios/gifs_360/0577.gif'));
+      expect(fake.caminhosBaixados, contains('exercicios/gifs/0577.gif'));
     });
 
     testWidgets(
@@ -282,7 +298,7 @@ void main() {
       (tester) async {
         final controller = ExercicioMidiaController(tocandoInicial: true);
         addTearDown(controller.dispose);
-        final fake = FakeGifCacheService()..erroNoDownload.add('exercicios/gifs_360/0577.gif');
+        final fake = FakeGifCacheService()..erroNoDownload.add('exercicios/gifs/0577.gif');
 
         await tester.pumpWidget(
           wrap(
@@ -339,7 +355,7 @@ void main() {
       (tester) async {
         final controller = ExercicioMidiaController(tocandoInicial: true);
         addTearDown(controller.dispose);
-        final fake = FakeGifCacheService()..erroNoDownload.add('exercicios/gifs_360/0577.gif');
+        final fake = FakeGifCacheService()..erroNoDownload.add('exercicios/gifs/0577.gif');
 
         await tester.pumpWidget(
           wrap(
@@ -368,7 +384,7 @@ void main() {
       (tester) async {
         final controller = ExercicioMidiaController(tocandoInicial: true);
         addTearDown(controller.dispose);
-        final fake = FakeGifCacheService()..doDownload['exercicios/gifs_360/0042.gif'] = imagemFalsa;
+        final fake = FakeGifCacheService()..doDownload['exercicios/gifs/0042.gif'] = imagemFalsa;
 
         await tester.pumpWidget(
           wrap(
@@ -390,7 +406,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
 
-        expect(fake.caminhosBaixados, contains('exercicios/gifs_360/0042.gif'));
+        expect(fake.caminhosBaixados, contains('exercicios/gifs/0042.gif'));
         expect(find.byType(Gif), findsOneWidget);
         expect(tester.takeException(), isNull);
       },

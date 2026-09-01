@@ -181,26 +181,29 @@ class ExerciseModel {
   /// tela de execução aprovada hoje.
   final String? descricao;
 
-  /// Loop em destaque — caminho resolvido a partir do [id] (ver
-  /// `LocalExerciseRepository`), nomenclatura oficial da ExerciseDB, sem
-  /// renomeação. A partir da Fase 2 (Firebase Storage + cache), este é
-  /// um caminho do Storage (`exercicios/gifs/{id}.gif`), não mais um
-  /// asset embutido no APK — resolvido sob demanda por
-  /// `GifCacheService` (ver `ExercicioMidia`), nunca lido diretamente
-  /// como `AssetImage`. A única exceção é um caminho começando com
-  /// `assets/` (usado por fixtures de teste que montam o objeto na
-  /// mão): esse prefixo é tratado como um asset local de verdade, sem
-  /// tocar rede — é assim que os testes existentes continuam
-  /// funcionando sem depender do Firebase. Nulo para os exercícios que
-  /// só têm vídeo (Vital Animations, sem GIF correspondente na
-  /// ExerciseDB) — nesse caso [videoUrl] é a única mídia disponível.
+  /// Variante 180° do loop — nunca hospedada no Firebase Storage a
+  /// partir da Fase 2 (hospedar as duas variantes dobraria
+  /// armazenamento/banda sem necessidade; só [gif360Url] cobre tanto a
+  /// lista quanto o fullscreen). Por isso este campo fica sempre nulo
+  /// pros exercícios da ExerciseDB — mantido (em vez de removido) só
+  /// pra não quebrar quem já desestrutura o construtor.
   final String? gif180Url;
 
-  /// Mesmo loop em resolução maior — usado automaticamente em telas com
-  /// mais zoom (tela cheia), nunca como escolha exposta ao aluno. Não é
-  /// um ângulo de câmera diferente, é o mesmo conteúdo do [gif180Url]
-  /// em qualidade maior. Mesma convenção Storage-ou-asset-de-teste de
-  /// [gif180Url].
+  /// Loop de demonstração do exercício (ExerciseDB), na única variante
+  /// hospedada — caminho resolvido a partir do [id] (ver
+  /// `LocalExerciseRepository`/`gif360PathPara`), nomenclatura oficial
+  /// da ExerciseDB, sem renomeação. A partir da Fase 2 (Firebase
+  /// Storage + cache), este é um caminho do Storage
+  /// (`exercicios/gifs/{id}.gif`), não mais um asset embutido no APK —
+  /// resolvido sob demanda por `GifCacheService` (ver `ExercicioMidia`),
+  /// nunca lido diretamente como `AssetImage`. A única exceção é um
+  /// caminho começando com `assets/` (usado por fixtures de teste que
+  /// montam o objeto na mão): esse prefixo é tratado como um asset
+  /// local de verdade, sem tocar rede — é assim que os testes
+  /// existentes continuam funcionando sem depender do Firebase. Nulo
+  /// para os exercícios que só têm vídeo (Vital Animations, sem GIF
+  /// correspondente na ExerciseDB) — nesse caso [videoUrl] é a única
+  /// mídia disponível.
   final String? gif360Url;
 
   /// Caminho local (asset) do vídeo de demonstração da Vital Animations,
@@ -239,9 +242,9 @@ class ExerciseModel {
   /// funcionando 100% em inglês, exatamente como antes desta tradução.
   ///
   /// [temGif] é `false` só para os exercícios novos da Vital Animations
-  /// que não existem na ExerciseDB (sem GIF correspondente) — nesses
-  /// casos [gif180Url]/[gif360Url] ficam nulos em vez de apontar pra um
-  /// asset que não existe. [videosPorId] (ver
+  /// que não existem na ExerciseDB (sem GIF correspondente) — nesse
+  /// caso [gif360Url] fica nulo em vez de apontar pra um asset que não
+  /// existe ([gif180Url] fica sempre nulo, ver seu doc). [videosPorId] (ver
   /// `LocalExerciseRepository`) é o mapa id -> caminho do vídeo da
   /// Vital Animations; quando o [id] deste exercício está no mapa,
   /// popula [videoUrl].
@@ -281,7 +284,7 @@ class ExerciseModel {
           ? null
           : [for (final linha in instrucoesOriginais) traducoes.instrucoes[linha] ?? linha],
       descricao: json['description'] as String?,
-      gif180Url: temGif ? gif180PathPara(id) : null,
+      gif180Url: null,
       gif360Url: temGif ? gif360PathPara(id) : null,
       videoUrl: videosPorId?[id],
       similares: relacionados('similarExercises'),
@@ -291,19 +294,15 @@ class ExerciseModel {
     );
   }
 
-  /// Convenção de caminho dos GIFs no Firebase Storage — nomenclatura
-  /// oficial da ExerciseDB (o próprio `id`), sem renomeação, como
-  /// definido; só a raiz mudou de `assets/exercicios/` (bundle local)
-  /// pra `exercicios/` (Storage) na Fase 2. Centralizado aqui de
-  /// propósito: é o único lugar a ajustar se a convenção de pasta mudar
-  /// no futuro — e é exatamente o que `upload-gifs-storage.js` espelha
-  /// do lado do upload.
-  static String gif180PathPara(String id) => 'exercicios/gifs/$id.gif';
-
-  /// Mesma convenção, para a variante 360° — usada automaticamente em
-  /// telas de alta resolução (ex.: fullscreen) via
-  /// `ExerciseModel.temVarianteAltaResolucao`.
-  static String gif360PathPara(String id) => 'exercicios/gifs_360/$id.gif';
+  /// Convenção de caminho do GIF no Firebase Storage — nomenclatura
+  /// oficial da ExerciseDB (o próprio `id`), sem renomeação. Só a
+  /// variante 360° (maior resolução) é hospedada — hospedar as duas
+  /// dobraria armazenamento/banda sem necessidade, já que a 360° cobre
+  /// tanto a lista quanto o fullscreen. Centralizado aqui de propósito:
+  /// é o único lugar a ajustar se a convenção de pasta mudar no futuro
+  /// — e é exatamente o que `upload-gifs-storage.js` espelha do lado do
+  /// upload.
+  static String gif360PathPara(String id) => 'exercicios/gifs/$id.gif';
 }
 
 /// Um exercício prescrito dentro de uma sessão de execução — o par

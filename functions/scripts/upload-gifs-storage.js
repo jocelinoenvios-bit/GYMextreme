@@ -11,13 +11,9 @@
  * Caminho no Storage: `exercicios/gifs/{id}.gif` — nomenclatura oficial
  * da ExerciseDB (o próprio id), sem renomeação. É o mesmo id, só que
  * agora é a ÚNICA cópia hospedada (a 360°) que vive nesse caminho.
- *
- * IMPORTANTE (pendência a resolver antes do upload de verdade): hoje
- * `ExerciseModel.gif360PathPara` (Dart) gera `exercicios/gifs_360/
- * {id}.gif`, não `exercicios/gifs/{id}.gif` — ou seja, o caminho que
- * este script usa ainda NÃO bate com o que o app pede. Isso precisa
- * ser alinhado no código Dart antes de rodar o upload de verdade,
- * senão o app não vai encontrar os arquivos.
+ * `ExerciseModel.gif360PathPara` (Dart) já gera exatamente esse mesmo
+ * caminho — `gif180PathPara` foi removido (a 180° nunca é hospedada;
+ * `gif180Url` fica sempre nulo pros exercícios da ExerciseDB).
  *
  * Preciso disso porque, a partir da Fase 2 da biblioteca de mídia, os
  * GIFs pararam de ser empacotados no APK (ver pubspec.yaml) — o app

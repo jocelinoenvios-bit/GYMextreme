@@ -193,7 +193,10 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                     }
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => ExercicioDetailScreen(exercicio: exercicio),
+                                        builder: (_) => ExercicioDetailScreen(
+                                          exercicio: exercicio,
+                                          gifCacheService: widget.gifCacheService,
+                                        ),
                                       ),
                                     );
                                   },
@@ -218,7 +221,7 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
   /// caso contrário cai no ícone de reserva, igual sempre foi pra
   /// qualquer GIF ausente/quebrado.
   Widget _miniatura(ExerciseModel exercicio) {
-    final caminho = exercicio.gif180Url;
+    final caminho = exercicio.gif360Url;
     if (caminho == null) return const _ThumbnailFallback();
 
     final imagem = _gifCacheService.resolverImagemDoCache(caminho);

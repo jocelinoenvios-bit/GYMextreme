@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gif/gif.dart';
 import 'package:gymextreme_app/models/exercise_model.dart';
 import 'package:gymextreme_app/screens/exercicios/exercicio_detail_screen.dart';
 import 'package:gymextreme_app/screens/exercicios/exercicios_list_screen.dart';
 import 'package:gymextreme_app/services/exercise_repository.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
+import 'support/fake_gif_bytes.dart';
+import 'support/fake_gif_cache_service.dart';
+
 Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
 class _FakeExerciseRepository implements ExerciseRepository {
   const _FakeExerciseRepository();
 
-  // Caminhos reais (existem de verdade em assets/exercicios/gifs/), não
-  // fake — desde que a ficha do exercício passou a usar o widget `Gif`
-  // (que, ao contrário do antigo `Image.asset`, não tem `errorBuilder`
-  // e lança uma exceção real se o asset não existir), o teste que abre
-  // a ficha (`ExercicioDetailScreen`) precisa de um caminho que o
-  // asset bundle do Flutter realmente resolve.
+  // gif360Url no padrão de produção (caminho do Storage, não um asset
+  // do bundle) — a lista/ficha resolvem via `GifCacheService`
+  // (`FakeGifCacheService` nos testes abaixo), nunca lendo o asset
+  // bundle do Flutter diretamente.
   static const _catalogo = <ExerciseModel>[
     ExerciseModel(
       id: '0001',
@@ -27,7 +29,7 @@ class _FakeExerciseRepository implements ExerciseRepository {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'sit up',
-      gif180Url: 'assets/exercicios/gifs/0001.gif',
+      gif360Url: 'exercicios/gifs/0001.gif',
     ),
     ExerciseModel(
       id: '0577',
@@ -38,7 +40,7 @@ class _FakeExerciseRepository implements ExerciseRepository {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'chest press',
-      gif180Url: 'assets/exercicios/gifs/0577.gif',
+      gif360Url: 'exercicios/gifs/0577.gif',
     ),
   ];
 
@@ -54,6 +56,10 @@ class _FakeExerciseRepository implements ExerciseRepository {
   Future<List<ExerciseModel>> buscarTodos() async => _catalogo;
 }
 
+FakeGifCacheService _fakeCache() => FakeGifCacheService()
+  ..doCache['exercicios/gifs/0001.gif'] = MemoryImage(gifDeTesteValido)
+  ..doCache['exercicios/gifs/0577.gif'] = MemoryImage(gifDeTesteValido);
+
 Future<void> _carregar(WidgetTester tester, Widget tela) async {
   await tester.pumpWidget(_wrap(tela));
   for (var i = 0; i < 10; i++) {
@@ -66,14 +72,20 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('lista os exercicios da Biblioteca Oficial', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
     expect(find.text('3/4 sit-up'), findsOneWidget);
     expect(find.text('lever chest press'), findsOneWidget);
   });
 
   testWidgets('busca por nome filtra a lista', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
     await tester.enterText(find.byType(TextField), 'lever');
     await tester.pump();
@@ -83,7 +95,10 @@ void main() {
   });
 
   testWidgets('filtro por grupo muscular restringe a lista', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
     // 'Peito' aparece duas vezes (o chip de filtro e o subtítulo do
     // item "lever chest press") — mira especificamente no ChoiceChip.
@@ -95,7 +110,10 @@ void main() {
   });
 
   testWidgets('tocar num exercicio sem onSelecionar abre o detalhe', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
     await tester.tap(find.text('3/4 sit-up'));
     // Sem pumpAndSettle: o GIF do detalhe roda em loop infinito
@@ -106,6 +124,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(ExercicioDetailScreen), findsOneWidget);
+    expect(find.byType(Gif), findsOneWidget);
   });
 
   testWidgets(

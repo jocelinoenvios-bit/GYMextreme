@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/exercise_model.dart';
+import '../../../services/gif_cache_service.dart';
 import '../../../theme/app_colors.dart';
 import 'exercicio_fullscreen_screen.dart';
 import 'exercicio_media_controls.dart';
@@ -13,13 +14,18 @@ import 'exercicio_midia.dart';
 ///
 /// Renderiza o vídeo da Vital Animations (`ExerciseModel.videoUrl`)
 /// quando existir — mídia primária, qualidade superior ao GIF — com
-/// fallback automático pro GIF oficial (`gif360Url`, com fallback pro
-/// `gif180Url`) quando não há vídeo ou ele falha ao carregar (ver
-/// `ExercicioMidia`). A troca nunca aparece como opção pro aluno.
+/// fallback automático pro GIF oficial (`gif360Url`) quando não há
+/// vídeo ou ele falha ao carregar (ver `ExercicioMidia`). A troca nunca
+/// aparece como opção pro aluno.
 class ExercicioMediaStage extends StatefulWidget {
-  const ExercicioMediaStage({super.key, required this.exercise});
+  const ExercicioMediaStage({super.key, required this.exercise, this.gifCacheService});
 
   final ExerciseModel exercise;
+
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa o
+  /// padrão de `ExercicioMidia` (`FirebaseGifCacheService()`). Também
+  /// repassado pro `ExercicioFullscreenScreen` aberto a partir daqui.
+  final GifCacheService? gifCacheService;
 
   @override
   State<ExercicioMediaStage> createState() => _ExercicioMediaStageState();
@@ -59,7 +65,10 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage> {
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => ExercicioFullscreenScreen(exercise: widget.exercise),
+        builder: (_) => ExercicioFullscreenScreen(
+          exercise: widget.exercise,
+          gifCacheService: widget.gifCacheService,
+        ),
       ),
     );
   }
@@ -84,6 +93,7 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage> {
                   controller: _midiaController,
                   fit: BoxFit.contain,
                   reduceMotion: reduceMotion,
+                  gifCacheService: widget.gifCacheService,
                 ),
               ),
             ),

@@ -5,6 +5,7 @@ import '../../constants/equipamentos.dart';
 import '../../constants/grupos_musculares.dart';
 import '../../constants/musculos.dart';
 import '../../models/exercise_model.dart';
+import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
 import '../area_aluno/widgets/exercicio_midia.dart';
 
@@ -13,14 +14,18 @@ import '../area_aluno/widgets/exercicio_midia.dart';
 /// sua própria tela dedicada com player/controles).
 ///
 /// Mostra a mídia animada de verdade — vídeo da Vital Animations
-/// (`videoUrl`) quando existir, GIF (`gif360Url`, com fallback pro
-/// `gif180Url`) caso contrário —, não só o primeiro quadro — mesmo
+/// (`videoUrl`) quando existir, GIF (`gif360Url`) caso contrário —,
+/// não só o primeiro quadro — mesmo
 /// padrão de `ExercicioMediaStage`/`ExercicioFullscreenScreen`, mas sem
 /// os controles manuais (aqui é só referência, sempre em loop).
 class ExercicioDetailScreen extends StatefulWidget {
-  const ExercicioDetailScreen({super.key, required this.exercicio});
+  const ExercicioDetailScreen({super.key, required this.exercicio, this.gifCacheService});
 
   final ExerciseModel exercicio;
+
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa o
+  /// padrão de `ExercicioMidia` (`FirebaseGifCacheService()`).
+  final GifCacheService? gifCacheService;
 
   @override
   State<ExercicioDetailScreen> createState() => _ExercicioDetailScreenState();
@@ -61,6 +66,7 @@ class _ExercicioDetailScreenState extends State<ExercicioDetailScreen> {
                   controller: _midiaController,
                   fit: BoxFit.cover,
                   reduceMotion: reduceMotion,
+                  gifCacheService: widget.gifCacheService,
                 ),
               ),
             ),

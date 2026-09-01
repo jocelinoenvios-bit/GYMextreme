@@ -39,7 +39,7 @@ void main() {
 
     test('resolve o caminho do gif pela nomenclatura oficial (id, sem renomeação)', () async {
       final exercicio = await repo.buscarPorId('0001');
-      expect(exercicio!.gif180Url, contains('0001'));
+      expect(exercicio!.gif360Url, contains('0001'));
     });
 
     test('resolve relacionamentos com tipos e score', () async {

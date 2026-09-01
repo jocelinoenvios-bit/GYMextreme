@@ -6,6 +6,7 @@ import '../../models/exercise_model.dart';
 import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../services/exercise_repository.dart';
+import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
 import 'widgets/exercicio_info_cards.dart';
 import 'widgets/exercicio_media_stage.dart';
@@ -32,6 +33,7 @@ class TreinoExecucaoScreen extends StatefulWidget {
     required this.treinoId,
     this.repository = const LocalExerciseRepository(),
     this.buscarTreino = _buscarTreinoPadrao,
+    this.gifCacheService,
   });
 
   final String alunoUid;
@@ -41,6 +43,10 @@ class TreinoExecucaoScreen extends StatefulWidget {
   /// Injetável pra teste — o padrão lê de verdade do Firestore via
   /// [AlunoService.buscarTreino].
   final Future<Treino?> Function(String alunoUid, String treinoId) buscarTreino;
+
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa o
+  /// padrão de `ExercicioMidia` (`FirebaseGifCacheService()`).
+  final GifCacheService? gifCacheService;
 
   static Future<Treino?> _buscarTreinoPadrao(String alunoUid, String treinoId) {
     return AlunoService().buscarTreino(alunoUid, treinoId);
@@ -255,7 +261,10 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
                     controller: _scrollController,
                     child: Column(
                       children: [
-                        ExercicioMediaStage(exercise: _prescricaoAtual.exercise),
+                        ExercicioMediaStage(
+                          exercise: _prescricaoAtual.exercise,
+                          gifCacheService: widget.gifCacheService,
+                        ),
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: ExercicioInfoList(prescricao: _prescricaoAtual),

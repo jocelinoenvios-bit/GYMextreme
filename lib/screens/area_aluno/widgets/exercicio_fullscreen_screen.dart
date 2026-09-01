@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/exercise_model.dart';
+import '../../../services/gif_cache_service.dart';
 import '../../../theme/app_colors.dart';
 import 'exercicio_media_controls.dart';
 import 'exercicio_midia.dart';
@@ -11,14 +12,17 @@ import 'exercicio_midia.dart';
 /// distração ao redor.
 ///
 /// Mesma prioridade vídeo-primeiro/GIF-fallback do palco principal (ver
-/// `ExercicioMidia`), usando `gif360Url` (em vez do `gif180Url`) quando
-/// cai pro GIF — a variante de maior resolução fica reservada
-/// automaticamente pra cá, onde o zoom (até 4x) mais se beneficia dela.
+/// `ExercicioMidia`), usando `gif360Url` quando cai pro GIF — a única
+/// variante hospedada, e a que mais se beneficia do zoom (até 4x) daqui.
 /// A troca nunca é uma escolha exposta ao aluno.
 class ExercicioFullscreenScreen extends StatefulWidget {
-  const ExercicioFullscreenScreen({super.key, required this.exercise});
+  const ExercicioFullscreenScreen({super.key, required this.exercise, this.gifCacheService});
 
   final ExerciseModel exercise;
+
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa o
+  /// padrão de `ExercicioMidia` (`FirebaseGifCacheService()`).
+  final GifCacheService? gifCacheService;
 
   @override
   State<ExercicioFullscreenScreen> createState() => _ExercicioFullscreenScreenState();
@@ -59,6 +63,7 @@ class _ExercicioFullscreenScreenState extends State<ExercicioFullscreenScreen> {
                     controller: _midiaController,
                     fit: BoxFit.contain,
                     reduceMotion: reduceMotion,
+                    gifCacheService: widget.gifCacheService,
                   ),
                 ),
               ),

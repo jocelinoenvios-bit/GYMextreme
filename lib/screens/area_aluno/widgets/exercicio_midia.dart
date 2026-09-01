@@ -127,7 +127,7 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
   /// nessa ordem — o download do GIF só é tentado depois que a
   /// tentativa de vídeo já terminou (com ou sem sucesso).
   Future<void> _carregarMidia() async {
-    final gifPath = widget.exercise.gif360Url ?? widget.exercise.gif180Url;
+    final gifPath = widget.exercise.gif360Url;
 
     // Cache local nunca custa uma chamada de rede — tenta mostrar algo
     // de cara, mesmo antes do vídeo, se esse GIF já tiver sido visto
@@ -245,7 +245,7 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       );
     }
 
-    final gifPath = widget.exercise.gif360Url ?? widget.exercise.gif180Url;
+    final gifPath = widget.exercise.gif360Url;
     if (gifPath == null) {
       // Nem vídeo nem GIF disponíveis pra este exercício — não deveria
       // acontecer no catálogo atual (todo exercício tem ao menos um dos

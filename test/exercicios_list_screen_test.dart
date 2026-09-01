@@ -11,6 +11,12 @@ Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 class _FakeExerciseRepository implements ExerciseRepository {
   const _FakeExerciseRepository();
 
+  // Caminhos reais (existem de verdade em assets/exercicios/gifs/), não
+  // fake — desde que a ficha do exercício passou a usar o widget `Gif`
+  // (que, ao contrário do antigo `Image.asset`, não tem `errorBuilder`
+  // e lança uma exceção real se o asset não existir), o teste que abre
+  // a ficha (`ExercicioDetailScreen`) precisa de um caminho que o
+  // asset bundle do Flutter realmente resolve.
   static const _catalogo = <ExerciseModel>[
     ExerciseModel(
       id: '0001',
@@ -21,7 +27,7 @@ class _FakeExerciseRepository implements ExerciseRepository {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'sit up',
-      gif180Url: 'assets/fake/0001.gif',
+      gif180Url: 'assets/exercicios/gifs/0001.gif',
     ),
     ExerciseModel(
       id: '0577',
@@ -32,7 +38,7 @@ class _FakeExerciseRepository implements ExerciseRepository {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'chest press',
-      gif180Url: 'assets/fake/0577.gif',
+      gif180Url: 'assets/exercicios/gifs/0577.gif',
     ),
   ];
 

@@ -137,23 +137,27 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
 
   /// `AnimationController.repeat()` exige uma duração já definida — o
   /// pacote `gif` só define isso depois de decodificar os quadros do
-  /// GIF, de forma assíncrona. Se o aluno troca de exercício rapidamente
-  /// (ex.: pula os últimos passos de uma série logo em seguida), o GIF
-  /// do exercício novo/anterior pode ainda não ter terminado de carregar
-  /// quando este método é chamado — chamar `.repeat()` nesse instante
-  /// lançaria "AnimationController.repeat() called without an explicit
-  /// period and with no default Duration.". Sem duração pronta, não faz
-  /// nada agora: o próprio widget `Gif` assume a reprodução sozinho
+  /// GIF, de forma assíncrona (e marca essa duração como protegida,
+  /// então não dá pra checar de fora se já está pronta antes de chamar).
+  /// Se o aluno troca de exercício rapidamente (ex.: pula os últimos
+  /// passos de uma série logo em seguida), o GIF do exercício novo/
+  /// anterior pode ainda não ter terminado de carregar quando este
+  /// método é chamado — chamar `.repeat()` nesse instante lançaria
+  /// "AnimationController.repeat() called without an explicit period
+  /// and with no default Duration.". Por isso a chamada real fica
+  /// protegida por try/catch: se a duração ainda não estiver pronta, o
+  /// pedido simplesmente não tem efeito agora (nunca propaga a exceção
+  /// pra tela) — o próprio widget `Gif` assume a reprodução sozinho
   /// assim que os quadros terminarem de carregar (`autostart` no
-  /// `build()`), então o pedido de "tocar" não se perde — só espera o
+  /// `build()`), então o pedido de "tocar" não se perde, só espera o
   /// carregamento terminar, como o comportamento sempre foi.
   void _repetirGifSePronto() {
-    if (_gifController.duration == null) return;
     try {
       _gifController.repeat();
     } catch (_) {
-      // Blindagem extra: nunca deixar a troca de exercício quebrar a
-      // tela por causa do GIF.
+      // Duração ainda não definida (GIF ainda carregando) ou qualquer
+      // outra falha do AnimationController — nunca deixar a troca de
+      // exercício quebrar a tela por causa do GIF.
     }
   }
 

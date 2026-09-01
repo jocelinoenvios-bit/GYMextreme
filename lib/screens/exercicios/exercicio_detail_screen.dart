@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gif/gif.dart';
 
 import '../../constants/dificuldade_exercicio.dart';
 import '../../constants/equipamentos.dart';
@@ -7,14 +6,17 @@ import '../../constants/grupos_musculares.dart';
 import '../../constants/musculos.dart';
 import '../../models/exercise_model.dart';
 import '../../theme/app_colors.dart';
+import '../area_aluno/widgets/exercicio_midia.dart';
 
 /// Ficha de referência de um exercício da Biblioteca Oficial — usada ao
 /// navegar a biblioteca (fora do fluxo de execução do treino, que tem
 /// sua própria tela dedicada com player/controles).
 ///
-/// Mostra o GIF animado de verdade (`gif360Url`, com fallback pro
-/// `gif180Url`), não só o primeiro quadro — mesmo padrão de
-/// `ExercicioMediaStage`/`ExercicioFullscreenScreen`.
+/// Mostra a mídia animada de verdade — vídeo da Vital Animations
+/// (`videoUrl`) quando existir, GIF (`gif360Url`, com fallback pro
+/// `gif180Url`) caso contrário —, não só o primeiro quadro — mesmo
+/// padrão de `ExercicioMediaStage`/`ExercicioFullscreenScreen`, mas sem
+/// os controles manuais (aqui é só referência, sempre em loop).
 class ExercicioDetailScreen extends StatefulWidget {
   const ExercicioDetailScreen({super.key, required this.exercicio});
 
@@ -24,19 +26,18 @@ class ExercicioDetailScreen extends StatefulWidget {
   State<ExercicioDetailScreen> createState() => _ExercicioDetailScreenState();
 }
 
-class _ExercicioDetailScreenState extends State<ExercicioDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late final GifController _loopController;
+class _ExercicioDetailScreenState extends State<ExercicioDetailScreen> {
+  late final ExercicioMidiaController _midiaController;
 
   @override
   void initState() {
     super.initState();
-    _loopController = GifController(vsync: this);
+    _midiaController = ExercicioMidiaController(tocandoInicial: true);
   }
 
   @override
   void dispose() {
-    _loopController.dispose();
+    _midiaController.dispose();
     super.dispose();
   }
 
@@ -55,12 +56,11 @@ class _ExercicioDetailScreenState extends State<ExercicioDetailScreen>
               aspectRatio: 1,
               child: Container(
                 color: AppColors.stage,
-                child: Gif(
-                  image: AssetImage(exercicio.gif360Url ?? exercicio.gif180Url),
-                  controller: _loopController,
-                  autostart: reduceMotion ? Autostart.no : Autostart.loop,
+                child: ExercicioMidia(
+                  exercise: exercicio,
+                  controller: _midiaController,
                   fit: BoxFit.cover,
-                  placeholder: (_) => const Center(child: CircularProgressIndicator()),
+                  reduceMotion: reduceMotion,
                 ),
               ),
             ),

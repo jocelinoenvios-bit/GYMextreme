@@ -156,12 +156,19 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                                     child: SizedBox(
                                       width: 52,
                                       height: 52,
-                                      child: Image.asset(
-                                        exercicio.gif180Url,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) =>
-                                            const _ThumbnailFallback(),
-                                      ),
+                                      child: exercicio.gif180Url == null
+                                          // Exercícios só-com-vídeo (Vital
+                                          // Animations) não têm GIF pra
+                                          // miniatura estática — gerar um
+                                          // frame do vídeo só pra 52x52
+                                          // não compensa o custo.
+                                          ? const _ThumbnailFallback()
+                                          : Image.asset(
+                                              exercicio.gif180Url!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) =>
+                                                  const _ThumbnailFallback(),
+                                            ),
                                     ),
                                   ),
                                   title: Text(exercicio.nomeExibicao),

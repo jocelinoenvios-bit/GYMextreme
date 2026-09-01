@@ -94,7 +94,7 @@ class ExerciseModel {
     this.passoAPasso = const [],
     this.passoAPassoLocalizado,
     this.descricao,
-    required this.gif180Url,
+    this.gif180Url,
     this.gif360Url,
     this.videoUrl,
     this.similares = const [],
@@ -183,8 +183,10 @@ class ExerciseModel {
 
   /// Loop em destaque — caminho resolvido a partir do [id] (ver
   /// `LocalExerciseRepository`), nomenclatura oficial da ExerciseDB, sem
-  /// renomeação.
-  final String gif180Url;
+  /// renomeação. Nulo para os exercícios que só têm vídeo (Vital
+  /// Animations, sem GIF correspondente na ExerciseDB) — nesse caso
+  /// [videoUrl] é a única mídia disponível.
+  final String? gif180Url;
 
   /// Mesmo loop em resolução maior — usado automaticamente em telas com
   /// mais zoom (tela cheia), nunca como escolha exposta ao aluno. Não é
@@ -192,8 +194,10 @@ class ExerciseModel {
   /// em qualidade maior.
   final String? gif360Url;
 
-  /// Vídeo completo — reservado pra API V2 (não implementada ainda).
-  /// Nulo enquanto só a biblioteca local estiver em uso.
+  /// Caminho local (asset) do vídeo de demonstração da Vital Animations,
+  /// quando existir pra este exercício — mídia PRIMÁRIA (o GIF vira
+  /// fallback automático, usado quando não há vídeo ou quando ele falha
+  /// ao carregar). Nulo para a maioria dos exercícios, que só têm GIF.
   final String? videoUrl;
 
   bool get temVarianteAltaResolucao => gif360Url != null;
@@ -224,9 +228,19 @@ class ExerciseModel {
   /// `TraducoesBiblioteca`/`LocalExerciseRepository`) — quando ausente
   /// (ex.: testes que montam o JSON bruto na mão), o exercício continua
   /// funcionando 100% em inglês, exatamente como antes desta tradução.
+  ///
+  /// [temGif] é `false` só para os exercícios novos da Vital Animations
+  /// que não existem na ExerciseDB (sem GIF correspondente) — nesses
+  /// casos [gif180Url]/[gif360Url] ficam nulos em vez de apontar pra um
+  /// asset que não existe. [videosPorId] (ver
+  /// `LocalExerciseRepository`) é o mapa id -> caminho do vídeo da
+  /// Vital Animations; quando o [id] deste exercício está no mapa,
+  /// popula [videoUrl].
   factory ExerciseModel.fromExerciseDbJson(
     Map<String, dynamic> json, {
     TraducoesBiblioteca? traducoes,
+    bool temGif = true,
+    Map<String, String>? videosPorId,
   }) {
     final id = json['id'] as String;
     final taxonomy = json['taxonomy'] as Map<String, dynamic>? ?? const {};
@@ -258,8 +272,9 @@ class ExerciseModel {
           ? null
           : [for (final linha in instrucoesOriginais) traducoes.instrucoes[linha] ?? linha],
       descricao: json['description'] as String?,
-      gif180Url: gif180PathPara(id),
-      gif360Url: gif360PathPara(id),
+      gif180Url: temGif ? gif180PathPara(id) : null,
+      gif360Url: temGif ? gif360PathPara(id) : null,
+      videoUrl: videosPorId?[id],
       similares: relacionados('similarExercises'),
       substituicoes: relacionados('substitutions'),
       progressoes: relacionados('progressions'),

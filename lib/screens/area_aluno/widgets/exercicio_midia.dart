@@ -131,7 +131,29 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       widget.controller.tocando ? video.play() : video.pause();
     } else {
       if (reiniciou) _gifController.reset();
-      widget.controller.tocando ? _gifController.repeat() : _gifController.stop();
+      widget.controller.tocando ? _repetirGifSePronto() : _gifController.stop();
+    }
+  }
+
+  /// `AnimationController.repeat()` exige uma duração já definida — o
+  /// pacote `gif` só define isso depois de decodificar os quadros do
+  /// GIF, de forma assíncrona. Se o aluno troca de exercício rapidamente
+  /// (ex.: pula os últimos passos de uma série logo em seguida), o GIF
+  /// do exercício novo/anterior pode ainda não ter terminado de carregar
+  /// quando este método é chamado — chamar `.repeat()` nesse instante
+  /// lançaria "AnimationController.repeat() called without an explicit
+  /// period and with no default Duration.". Sem duração pronta, não faz
+  /// nada agora: o próprio widget `Gif` assume a reprodução sozinho
+  /// assim que os quadros terminarem de carregar (`autostart` no
+  /// `build()`), então o pedido de "tocar" não se perde — só espera o
+  /// carregamento terminar, como o comportamento sempre foi.
+  void _repetirGifSePronto() {
+    if (_gifController.duration == null) return;
+    try {
+      _gifController.repeat();
+    } catch (_) {
+      // Blindagem extra: nunca deixar a troca de exercício quebrar a
+      // tela por causa do GIF.
     }
   }
 

@@ -1,7 +1,11 @@
 /// Tradução dos nomes de músculo (`target`/`secondaryMuscles`) que a
 /// Biblioteca Oficial de Exercícios (ExerciseDB) usa — 76 valores, entre
-/// músculo principal e secundário de todos os 1.394 exercícios. Usado
-/// pra exibir "Peitorais"/"Tríceps" em vez de "pectorals"/"triceps" nas
+/// músculo principal e secundário de todos os 1.394 exercícios — mais os
+/// valores adicionais que os 44 exercícios novos da Vital Animations
+/// introduziram (nomenclatura mais ampla/por região do corpo em vez de
+/// músculo específico; traduzidos de forma consistente com os mesmos
+/// termos já usados em `grupos_musculares.dart` pra bodyPart). Usado pra
+/// exibir "Peitorais"/"Tríceps" em vez de "pectorals"/"triceps" nas
 /// telas de detalhe/execução.
 const Map<String, String> musculosLabels = {
   'abdominals': 'Abdominais',
@@ -38,13 +42,17 @@ const Map<String, String> musculosLabels = {
   'hands': 'Mãos',
   'hip flexors': 'Flexores do quadril',
   'inner thighs': 'Parte interna da coxa',
+  'lateral delts': 'Deltoides laterais',
   'latissimus dorsi': 'Grande dorsal',
   'lats': 'Dorsais',
   'levator scapulae': 'Levantador da escápula',
   'longus capitis': 'Longo da cabeça',
   'longus colli': 'Longo do pescoço',
   'lower abs': 'Abdômen inferior',
+  'lower arms': 'Antebraços',
   'lower back': 'Lombar',
+  'lower legs': 'Panturrilhas',
+  'middle traps': 'Trapézio médio',
   'obliques': 'Oblíquos',
   'obturator internus': 'Obturador interno',
   'obturator internus/externus': 'Obturador interno/externo',
@@ -56,6 +64,7 @@ const Map<String, String> musculosLabels = {
   'quadriceps': 'Quadríceps',
   'quads': 'Quadríceps',
   'rear deltoids': 'Deltoides posteriores',
+  'rear delts': 'Deltoides posteriores',
   'rhomboids': 'Romboides',
   'rotator cuff': 'Manguito rotador',
   'scalenes': 'Escalenos',
@@ -69,14 +78,18 @@ const Map<String, String> musculosLabels = {
   'splenius cervicis': 'Esplênio do pescoço',
   'sternocleidomastoid': 'Esternocleidomastóideo',
   'suboccipitals': 'Suboccipitais',
+  'supraspinatus': 'Supraespinhal',
   'tibialis anterior': 'Tibial anterior',
   'tibialis posterior': 'Tibial posterior',
   'trapezius': 'Trapézio',
   'traps': 'Trapézio',
   'triceps': 'Tríceps',
+  'upper arms': 'Braços',
   'upper back': 'Costas superior',
   'upper chest': 'Peito superior',
+  'upper legs': 'Pernas',
   'upper trapezius': 'Trapézio superior',
+  'upper traps': 'Trapézio superior',
   'wrist extensors': 'Extensores do punho',
   'wrist flexors': 'Flexores do punho',
   'wrists': 'Punhos',

@@ -211,6 +211,20 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
     final erro = _erro;
 
     return Scaffold(
+      // false: esta é a única tela do app com um TextField dentro de uma
+      // barra fixa no rodapé (bottomNavigationBar) — o padrão
+      // resizeToAvoidBottomInset=true encolhe o corpo pra "abrir espaço"
+      // pro teclado, mas em alguns aparelhos/versões do Android (edge-to-
+      // edge obrigatório a partir do Android 15) o Flutter recebe um
+      // inset de teclado incorreto/inflado mesmo sem teclado nenhum
+      // aberto, espremendo a tela inteira pra cima e deixando uma área
+      // enorme preta no lugar do "teclado" inexistente — suspeita levantada
+      // ao investigar um relato de tela em branco/quebrada num aparelho
+      // físico real na execução do treino (nunca visto em CI/emulador).
+      // O campo "Carga usada" não precisa desse comportamento — ele fica
+      // sempre visível, ancorado, então desligar o resize automático é
+      // seguro aqui.
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(
           (erro != null || exercicios == null || _treinoConcluido)

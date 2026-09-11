@@ -39,22 +39,25 @@ void main() {
       expect(find.text('Minha evolução'), findsOneWidget);
     });
 
-    testWidgets('cada item navega pra tela correspondente', (tester) async {
-      for (final caso in [
-        ('Dados pessoais', MeusDadosAlunoScreen),
-        ('Minha ficha', MinhaFichaScreen),
-        ('Minhas medidas', MinhasMedidasScreen),
-        ('Minha anamnese', MinhaAnamneseScreen),
-        ('Minha evolução', MinhaEvolucaoScreen),
-      ]) {
+    // Cada caso roda no seu próprio testWidgets (tester próprio) — reusar
+    // um único tester num loop deixaria o Navigator com a tela anterior
+    // ainda empilhada (pumpWidget de novo não reseta a pilha de rotas
+    // sozinho), então o 2º toque em diante nunca acharia o item na tela.
+    for (final caso in [
+      ('Dados pessoais', MeusDadosAlunoScreen),
+      ('Minha ficha', MinhaFichaScreen),
+      ('Minhas medidas', MinhasMedidasScreen),
+      ('Minha anamnese', MinhaAnamneseScreen),
+      ('Minha evolução', MinhaEvolucaoScreen),
+    ])
+      testWidgets('tocar em "${caso.$1}" navega pra tela correspondente', (tester) async {
         await tester.pumpWidget(_wrap(FakeAlunoService()));
         await tester.pump();
 
         await tester.tap(find.text(caso.$1));
         await tester.pumpAndSettle();
 
-        expect(find.byType(caso.$2), findsOneWidget, reason: 'ao tocar em "${caso.$1}"');
-      }
-    });
+        expect(find.byType(caso.$2), findsOneWidget);
+      });
   });
 }

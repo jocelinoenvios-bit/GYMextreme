@@ -7,6 +7,7 @@ import 'package:gymextreme_app/screens/area_aluno/meus_dados_aluno_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/rich_text_finder.dart';
 
 Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
@@ -29,8 +30,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.textContaining('Ana Teste'), findsOneWidget);
-      expect(find.textContaining('ana@teste.com'), findsOneWidget);
+      expect(findRichTextContaining('Ana Teste'), findsOneWidget);
+      expect(findRichTextContaining('ana@teste.com'), findsOneWidget);
     });
 
     testWidgets('mostra os dados pessoais preenchidos e omite os vazios', (tester) async {
@@ -49,10 +50,10 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.textContaining('Feminino'), findsOneWidget);
-      expect(find.textContaining('11999990000'), findsOneWidget);
+      expect(findRichTextContaining('Feminino'), findsOneWidget);
+      expect(findRichTextContaining('11999990000'), findsOneWidget);
       // CPF não foi preenchido — não deve aparecer nenhuma linha em branco.
-      expect(find.textContaining('CPF'), findsNothing);
+      expect(findRichTextContaining('CPF'), findsNothing);
     });
   });
 }

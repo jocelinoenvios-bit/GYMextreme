@@ -5,6 +5,7 @@ import 'package:gymextreme_app/screens/area_aluno/minhas_medidas_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
+import 'support/rich_text_finder.dart';
 
 Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
@@ -29,11 +30,14 @@ void main() {
       await tester.pumpWidget(_wrap(MinhasMedidasScreen(uid: 'aluno-1', alunoService: alunoService)));
       await tester.pump();
 
-      expect(find.textContaining('Peso'), findsOneWidget);
-      expect(find.textContaining('Altura'), findsOneWidget);
+      // "Peso"/"Altura" são rótulos de um RichText (_InfoChip) — não um
+      // Text simples — então usam o finder que lê o texto plano do
+      // RichText. O selo de IMC é um Text de verdade.
+      expect(findRichTextContaining('Peso'), findsOneWidget);
+      expect(findRichTextContaining('Altura'), findsOneWidget);
       expect(find.textContaining('IMC'), findsOneWidget);
-      expect(find.textContaining('gordura'), findsNothing);
-      expect(find.textContaining('massa muscular'), findsNothing);
+      expect(findRichTextContaining('gordura'), findsNothing);
+      expect(findRichTextContaining('massa muscular'), findsNothing);
     });
   });
 }

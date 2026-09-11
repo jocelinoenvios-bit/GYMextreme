@@ -17,6 +17,14 @@ const _staff = AppUser(
   role: UserRole.personal,
 );
 
+// O formulário tem mais campos do que cabem no viewport padrão de teste —
+// sem rolar até o botão primeiro, tap() acerta um ponto fora da tela.
+Future<void> _tocarSalvar(WidgetTester tester) async {
+  final botao = find.text('SALVAR TREINO');
+  await tester.dragUntilVisible(botao, find.byType(ListView), const Offset(0, -300));
+  await tester.tap(botao);
+}
+
 void main() {
   group('TreinoFormScreen — dia da semana/objetivo/vigência', () {
     testWidgets('salvar um treino novo grava o dia da semana e o objetivo escolhidos', (
@@ -39,7 +47,7 @@ void main() {
       await tester.tap(find.text('Segunda').last);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('SALVAR TREINO'));
+      await _tocarSalvar(tester);
       await tester.pumpAndSettle();
 
       expect(alunoService.treinos, hasLength(1));
@@ -77,7 +85,7 @@ void main() {
       expect(find.text('Quarta'), findsOneWidget);
       expect(find.text('31/12/2026'), findsOneWidget);
 
-      await tester.tap(find.text('SALVAR TREINO'));
+      await _tocarSalvar(tester);
       await tester.pumpAndSettle();
 
       final salvo = alunoService.treinos.single;

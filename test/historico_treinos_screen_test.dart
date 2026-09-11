@@ -34,7 +34,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(HistoricoTreinosScreen(uid: 'aluno-1', alunoService: alunoService)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Não registrado'), findsOneWidget);
       expect(find.text('Falta'), findsNothing);
@@ -57,7 +57,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(HistoricoTreinosScreen(uid: 'aluno-1', alunoService: alunoService)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Realizado'), findsOneWidget);
       expect(find.text('Não registrado'), findsNothing);
@@ -80,7 +80,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(HistoricoTreinosScreen(uid: 'aluno-1', alunoService: alunoService)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Falta'), findsOneWidget);
     });
@@ -93,7 +93,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(HistoricoTreinosScreen(uid: 'aluno-1', alunoService: alunoService)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Sem treino prescrito'), findsWidgets);
     });
@@ -106,7 +106,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(HistoricoTreinosScreen(uid: 'aluno-1', alunoService: alunoService)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(
         find.text(
@@ -125,7 +125,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(HistoricoTreinosScreen(uid: 'aluno-1', alunoService: alunoService)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final botaoProxima = find.widgetWithIcon(IconButton, Icons.chevron_right);
       final IconButton widget = tester.widget(botaoProxima);

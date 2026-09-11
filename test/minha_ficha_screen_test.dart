@@ -92,7 +92,12 @@ void main() {
       await tester.pumpWidget(_wrap(MinhaFichaScreen(uid: 'aluno-1', alunoService: alunoService)));
       await tester.pump();
 
-      await tester.tap(find.text('HISTÓRICO DE TREINOS (SEMANAS ANTERIORES)'));
+      // O botão fica depois das 7 seções de dia da semana — abaixo do
+      // viewport padrão de teste, então precisa rolar até ele antes de
+      // tocar (tap() não rola sozinho).
+      final botao = find.text('HISTÓRICO DE TREINOS (SEMANAS ANTERIORES)');
+      await tester.dragUntilVisible(botao, find.byType(ListView), const Offset(0, -300));
+      await tester.tap(botao);
       await tester.pumpAndSettle();
 
       expect(find.byType(HistoricoTreinosScreen), findsOneWidget);

@@ -278,6 +278,18 @@ service cloud.firestore {
         allow write: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
       }
 
+      // Historico de presenca/frequencia (Realizado/Falta) de cada treino
+      // prescrito — SEPARADO da ficha prescrita acima (`treinos`): a
+      // ficha nunca depende deste registro pra aparecer (fica visivel
+      // mesmo sem nenhum historico), e o registro de presenca NUNCA e
+      // criado pelo proprio aluno (evita presenca/frequencia fraudada).
+      // So quem tem a mesma permissao que ja edita a ficha confirma
+      // presenca/falta; o aluno so le o proprio historico, nunca escreve.
+      match /historicoTreinos/{registroId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow create, update, delete: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
+      }
+
       // Historico de matriculas do aluno — mesmo padrao de pagamentos: o
       // proprio aluno so le a propria, staff generico tambem le, e so
       // quem tem a permissao especifica de matriculas escreve (cria,

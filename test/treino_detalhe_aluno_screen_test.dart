@@ -36,9 +36,13 @@ class _FakeExerciseRepository implements ExerciseRepository {
 void main() {
   group('TreinoDetalheAlunoScreen', () {
     testWidgets('mostra nome, badges de dia/objetivo e os exercícios prescritos', (tester) async {
+      // Nome diferente de "Treino A" de propósito — a AppBar já mostra
+      // "Treino ${letra}", então usar o mesmo texto no nome criaria uma
+      // ambiguidade (2 widgets com o mesmo texto) sem relação com o que
+      // este teste verifica.
       const treino = Treino(
         id: 'treino-a',
-        nome: 'Treino A',
+        nome: 'Peito e tríceps',
         letra: 'A',
         diaSemana: 1,
         objetivo: 'Hipertrofia',
@@ -58,7 +62,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Treino A'), findsOneWidget);
+      expect(find.text('Peito e tríceps'), findsOneWidget);
+      expect(find.text('Treino A'), findsOneWidget); // título da AppBar
       expect(find.text('Segunda'), findsOneWidget);
       expect(find.text('Hipertrofia'), findsOneWidget);
       expect(find.text('lever chest press'), findsOneWidget);

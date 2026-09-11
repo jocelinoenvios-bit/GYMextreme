@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/anamnese.dart';
+import 'package:gymextreme_app/models/app_user.dart';
+import 'package:gymextreme_app/models/permission.dart';
+import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/alunos/tabs/anamnese_tab.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/test_viewport.dart';
 
-Widget _wrap(FakeAlunoService alunoService) {
+const _comPermissao = AppUser(
+  uid: 'staff-com-permissao',
+  nome: 'Personal Com Permissão',
+  email: 'personal@teste.com',
+  role: UserRole.funcionario,
+  permissoes: {Permission.avaliacoesFisicas},
+);
+
+const _semPermissao = AppUser(
+  uid: 'staff-sem-permissao',
+  nome: 'Funcionário Sem Permissão',
+  email: 'funcionario@teste.com',
+  role: UserRole.funcionario,
+  permissoes: {Permission.acessarProdutos},
+);
+
+Widget _wrap(FakeAlunoService alunoService, {AppUser staffAtual = _comPermissao}) {
   return MaterialApp(
     theme: AppTheme.dark,
-    home: Scaffold(body: AnamneseTab(uid: 'aluno-1', alunoService: alunoService)),
+    home: Scaffold(
+      body: AnamneseTab(uid: 'aluno-1', alunoService: alunoService, staffAtual: staffAtual),
+    ),
   );
 }
 
@@ -56,5 +77,17 @@ void main() {
     await _carregar(tester, _wrap(alunoService));
 
     expect(find.textContaining('Respondida em 01/08/2026'), findsOneWidget);
+  });
+
+  testWidgets('staff SEM avaliacoesFisicas não vê o botão salvar, só um aviso', (tester) async {
+    usarViewportGrande(tester);
+    final alunoService = FakeAlunoService();
+    await _carregar(tester, _wrap(alunoService, staffAtual: _semPermissao));
+
+    expect(find.text('SALVAR ANAMNESE'), findsNothing);
+    expect(
+      find.text('Você não tem permissão para editar a anamnese deste aluno.'),
+      findsOneWidget,
+    );
   });
 }

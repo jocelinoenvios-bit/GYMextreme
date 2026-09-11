@@ -124,7 +124,64 @@ void main() {
       expect(PermissionService.has(personalLegado, Permission.gerenciarAlunos), isTrue);
       expect(PermissionService.has(personalLegado, Permission.bibliotecaExercicios), isTrue);
       expect(PermissionService.has(personalLegado, Permission.avaliacoesFisicas), isTrue);
+      // Corrigido após a auditoria apontar a regressão: personal legado
+      // tinha perdido silenciosamente a capacidade de prescrever/editar
+      // treino, a função mais básica do cargo.
+      expect(PermissionService.has(personalLegado, Permission.criarTreinos), isTrue);
+      expect(PermissionService.has(personalLegado, Permission.editarTreinos), isTrue);
       expect(PermissionService.has(personalLegado, Permission.financeiro), isFalse);
+      expect(PermissionService.has(personalLegado, Permission.gerenciarFuncionarios), isFalse);
+    });
+
+    test('personal MODERNO (com permissoes gravadas) usa exatamente a lista gravada, ignora o fallback', () {
+      // Se um dia alguém salvar um `personal` moderno SEM criarTreinos
+      // explicitamente (ex.: um cargo customizado mais restrito), o
+      // fallback legado NUNCA deve entrar em ação — só serve pra conta
+      // antiga sem `permissoes` nenhuma gravada.
+      const personalModerno = AppUser(
+        uid: 'personal2',
+        nome: 'Personal Moderno',
+        email: 'personal.moderno@gymextreme.com.br',
+        role: UserRole.personal,
+        permissoes: {Permission.bibliotecaExercicios},
+      );
+
+      expect(PermissionService.has(personalModerno, Permission.bibliotecaExercicios), isTrue);
+      expect(PermissionService.has(personalModerno, Permission.criarTreinos), isFalse);
+      expect(PermissionService.has(personalModerno, Permission.editarTreinos), isFalse);
+      expect(PermissionService.has(personalModerno, Permission.avaliacoesFisicas), isFalse);
+      expect(PermissionService.has(personalModerno, Permission.gerenciarAlunos), isFalse);
+    });
+
+    test('personal moderno com o cargo padrao Personal Trainer tem criar/editar treinos', () {
+      final personalComCargo = AppUser(
+        uid: 'personal3',
+        nome: 'Personal Com Cargo',
+        email: 'personal.cargo@gymextreme.com.br',
+        role: UserRole.personal,
+        cargoId: CargosPadrao.personalTrainer.id,
+        permissoes: CargosPadrao.personalTrainer.permissoesPadrao,
+      );
+
+      expect(PermissionService.has(personalComCargo, Permission.criarTreinos), isTrue);
+      expect(PermissionService.has(personalComCargo, Permission.editarTreinos), isTrue);
+      expect(PermissionService.has(personalComCargo, Permission.avaliacoesFisicas), isTrue);
+    });
+
+    test('funcionario (nao personal) sem permissoes gravadas NAO cai em nenhum fallback', () {
+      // O fallback legado e especifico de `role == personal` — um
+      // funcionario sem `permissoes` gravada nunca ganha nada por
+      // "compatibilidade", mesmo que o cenario pareca parecido.
+      final funcionarioSemPermissoes = AppUser(
+        uid: 'func-legado',
+        nome: 'Funcionário Sem Permissões',
+        email: 'funcionario.legado@gymextreme.com.br',
+        role: UserRole.funcionario,
+      );
+
+      expect(PermissionService.effectivePermissions(funcionarioSemPermissoes), isEmpty);
+      expect(PermissionService.has(funcionarioSemPermissoes, Permission.criarTreinos), isFalse);
+      expect(PermissionService.has(funcionarioSemPermissoes, Permission.gerenciarAlunos), isFalse);
     });
 
     test('aluno nao tem nenhuma permissao de staff, em todo o catalogo', () {

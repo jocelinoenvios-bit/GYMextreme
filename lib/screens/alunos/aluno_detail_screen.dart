@@ -14,7 +14,11 @@ import 'tabs/treinos_tab.dart';
 /// treino — a aba de Treinos é sempre visível pra qualquer staff, sem
 /// exigir a permissão `prescricaoTreinos` (decisão explícita: só a
 /// visibilidade da aba foi liberada; criar/editar treino continua
-/// exigindo `criarTreinos`/`editarTreinos`, ver `TreinosTab`).
+/// exigindo `criarTreinos`/`editarTreinos`, ver `TreinosTab`). As abas
+/// Anamnese e Avaliações são sempre visíveis também, mas criar/editar
+/// dentro delas exige `avaliacoesFisicas` (ver `AnamneseTab`/
+/// `AvaliacoesTab`) — mesmo padrão de Treinos, e reforçado em
+/// `firestore.rules` (não só escondido na UI).
 class AlunoDetailScreen extends StatelessWidget {
   const AlunoDetailScreen({
     super.key,
@@ -56,9 +60,9 @@ class AlunoDetailScreen extends StatelessWidget {
               storageService: storageService,
               staffAtual: staffAtual,
             ),
-            AnamneseTab(uid: aluno.uid, alunoService: alunoService),
+            AnamneseTab(uid: aluno.uid, alunoService: alunoService, staffAtual: staffAtual),
             TermoTab(aluno: aluno, alunoService: alunoService, staffAtual: staffAtual),
-            AvaliacoesTab(uid: aluno.uid, alunoService: alunoService),
+            AvaliacoesTab(uid: aluno.uid, alunoService: alunoService, staffAtual: staffAtual),
             TreinosTab(
               uid: aluno.uid,
               alunoService: alunoService,

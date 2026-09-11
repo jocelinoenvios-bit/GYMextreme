@@ -168,6 +168,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
                     child: AnamneseTab(
                       uid: _uid!,
                       alunoService: widget.alunoService,
+                      staffAtual: widget.staffAtual,
                     ),
                   ),
                 ),

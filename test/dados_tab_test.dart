@@ -81,4 +81,101 @@ void main() {
     expect(alunoService.ultimoAlunoSalvo?.telefone, '11987654321');
     expect(find.text('Dados atualizados.'), findsOneWidget);
   });
+
+  group('regressão do bug: editar dados não pode apagar campos operacionais/financeiros', () {
+    // Reproduz exatamente o cenário do bug: (1) aluno ativo com
+    // proximoVencimento preenchido, (2) edita só telefone/endereço,
+    // (3) salva, (4-8) todos os campos operacionais/financeiros
+    // continuam exatamente como estavam antes.
+    testWidgets('editar só telefone/endereço preserva ativo/bloqueado/vencimento/inatividade/optIn', (
+      tester,
+    ) async {
+      usarViewportGrande(tester);
+      final vencimentoOriginal = DateTime(2026, 12, 10);
+      final dataInativacaoOriginal = DateTime(2026, 3, 1);
+      final dataReativacaoOriginal = DateTime(2026, 5, 20);
+      final alunoOriginal = Aluno(
+        uid: 'aluno-1',
+        telefone: '11900000000',
+        ativo: true,
+        bloqueado: true,
+        proximoVencimento: vencimentoOriginal,
+        dataInativacao: dataInativacaoOriginal,
+        dataReativacao: dataReativacaoOriginal,
+        whatsappOptIn: true,
+      );
+      final alunoService = FakeAlunoService(aluno: alunoOriginal);
+
+      await _carregar(tester, _wrap(alunoService, FakeStorageService()));
+
+      // (2) Edita SÓ telefone/endereço — nenhum campo operacional é
+      // tocado pela tela (não existe nem UI pra isso na aba Dados).
+      await tester.enterText(find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Rua/Av.'), 'Rua Nova');
+
+      // (3) Salva.
+      await tester.tap(find.text('SALVAR'));
+      await pumpCurto(tester);
+
+      final salvo = alunoService.aluno!;
+      expect(salvo.telefone, '11987654321'); // edição foi aplicada
+      expect(salvo.endereco.logradouro, 'Rua Nova'); // edição foi aplicada
+      // (4) ativo continua ativo.
+      expect(salvo.ativo, isTrue);
+      // (6) bloqueado continua igual.
+      expect(salvo.bloqueado, isTrue);
+      // (5) proximoVencimento continua igual.
+      expect(salvo.proximoVencimento, vencimentoOriginal);
+      // (7) dataInativacao/dataReativacao continuam iguais.
+      expect(salvo.dataInativacao, dataInativacaoOriginal);
+      expect(salvo.dataReativacao, dataReativacaoOriginal);
+      // (8) whatsappOptIn continua igual.
+      expect(salvo.whatsappOptIn, isTrue);
+    });
+
+    testWidgets('editar dados de um aluno INATIVO não o reativa nem limpa o histórico', (
+      tester,
+    ) async {
+      usarViewportGrande(tester);
+      final dataInativacaoOriginal = DateTime(2026, 3, 1);
+      final alunoService = FakeAlunoService(
+        aluno: Aluno(
+          uid: 'aluno-1',
+          ativo: false,
+          bloqueado: false,
+          dataInativacao: dataInativacaoOriginal,
+        ),
+      );
+
+      await _carregar(tester, _wrap(alunoService, FakeStorageService()));
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'CPF'), '12345678900');
+      await tester.tap(find.text('SALVAR'));
+      await pumpCurto(tester);
+
+      final salvo = alunoService.aluno!;
+      expect(salvo.cpf, '12345678900');
+      // O aluno continua inativo — editar cadastro nunca reativa sozinho.
+      expect(salvo.ativo, isFalse);
+      expect(salvo.dataInativacao, dataInativacaoOriginal);
+    });
+  });
+
+  group('operações que DEVEM alterar os campos operacionais continuam funcionando', () {
+    testWidgets('AlunoService.reativarAluno ainda ativa o aluno e define novo vencimento', () async {
+      final alunoService = FakeAlunoService(
+        aluno: Aluno(
+          uid: 'aluno-1',
+          ativo: false,
+          dataInativacao: DateTime(2026, 3, 1),
+        ),
+      );
+
+      await alunoService.reativarAluno('aluno-1', staffUid: 'staff-1', staffNome: 'Ana');
+
+      expect(alunoService.aluno!.ativo, isTrue);
+      expect(alunoService.aluno!.dataReativacao, isNotNull);
+      expect(alunoService.ultimaReativacao, isNotNull);
+    });
+  });
 }

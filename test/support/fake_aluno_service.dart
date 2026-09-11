@@ -95,10 +95,45 @@ class FakeAlunoService implements AlunoService {
   @override
   Stream<List<AvaliacaoFisica>> watchAvaliacoes(String uid) => Stream.value(avaliacoes);
 
+  /// Espelha `AlunoService.salvarDadosAluno` real: só os campos
+  /// cadastrais do `aluno` passado são aplicados; os campos
+  /// operacionais/financeiros (`ativo`, `bloqueado`, `proximoVencimento`,
+  /// `dataInativacao`, `dataReativacao`, `reativadoPor*`,
+  /// `whatsappOptIn`, `unidadeId`) são preservados do estado atual — não
+  /// usa `copyWith` de propósito (ele trata `null` como "não mudou", o
+  /// que impediria limpar um campo cadastral já preenchido).
   @override
-  Future<void> salvarDadosAluno(Aluno aluno) async {
-    ultimoAlunoSalvo = aluno;
-    this.aluno = aluno;
+  Future<void> salvarDadosAluno(Aluno novo) async {
+    ultimoAlunoSalvo = novo;
+    final atual = aluno;
+    aluno = Aluno(
+      uid: novo.uid,
+      sexo: novo.sexo,
+      dataNascimento: novo.dataNascimento,
+      idadeInformada: novo.idadeInformada,
+      fotoUrl: novo.fotoUrl,
+      cpf: novo.cpf,
+      rg: novo.rg,
+      telefone: novo.telefone,
+      whatsapp: novo.whatsapp,
+      endereco: novo.endereco,
+      contatoEmergenciaNome: novo.contatoEmergenciaNome,
+      contatoEmergenciaTelefone: novo.contatoEmergenciaTelefone,
+      observacoes: novo.observacoes,
+      dataInicio: novo.dataInicio,
+      diaVencimento: novo.diaVencimento,
+      cadastradoPorUid: atual?.cadastradoPorUid ?? novo.cadastradoPorUid,
+      cadastradoPorNome: atual?.cadastradoPorNome ?? novo.cadastradoPorNome,
+      proximoVencimento: atual?.proximoVencimento,
+      ativo: atual?.ativo ?? true,
+      bloqueado: atual?.bloqueado ?? false,
+      unidadeId: atual?.unidadeId,
+      dataInativacao: atual?.dataInativacao,
+      dataReativacao: atual?.dataReativacao,
+      reativadoPorUid: atual?.reativadoPorUid,
+      reativadoPorNome: atual?.reativadoPorNome,
+      whatsappOptIn: atual?.whatsappOptIn,
+    );
   }
 
   @override

@@ -42,14 +42,32 @@ service cloud.firestore {
       allow create: if ehStaff() &&
         (request.resource.data.role == 'aluno' || temPermissao('gerenciarFuncionarios'));
 
-      // Editar/apagar o documento de outra pessoa (ex.: ajustar permissoes
-      // de um funcionario) exige "gerenciarFuncionarios". Exceção: o
-      // próprio usuário (qualquer role, inclusive aluno) pode atualizar
-      // SÓ o próprio `fcmTokens` — é o que registra o token de push do
-      // aparelho pra notificação de mensalidade
+      // Editar o documento de OUTRA pessoa (ex.: ajustar permissoes de um
+      // funcionario) exige "gerenciarFuncionarios". Blindagem contra
+      // auto-escalonamento: quem NAO e adm nunca pode usar esta mesma
+      // permissao pra editar o PROPRIO documento (request.auth.uid ==
+      // uid) — sem essa trava, um funcionario/personal com
+      // "gerenciarFuncionarios" poderia se auto-promover a role 'adm'
+      // (ou conceder a si mesmo qualquer outra permissao) escrevendo
+      // direto no Firestore, contornando a UI. Um ADM de verdade
+      // (ehAdm()) continua podendo editar o proprio documento por essa
+      // via — ja esta no privilegio maximo, nao ha escalonamento
+      // possivel. Tambem nunca muda o `role` de ninguem pra fora do que
+      // ja era (comparado a `resource.data.role`, o valor ANTES desta
+      // escrita) a nao ser que quem esta editando ja seja adm —
+      // `atualizarPermissoes` (unico fluxo de edicao hoje) nunca mexe em
+      // `role` mesmo, entao isso nao muda nenhum comportamento existente,
+      // so fecha a mesma brecha por outro angulo (promover um TERCEIRO a
+      // adm sem ser adm). Exceção separada: o próprio usuário (qualquer
+      // role, inclusive aluno) pode sempre atualizar SÓ o próprio
+      // `fcmTokens` — é o que registra o token de push do aparelho pra
+      // notificação de mensalidade
       // (`NotificacaoService.registrarTokenDoAparelho`), sem abrir a porta
       // pra se autopromover ou editar mais nada do próprio documento.
-      allow update: if temPermissao('gerenciarFuncionarios') ||
+      allow update: if
+        (temPermissao('gerenciarFuncionarios') &&
+          (ehAdm() || request.auth.uid != uid) &&
+          (request.resource.data.role == resource.data.role || ehAdm())) ||
         (request.auth != null && request.auth.uid == uid &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmTokens', 'atualizadoEm']));
       allow delete: if temPermissao('gerenciarFuncionarios');
@@ -241,14 +259,54 @@ service cloud.firestore {
     }
 
     match /alunos/{uid} {
-      // O proprio aluno pode ler a propria ficha; ADM/Personal leem e
-      // escrevem a ficha de qualquer aluno (cadastro, anamnese, termo).
+      // O proprio aluno pode ler a propria ficha; ADM/Personal/
+      // Funcionario leem e escrevem os dados cadastrais e o termo de
+      // qualquer aluno (ehStaff() generico continua valendo pra isso,
+      // igual antes). O campo `anamnese` fica embutido neste MESMO
+      // documento (nao e subcolecao, decisao de modelagem ja existente)
+      // — como o Firestore Rules nao restringe LEITURA por campo dentro
+      // de um documento (so por escrita, via diff), a leitura do doc
+      // inteiro continua exigindo so ehStaff(); mas ESCREVER no campo
+      // `anamnese` especificamente agora exige `avaliacoesFisicas`,
+      // igual `avaliacoes/` abaixo — fecha a mesma permissao que so
+      // escondia o botao "Salvar" na UI (`AnamneseTab`) sem proteger o
+      // banco. Se no futuro for necessario tambem restringir LEITURA da
+      // anamnese por permissao, isso exige mover `anamnese` pra uma
+      // subcolecao propria — decisao maior, fora do escopo desta correcao.
       allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
-      allow write: if ehStaff();
 
+      // Criar (cadastrar um aluno novo) continua exigindo so ehStaff() —
+      // um documento novo nunca chega com `anamnese` preenchida (ela so
+      // existe depois, gravada numa escrita separada por
+      // `salvarAnamnese`), e `resource` nao existe ainda num `create`
+      // (checar `resource.data.diff(...)` aqui quebraria o cadastro,
+      // porque `resource` e null antes do documento existir).
+      allow create: if ehStaff();
+
+      // Editar um aluno existente: dados cadastrais/termo/campos
+      // operacionais continuam exigindo so ehStaff() (ver
+      // `salvarDadosAluno`, `salvarTermoAceite`, `reativarAluno` etc.);
+      // mas escrever no campo `anamnese` especificamente exige TAMBEM
+      // `avaliacoesFisicas`.
+      allow update: if ehStaff() &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['anamnese']) ||
+          temPermissao('avaliacoesFisicas'));
+
+      // Nenhum fluxo do app apaga um aluno hoje — mantido igual ao
+      // comportamento anterior (fazia parte do `allow write: if
+      // ehStaff()` combinado), sem uso real conhecido.
+      allow delete: if ehStaff();
+
+      // Avaliacoes fisicas: antes qualquer staff lia/escrevia
+      // (`ehStaff()` generico) — a permissao `avaliacoesFisicas` existia
+      // no catalogo mas nunca era checada nem aqui nem na UI. Agora leitura
+      // e escrita exigem especificamente essa permissao (mesmo padrao ja
+      // usado em `contasReceber`: uid==uid OU a permissao granular, nunca
+      // "e staff" sozinho).
       match /avaliacoes/{avaliacaoId} {
-        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
-        allow write: if ehStaff();
+        allow read: if request.auth != null &&
+          (request.auth.uid == uid || temPermissao('avaliacoesFisicas'));
+        allow write: if temPermissao('avaliacoesFisicas');
       }
 
       // Historico de pagamentos de mensalidade — so quem tem a permissao

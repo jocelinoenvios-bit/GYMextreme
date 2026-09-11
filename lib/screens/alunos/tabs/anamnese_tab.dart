@@ -1,21 +1,36 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/anamnese.dart';
+import '../../../models/app_user.dart';
+import '../../../models/permission.dart';
 import '../../../services/aluno_service.dart';
+import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
 
 /// Replica a ficha "ANAMNESE" em papel, pergunta a pergunta (01 a 13).
+/// Salvar exige `Permission.avaliacoesFisicas` — reforçado em
+/// `firestore.rules` (campo `anamnese` dentro de `alunos/{uid}`), não só
+/// escondido aqui.
 class AnamneseTab extends StatefulWidget {
-  const AnamneseTab({super.key, required this.uid, required this.alunoService});
+  const AnamneseTab({
+    super.key,
+    required this.uid,
+    required this.alunoService,
+    required this.staffAtual,
+  });
 
   final String uid;
   final AlunoService alunoService;
+  final AppUser staffAtual;
 
   @override
   State<AnamneseTab> createState() => _AnamneseTabState();
 }
 
 class _AnamneseTabState extends State<AnamneseTab> {
+  bool get _podeEditar =>
+      PermissionService.has(widget.staffAtual, Permission.avaliacoesFisicas);
+
   /// Criada uma única vez — se fosse recriada a cada `build()` (chamando
   /// `watchAnamnese` direto no `StreamBuilder`), qualquer `setState` local
   /// (ex.: tocar num chip) resetaria o StreamBuilder pra "carregando",
@@ -348,16 +363,23 @@ class _AnamneseTabState extends State<AnamneseTab> {
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.5),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isSaving ? null : _handleSave,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
-                    )
-                  : const Text('SALVAR ANAMNESE'),
-            ),
+            if (_podeEditar)
+              ElevatedButton(
+                onPressed: _isSaving ? null : _handleSave,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
+                      )
+                    : const Text('SALVAR ANAMNESE'),
+              )
+            else
+              const Text(
+                'Você não tem permissão para editar a anamnese deste aluno.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+              ),
           ],
         );
       },

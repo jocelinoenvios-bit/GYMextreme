@@ -132,10 +132,61 @@ class AlunoService {
         );
   }
 
+  /// Salva os dados de CADASTRO do aluno (nome de contato, documento,
+  /// endereço, foto etc.) — nunca toca nos campos operacionais/
+  /// financeiros: `ativo`, `bloqueado`, `proximoVencimento`,
+  /// `unidadeId`, `dataInativacao`, `dataReativacao`,
+  /// `reativadoPorUid`/`reativadoPorNome`, `whatsappOptIn`. Esses só
+  /// mudam através das operações específicas já autorizadas pra isso
+  /// (`marcarPagamentoRecebido`, `registrarRecebimento`,
+  /// `reativarAluno`, a automação diária de inadimplência via Admin
+  /// SDK) — nunca como efeito colateral de editar um dado cadastral.
+  ///
+  /// Antes esta função usava `aluno.toFirestore()` (grava TODOS os
+  /// campos do objeto) — como a tela que chama isto (`DadosTab`) só
+  /// preenche os campos cadastrais ao reconstruir o `Aluno`, os campos
+  /// operacionais caíam nos valores padrão do construtor (`ativo:
+  /// true`, `bloqueado: false`, os demais `null`) e o `merge: true`
+  /// ainda assim os sobrescrevia — apagando silenciosamente o
+  /// vencimento da mensalidade e reativando/desbloqueando o aluno a
+  /// cada edição de cadastro. Corrigido serializando só os campos
+  /// cadastrais via [dadosCadastraisParaFirestore] — não importa o que
+  /// o `Aluno` passado tenha nos campos operacionais, essa função nunca
+  /// os inclui no mapa gravado.
   Future<void> salvarDadosAluno(Aluno aluno) {
     return _alunos
         .doc(aluno.uid)
-        .set(aluno.toFirestore(), SetOptions(merge: true));
+        .set(dadosCadastraisParaFirestore(aluno), SetOptions(merge: true));
+  }
+
+  /// Monta o mapa gravado por [salvarDadosAluno] — extraído como função
+  /// estática (pura, sem Firestore) pra poder testar diretamente que os
+  /// campos operacionais/financeiros NUNCA aparecem nas chaves do mapa,
+  /// não importa o que o [Aluno] passado contenha neles (ver
+  /// test/aluno_service_test.dart).
+  static Map<String, dynamic> dadosCadastraisParaFirestore(Aluno aluno) {
+    return {
+      'sexo': aluno.sexo?.name,
+      'dataNascimento': aluno.dataNascimento != null
+          ? Timestamp.fromDate(aluno.dataNascimento!)
+          : null,
+      'idade': aluno.idadeInformada,
+      'fotoUrl': aluno.fotoUrl,
+      'cpf': aluno.cpf,
+      'rg': aluno.rg,
+      'telefone': aluno.telefone,
+      'whatsapp': aluno.whatsapp,
+      'endereco': aluno.endereco.toFirestore(),
+      'contatoEmergenciaNome': aluno.contatoEmergenciaNome,
+      'contatoEmergenciaTelefone': aluno.contatoEmergenciaTelefone,
+      'observacoes': aluno.observacoes,
+      'dataInicio': aluno.dataInicio != null
+          ? Timestamp.fromDate(aluno.dataInicio!)
+          : null,
+      'diaVencimento': aluno.diaVencimento,
+      if (aluno.cadastradoPorUid != null) 'cadastradoPorUid': aluno.cadastradoPorUid,
+      if (aluno.cadastradoPorNome != null) 'cadastradoPorNome': aluno.cadastradoPorNome,
+    };
   }
 
   Future<void> salvarAnamnese(String uid, Anamnese anamnese) {

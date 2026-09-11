@@ -1,33 +1,51 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/app_user.dart';
 import '../../../models/avaliacao_fisica.dart';
+import '../../../models/permission.dart';
 import '../../../services/aluno_service.dart';
+import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/imc.dart';
 import '../avaliacao_fisica_form_screen.dart';
 
 /// Historico de avaliacoes fisicas do aluno, mais recente primeiro —
 /// equivalente as 3 colunas "AVALIACAO FISICA __/__/__" da ficha em
-/// papel, so que sem limite de quantas.
+/// papel, so que sem limite de quantas. Criar uma avaliação exige
+/// `Permission.avaliacoesFisicas` — reforçado em `firestore.rules`
+/// (`alunos/{uid}/avaliacoes`), não só escondido aqui: um staff sem essa
+/// permissão que tentasse escrever direto pelo SDK também seria
+/// recusado pelo banco.
 class AvaliacoesTab extends StatelessWidget {
-  const AvaliacoesTab({super.key, required this.uid, required this.alunoService});
+  const AvaliacoesTab({
+    super.key,
+    required this.uid,
+    required this.alunoService,
+    required this.staffAtual,
+  });
 
   final String uid;
   final AlunoService alunoService;
+  final AppUser staffAtual;
+
+  bool get _podeRegistrar =>
+      PermissionService.has(staffAtual, Permission.avaliacoesFisicas);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => AvaliacaoFisicaFormScreen(uid: uid, alunoService: alunoService),
-          ),
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('Nova avaliação'),
-      ),
+      floatingActionButton: _podeRegistrar
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AvaliacaoFisicaFormScreen(uid: uid, alunoService: alunoService),
+                ),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Nova avaliação'),
+            )
+          : null,
       body: StreamBuilder<List<AvaliacaoFisica>>(
         stream: alunoService.watchAvaliacoes(uid),
         builder: (context, snapshot) {

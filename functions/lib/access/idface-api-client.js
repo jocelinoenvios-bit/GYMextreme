@@ -22,12 +22,26 @@
  * documentação oficial — `WebFetch` pra controlid.com.br está bloqueado
  * neste ambiente, igual estava pra quem implementou o resto da
  * integração; os nomes de campo abaixo vêm de resumos de busca com
- * fonte, não de uma leitura direta da página — ver PONTOS_A_CONFIRMAR):
+ * fonte, não de uma leitura direta da página — ver `PONTOS_A_CONFIRMAR`
+ * no final deste arquivo):
  * - `login()` — `POST /login.fcgi`, retorna `{ session }`.
+ * - `logout()` — `POST /logout.fcgi?session=`, sem parâmetros nem
+ *   retorno (fonte: "Fazer logout - API Linha de Acesso").
  * - `carregarObjetos()`/`criarObjetos()` — wrappers genéricos pra
  *   `POST /load_objects.fcgi` e `POST /create_objects.fcgi` (API
  *   genérica de objetos da Control iD — confirmada que existe; quem
  *   chama informa o nome do objeto/tabela e os campos).
+ *
+ * Sessão — reutilização, nunca cache automático: a documentação
+ * confirma que a MESMA sessão devolvida por `login()` deve ser reusada
+ * em todas as chamadas seguintes (nunca logar de novo a cada chamada).
+ * Este cliente é deliberadamente sem estado: não guarda a sessão em
+ * nenhuma variável de módulo nem a renova sozinho — quem chama
+ * (`login()` uma vez, guarda `{session}`, passa esse valor em cada
+ * `carregarObjetos`/`criarObjetos`/`logout` seguinte) é responsável por
+ * isso. Cache/expiração automática de sessão fica pra uma camada acima
+ * (quando este cliente for de fato ligado a algo), pra não esconder bug
+ * nenhum de sessão expirada atrás de uma re-autenticação silenciosa.
  *
  * O que fica como STUB, lançando erro explícito (nunca finge
  * funcionar — mesmo padrão já usado em `device-sync-service.js`):
@@ -162,16 +176,16 @@ async function interpretarResposta(resposta, contexto) {
  *
  * @param {{
  *   baseUrl: string,
- *   login: string,
+ *   usuario: string,
  *   senha: string,
  *   timeoutMs?: number,
  *   fetchImpl?: typeof fetch,
  * }} params
  * @returns {Promise<{ session: string }>}
  */
-async function login({ baseUrl, login, senha, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
+async function login({ baseUrl, usuario, senha, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
   if (!baseUrl) throw new Error('baseUrl e obrigatorio (endereco do iDFace na rede local).');
-  if (!login) throw new Error('login e obrigatorio.');
+  if (!usuario) throw new Error('usuario e obrigatorio.');
   if (!senha) throw new Error('senha e obrigatoria.');
 
   const resposta = await chamarComTimeout(
@@ -180,7 +194,10 @@ async function login({ baseUrl, login, senha, timeoutMs = DEFAULT_TIMEOUT_MS, fe
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password: senha }),
+      // Nomes de campo ("login"/"password") conforme a documentacao
+      // oficial (resumo de busca com fonte) — ver PONTOS_A_CONFIRMAR se
+      // o equipamento real usar nomes diferentes.
+      body: JSON.stringify({ login: usuario, password: senha }),
     },
     timeoutMs,
   );
@@ -194,6 +211,49 @@ async function login({ baseUrl, login, senha, timeoutMs = DEFAULT_TIMEOUT_MS, fe
   }
 
   return { session: corpo.session };
+}
+
+/**
+ * `POST /logout.fcgi?session=<session>` — encerra a sessão obtida por
+ * `login()`. Mecanismo confirmado via documentação oficial (busca, com
+ * fonte: "Fazer logout - API Linha de Acesso") — sem parâmetros no
+ * corpo e SEM retorno, por isso esta função não tenta interpretar
+ * nenhum JSON de resposta (diferente de `login()`/`chamarObjetos()`):
+ * fazer isso seria assumir um formato de corpo que a própria
+ * documentação diz que não existe.
+ *
+ * @param {{
+ *   baseUrl: string,
+ *   session: string,
+ *   timeoutMs?: number,
+ *   fetchImpl?: typeof fetch,
+ * }} params
+ * @returns {Promise<void>}
+ */
+async function logout({ baseUrl, session, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
+  if (!baseUrl) throw new Error('baseUrl e obrigatorio.');
+  if (!session) throw new Error('session e obrigatoria (ver login()).');
+
+  const resposta = await chamarComTimeout(
+    fetchImpl,
+    `${baseUrl}/logout.fcgi?session=${encodeURIComponent(session)}`,
+    { method: 'POST' },
+    timeoutMs,
+  );
+
+  if (resposta.status === 401 || resposta.status === 403) {
+    throw new IdFaceAuthError(
+      `iDFace rejeitou a autenticacao em "logout" (HTTP ${resposta.status}).`,
+      { status: resposta.status },
+    );
+  }
+  if (!resposta.ok) {
+    throw new IdFaceHttpError(`iDFace respondeu HTTP ${resposta.status} em "logout".`, {
+      status: resposta.status,
+    });
+  }
+  // Documentacao: sem retorno — nao ha corpo pra interpretar aqui, de
+  // proposito (nunca assume um formato de resposta nao confirmado).
 }
 
 /**
@@ -329,6 +389,22 @@ async function consultarEventos() {
   );
 }
 
+/**
+ * Lista consolidada de tudo que este arquivo NÃO assume como certo —
+ * cada item só pode ser fechado de verdade na Fase de validação física
+ * (equipamento em mãos) ou com acesso direto à documentação primária
+ * (bloqueada neste ambiente). Nenhuma função acima finge que um destes
+ * pontos já foi confirmado.
+ */
+const PONTOS_A_CONFIRMAR = Object.freeze([
+  'Nomes exatos dos campos do corpo de login.fcgi ("login"/"password" vêm de um resumo de busca, não de leitura direta da documentação primária).',
+  'Se logout.fcgi realmente não traz nenhum corpo de resposta (assumido pela documentação, não observado num equipamento real).',
+  'Nome exato do objeto/tabela de usuários em create_objects.fcgi (bloqueia criarUsuario).',
+  'Formato exato do payload do endpoint de enrollment facial — facial-enroll (bloqueia cadastrarFace).',
+  'Nome exato do objeto/tabela de eventos/logs de acesso em load_objects.fcgi (bloqueia consultarEventos).',
+  'Se o "Modo Pro/Online" do iDFace aceita anexar credenciais/headers customizados, ou só o payload documentado.',
+]);
+
 module.exports = {
   IdFaceAuthError,
   IdFaceHttpError,
@@ -336,7 +412,9 @@ module.exports = {
   IdFaceNetworkError,
   IdFaceInvalidResponseError,
   IdFaceNotImplementedError,
+  PONTOS_A_CONFIRMAR,
   login,
+  logout,
   carregarObjetos,
   criarObjetos,
   criarUsuario,

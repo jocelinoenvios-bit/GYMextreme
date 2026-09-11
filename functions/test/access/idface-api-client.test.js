@@ -24,7 +24,9 @@ const {
   IdFaceNetworkError,
   IdFaceInvalidResponseError,
   IdFaceNotImplementedError,
+  PONTOS_A_CONFIRMAR,
   login,
+  logout,
   carregarObjetos,
   criarObjetos,
   criarUsuario,
@@ -72,7 +74,7 @@ test('login: monta a requisição corretamente (POST /login.fcgi, credenciais no
 
   await login({
     baseUrl: 'http://idface-fake-teste.local',
-    login: 'login-fake-teste',
+    usuario: 'usuario-fake-teste',
     senha: 'senha-fake-teste',
     fetchImpl: fetchMock,
   });
@@ -81,18 +83,18 @@ test('login: monta a requisição corretamente (POST /login.fcgi, credenciais no
   assert.equal(opcoesChamadas.method, 'POST');
   assert.equal(opcoesChamadas.headers['Content-Type'], 'application/json');
   const corpoEnviado = JSON.parse(opcoesChamadas.body);
-  assert.equal(corpoEnviado.login, 'login-fake-teste');
+  assert.equal(corpoEnviado.login, 'usuario-fake-teste');
   assert.equal(corpoEnviado.password, 'senha-fake-teste');
 });
 
-test('login: baseUrl/login/senha ausentes lançam erro de parâmetro, sem chamar fetch', async () => {
-  await assert.rejects(() => login({ login: 'x', senha: 'y', fetchImpl: async () => {
+test('login: baseUrl/usuario/senha ausentes lançam erro de parâmetro, sem chamar fetch', async () => {
+  await assert.rejects(() => login({ usuario: 'x', senha: 'y', fetchImpl: async () => {
     throw new Error('não deveria ser chamado');
   } }));
   await assert.rejects(() => login({ baseUrl: 'http://x', senha: 'y', fetchImpl: async () => {
     throw new Error('não deveria ser chamado');
   } }));
-  await assert.rejects(() => login({ baseUrl: 'http://x', login: 'x', fetchImpl: async () => {
+  await assert.rejects(() => login({ baseUrl: 'http://x', usuario: 'x', fetchImpl: async () => {
     throw new Error('não deveria ser chamado');
   } }));
 });
@@ -106,7 +108,7 @@ test('sucesso: login devolve { session } a partir da resposta do iDFace', async 
 
   const resultado = await login({
     baseUrl: 'http://idface-fake-teste.local',
-    login: 'login-fake-teste',
+    usuario: 'usuario-fake-teste',
     senha: 'senha-fake-teste',
     fetchImpl: fetchMock,
   });
@@ -157,7 +159,7 @@ test('erro HTTP: status 500 vira IdFaceHttpError, nunca finge sucesso', async ()
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-fake-teste',
         fetchImpl: fetchMock,
       }),
@@ -179,7 +181,7 @@ test('erro de autenticação: HTTP 401 vira IdFaceAuthError (nunca IdFaceHttpErr
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-errada-fake-teste',
         fetchImpl: fetchMock,
       }),
@@ -198,7 +200,7 @@ test('erro de autenticação: HTTP 403 também vira IdFaceAuthError', async () =
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-errada-fake-teste',
         fetchImpl: fetchMock,
       }),
@@ -223,7 +225,7 @@ test('timeout: fetch que nunca resolve vira IdFaceTimeoutError, respeitando time
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-fake-teste',
         timeoutMs: 20,
         fetchImpl: fetchQueNuncaResolve,
@@ -248,7 +250,7 @@ test('erro de rede: fetch que rejeita (ex.: ECONNREFUSED) vira IdFaceNetworkErro
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-fake-teste',
         fetchImpl: fetchQueRejeitaDeRede,
       }),
@@ -270,7 +272,7 @@ test('resposta inválida: corpo que não é JSON vira IdFaceInvalidResponseError
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-fake-teste',
         fetchImpl: fetchMock,
       }),
@@ -286,12 +288,96 @@ test('resposta inválida: JSON válido mas sem o campo "session" também vira Id
     () =>
       login({
         baseUrl: 'http://idface-fake-teste.local',
-        login: 'login-fake-teste',
+        usuario: 'usuario-fake-teste',
         senha: 'senha-fake-teste',
         fetchImpl: fetchMock,
       }),
     (err) => err instanceof IdFaceInvalidResponseError,
   );
+});
+
+// ---------------------------------------------------------------------
+// logout — encerramento de sessão (confirmado via documentação oficial,
+// não pedido como item numerado separado, mas parte do escopo da
+// revisão desta etapa: "verificar... encerramento/reutilização da
+// sessão")
+// ---------------------------------------------------------------------
+test('logout: monta a requisição corretamente (POST /logout.fcgi?session=)', async () => {
+  let urlChamada = null;
+  let opcoesChamadas = null;
+  const fetchMock = async (url, opcoes) => {
+    urlChamada = url;
+    opcoesChamadas = opcoes;
+    return respostaMock({ ok: true, status: 200, corpoJson: null });
+  };
+
+  await logout({
+    baseUrl: 'http://idface-fake-teste.local',
+    session: 'sessao-fake-teste',
+    fetchImpl: fetchMock,
+  });
+
+  assert.equal(
+    urlChamada,
+    'http://idface-fake-teste.local/logout.fcgi?session=sessao-fake-teste',
+  );
+  assert.equal(opcoesChamadas.method, 'POST');
+});
+
+test('logout: nunca tenta interpretar um corpo JSON (documentação diz "sem retorno")', async () => {
+  const fetchMock = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => {
+      throw new Error('logout NAO deveria tentar chamar .json() na resposta');
+    },
+  });
+
+  // Não deve lançar — se a implementação chamasse .json() aqui, o mock
+  // acima faria este teste falhar.
+  await logout({
+    baseUrl: 'http://idface-fake-teste.local',
+    session: 'sessao-fake-teste',
+    fetchImpl: fetchMock,
+  });
+});
+
+test('logout: erro de autenticação (401) vira IdFaceAuthError, igual a login/objetos', async () => {
+  const fetchMock = async () => respostaMock({ ok: false, status: 401, corpoJson: {} });
+
+  await assert.rejects(
+    () =>
+      logout({
+        baseUrl: 'http://idface-fake-teste.local',
+        session: 'sessao-fake-teste',
+        fetchImpl: fetchMock,
+      }),
+    (err) => err instanceof IdFaceAuthError,
+  );
+});
+
+test('logout: baseUrl/session ausentes lançam erro de parâmetro, sem chamar fetch', async () => {
+  await assert.rejects(() =>
+    logout({ session: 'x', fetchImpl: async () => {
+      throw new Error('não deveria ser chamado');
+    } }),
+  );
+  await assert.rejects(() =>
+    logout({ baseUrl: 'http://x', fetchImpl: async () => {
+      throw new Error('não deveria ser chamado');
+    } }),
+  );
+});
+
+// ---------------------------------------------------------------------
+// documentação do que ainda depende de validação física — a lista
+// precisa existir e não pode estar vazia (é o ponto 2 desta revisão:
+// separar claramente confirmado x pendente)
+// ---------------------------------------------------------------------
+test('PONTOS_A_CONFIRMAR: existe, não é vazia, e documenta os pontos pendentes de validação física', () => {
+  assert.ok(Array.isArray(PONTOS_A_CONFIRMAR));
+  assert.ok(PONTOS_A_CONFIRMAR.length > 0);
+  assert.ok(Object.isFrozen(PONTOS_A_CONFIRMAR));
 });
 
 // ---------------------------------------------------------------------

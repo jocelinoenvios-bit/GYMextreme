@@ -81,31 +81,25 @@ class _ExercicioMediaStageState extends State<ExercicioMediaStage> {
       width: double.infinity,
       color: AppColors.stage,
       child: Stack(
+        // StackFit.expand: cada filho não-posicionado (a mídia) recebe
+        // constraints TIGHT batendo com os 300px do Container, sem
+        // ambiguidade nenhuma sobre o tamanho — troca definitiva do
+        // InteractiveViewer (zoom/pinça), que ficou confirmado como a
+        // causa raiz de a mídia nunca chegar a desenhar nada nesta tela
+        // num aparelho físico real (RepaintBoundary não resolveu; o
+        // vídeo prova funcionar perfeitamente na mesma estrutura simples
+        // usada pela Biblioteca de Exercícios, sem InteractiveViewer).
+        // Sacrifica o zoom aqui — a demonstração continua sempre visível,
+        // que é o que importa.
+        fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            // RepaintBoundary isola a composição do vídeo/GIF (textura
-            // nativa do Android) do resto da tela — sem isso, um vídeo
-            // tocando de verdade dentro do InteractiveViewer (zoom/pinça)
-            // pode corromper a composição de tudo ao redor num aparelho
-            // físico real (nunca detectado em CI/emulador, onde o vídeo
-            // sempre falha ao inicializar e cai pro GIF antes de chegar
-            // a tocar de verdade).
-            child: RepaintBoundary(
-              child: InteractiveViewer(
-                minScale: 1,
-                maxScale: 3,
-                child: Center(
-                  child: ExercicioMidia(
-                    key: ValueKey(widget.exercise.id),
-                    exercise: widget.exercise,
-                    controller: _midiaController,
-                    fit: BoxFit.contain,
-                    reduceMotion: reduceMotion,
-                    gifCacheService: widget.gifCacheService,
-                  ),
-                ),
-              ),
-            ),
+          ExercicioMidia(
+            key: ValueKey(widget.exercise.id),
+            exercise: widget.exercise,
+            controller: _midiaController,
+            fit: BoxFit.contain,
+            reduceMotion: reduceMotion,
+            gifCacheService: widget.gifCacheService,
           ),
           const Positioned(top: 14, left: 14, child: LoopBadge()),
           Positioned(

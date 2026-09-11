@@ -10,6 +10,7 @@ class ResumoAlunos {
     required this.ativos,
     required this.bloqueados,
     required this.semRegistro,
+    required this.inativos,
   });
 
   final int total;
@@ -20,6 +21,13 @@ class ResumoAlunos {
   /// mas também não contam como "em dia" de verdade) — ver
   /// `StatusMensalidade.semRegistro`.
   final int semRegistro;
+
+  /// `Aluno.ativo == false` — ciclo de inadimplência chegou aos 30 dias
+  /// (ou inativação manual). Contado à parte de [ativos]/[bloqueados]/
+  /// [semRegistro]: um aluno inativo nunca entra em nenhum dos três,
+  /// mesmo que a mensalidade dele por acaso ainda mostre "em dia" (ver
+  /// `calcularStatusOperacional`).
+  final int inativos;
 }
 
 /// Situação efetiva de mensalidade de UM aluno — cruza o `AppUser`
@@ -45,8 +53,15 @@ ResumoAlunos calcularResumoAlunos({
   var ativos = 0;
   var bloqueados = 0;
   var semRegistro = 0;
+  var inativos = 0;
 
   for (final aluno in alunos) {
+    final ficha = fichasPorUid[aluno.uid];
+    if (ficha != null && !ficha.ativo) {
+      inativos++;
+      continue;
+    }
+
     final status = calcularStatusMensalidadeAluno(aluno, fichasPorUid, hoje: hoje);
     switch (status) {
       case StatusMensalidade.bloqueado:
@@ -64,6 +79,7 @@ ResumoAlunos calcularResumoAlunos({
     ativos: ativos,
     bloqueados: bloqueados,
     semRegistro: semRegistro,
+    inativos: inativos,
   );
 }
 

@@ -20,12 +20,23 @@ class MensalidadeSection extends StatefulWidget {
     required this.alunoService,
     required this.staffAtual,
     this.whatsapp,
+    this.ativo = true,
+    this.dataInativacao,
+    this.dataReativacao,
   });
 
   final String alunoUid;
   final DateTime? proximoVencimento;
   final AlunoService alunoService;
   final AppUser staffAtual;
+
+  /// `Aluno.ativo` — quando `false`, esta seção mostra o selo "Inativo"
+  /// (ciclo de inadimplência chegou aos 30 dias, ou inativação manual)
+  /// em vez do status normal de mensalidade, e troca a ação disponível
+  /// por "Reativar aluno" (ver `AlunoService.reativarAluno`).
+  final bool ativo;
+  final DateTime? dataInativacao;
+  final DateTime? dataReativacao;
 
   /// Número de WhatsApp cadastrado na ficha do aluno (só dígitos, sem
   /// código do país) — quando presente e a mensalidade não está em dia,
@@ -60,6 +71,16 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
       () => widget.alunoService.marcarPagamentoRecebido(
         widget.alunoUid,
         vencimentoAtual: widget.proximoVencimento,
+        staffUid: widget.staffAtual.uid,
+        staffNome: widget.staffAtual.nome,
+      ),
+    );
+  }
+
+  Future<void> _reativarAluno() async {
+    await _executar(
+      () => widget.alunoService.reativarAluno(
+        widget.alunoUid,
         staffUid: widget.staffAtual.uid,
         staffNome: widget.staffAtual.nome,
       ),
@@ -129,7 +150,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
       case StatusMensalidade.tolerancia:
         return 'Tolerância · restam ${status.diasToleranciaRestantes} dia(s)';
       case StatusMensalidade.bloqueado:
-        return 'Bloqueado por atraso';
+        return 'Inadimplente · ${status.diasAtraso} dia(s) de atraso';
       case StatusMensalidade.semRegistro:
         return 'Cobrança não configurada';
     }
@@ -140,8 +161,70 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
         '${data.month.toString().padLeft(2, '0')}/${data.year}';
   }
 
+  Widget _badge(String texto, Color cor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(texto, style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 12)),
+    );
+  }
+
+  Widget _buildInativo(BuildContext context) {
+    const cor = AppColors.textSecondary;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cor.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _badge('Inativo', cor),
+          const SizedBox(height: 10),
+          Text(
+            widget.dataInativacao != null
+                ? 'Inativo desde ${_formatarData(widget.dataInativacao!)}'
+                : 'Inativo.',
+            style: const TextStyle(color: AppColors.textPrimary),
+          ),
+          if (widget.dataReativacao != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Última reativação: ${_formatarData(widget.dataReativacao!)}',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+            ),
+          ],
+          if (_podeReceber) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _isSaving ? null : _reativarAluno,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('REATIVAR ALUNO'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!widget.ativo) return _buildInativo(context);
+
     final status = calcularStatusAcesso(proximoVencimento: widget.proximoVencimento);
     final cor = _corDoStatus(status.status);
 
@@ -156,17 +239,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: cor.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              _rotuloStatus(status),
-              style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ),
+          _badge(_rotuloStatus(status), cor),
           const SizedBox(height: 10),
           Text(
             widget.proximoVencimento != null

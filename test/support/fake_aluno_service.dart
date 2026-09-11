@@ -56,6 +56,7 @@ class FakeAlunoService implements AlunoService {
   ContaReceber? ultimaContaAtualizada;
   ContaReceber? ultimoRecebimentoRegistrado;
   HistoricoTreino? ultimoHistoricoRegistrado;
+  ({String staffUid, String staffNome, DateTime dataReativacao})? ultimaReativacao;
 
   /// Preenchido só quando [registrarRecebimento] recebeu `matriculaId` +
   /// `vencimentoOriginal` — simula o avanço de `Aluno.proximoVencimento`
@@ -131,6 +132,28 @@ class FakeAlunoService implements AlunoService {
 
   @override
   Future<void> definirVencimentoInicial(String uid, DateTime vencimento) async {}
+
+  @override
+  Future<void> reativarAluno(
+    String uid, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final agora = DateTime.now();
+    ultimaReativacao = (
+      staffUid: staffUid,
+      staffNome: staffNome,
+      dataReativacao: agora,
+    );
+    if (aluno != null) {
+      aluno = aluno!.copyWith(
+        ativo: true,
+        dataReativacao: agora,
+        reativadoPorUid: staffUid,
+        reativadoPorNome: staffNome,
+      );
+    }
+  }
 
   @override
   Stream<List<Matricula>> watchMatriculas(String uid) =>

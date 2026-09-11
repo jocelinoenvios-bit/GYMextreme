@@ -50,6 +50,11 @@ class Aluno {
     this.unidadeId,
     this.cadastradoPorUid,
     this.cadastradoPorNome,
+    this.dataInativacao,
+    this.dataReativacao,
+    this.reativadoPorUid,
+    this.reativadoPorNome,
+    this.whatsappOptIn,
   });
 
   final String uid;
@@ -108,6 +113,27 @@ class Aluno {
   final String? cadastradoPorUid;
   final String? cadastradoPorNome;
 
+  /// Quando [ativo] virou `false` pela última vez — preenchido pela
+  /// automação de inadimplência (30 dias de atraso, ver
+  /// `functions/lib/inadimplencia.js`) ou por uma inativação manual.
+  /// Nunca é apagado ao reativar (fica como histórico de quando foi a
+  /// última inativação).
+  final DateTime? dataInativacao;
+
+  /// Quando [ativo] voltou a `true` pela última vez, via
+  /// `AlunoService.reativarAluno`. `null` se o aluno nunca foi
+  /// reativado (nunca ficou inativo, ou ainda está inativo agora).
+  final DateTime? dataReativacao;
+
+  /// Auditoria: qual membro da equipe reativou o aluno pela última vez.
+  final String? reativadoPorUid;
+  final String? reativadoPorNome;
+
+  /// Consentimento pra receber mensagens automáticas de WhatsApp
+  /// (LGPD/opt-in) — `null` = nunca perguntado, tratado como "não
+  /// enviar" em qualquer envio automático, nunca como autorização.
+  final bool? whatsappOptIn;
+
   /// Idade calculada a partir de [dataNascimento]; cai para
   /// [idadeInformada] em cadastros antigos que ainda não têm data de
   /// nascimento preenchida.
@@ -118,6 +144,8 @@ class Aluno {
     final nascimento = data['dataNascimento'];
     final enderecoData = data['endereco'];
     final proximoVencimento = data['proximoVencimento'];
+    final dataInativacao = data['dataInativacao'];
+    final dataReativacao = data['dataReativacao'];
     return Aluno(
       uid: uid,
       sexo: _sexoOrNull(data['sexo']),
@@ -142,6 +170,11 @@ class Aluno {
       unidadeId: data['unidadeId'] as String?,
       cadastradoPorUid: data['cadastradoPorUid'] as String?,
       cadastradoPorNome: data['cadastradoPorNome'] as String?,
+      dataInativacao: dataInativacao is Timestamp ? dataInativacao.toDate() : null,
+      dataReativacao: dataReativacao is Timestamp ? dataReativacao.toDate() : null,
+      reativadoPorUid: data['reativadoPorUid'] as String?,
+      reativadoPorNome: data['reativadoPorNome'] as String?,
+      whatsappOptIn: data['whatsappOptIn'] as bool?,
     );
   }
 
@@ -171,6 +204,11 @@ class Aluno {
       'unidadeId': unidadeId,
       if (cadastradoPorUid != null) 'cadastradoPorUid': cadastradoPorUid,
       if (cadastradoPorNome != null) 'cadastradoPorNome': cadastradoPorNome,
+      'dataInativacao': dataInativacao != null ? Timestamp.fromDate(dataInativacao!) : null,
+      'dataReativacao': dataReativacao != null ? Timestamp.fromDate(dataReativacao!) : null,
+      if (reativadoPorUid != null) 'reativadoPorUid': reativadoPorUid,
+      if (reativadoPorNome != null) 'reativadoPorNome': reativadoPorNome,
+      'whatsappOptIn': whatsappOptIn,
     };
   }
 
@@ -195,6 +233,11 @@ class Aluno {
     String? unidadeId,
     String? cadastradoPorUid,
     String? cadastradoPorNome,
+    DateTime? dataInativacao,
+    DateTime? dataReativacao,
+    String? reativadoPorUid,
+    String? reativadoPorNome,
+    bool? whatsappOptIn,
   }) {
     return Aluno(
       uid: uid,
@@ -219,6 +262,11 @@ class Aluno {
       unidadeId: unidadeId ?? this.unidadeId,
       cadastradoPorUid: cadastradoPorUid ?? this.cadastradoPorUid,
       cadastradoPorNome: cadastradoPorNome ?? this.cadastradoPorNome,
+      dataInativacao: dataInativacao ?? this.dataInativacao,
+      dataReativacao: dataReativacao ?? this.dataReativacao,
+      reativadoPorUid: reativadoPorUid ?? this.reativadoPorUid,
+      reativadoPorNome: reativadoPorNome ?? this.reativadoPorNome,
+      whatsappOptIn: whatsappOptIn ?? this.whatsappOptIn,
     );
   }
 }

@@ -101,6 +101,7 @@ class _RelatorioAlunosScreenState extends State<RelatorioAlunosScreen> {
                   _CartaoNumero('Ativos', '${resumo.ativos}', const Color(0xFF4CAF6D)),
                   _CartaoNumero('Bloqueados', '${resumo.bloqueados}', AppColors.error),
                   _CartaoNumero('Sem registro', '${resumo.semRegistro}', AppColors.textSecondary),
+                  _CartaoNumero('Inativos', '${resumo.inativos}', AppColors.textSecondary),
                 ],
               ),
               const SizedBox(height: 24),

@@ -505,6 +505,9 @@ class _DadosTabState extends State<DadosTab> {
               alunoService: widget.alunoService,
               staffAtual: widget.staffAtual,
               whatsapp: snapshot.data?.whatsapp,
+              ativo: snapshot.data?.ativo ?? true,
+              dataInativacao: snapshot.data?.dataInativacao,
+              dataReativacao: snapshot.data?.dataReativacao,
             ),
             const SizedBox(height: 14),
             TextField(

@@ -270,6 +270,19 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Auditoria das mensagens automaticas de WhatsApp do ciclo de
+      // inadimplencia/inatividade (Cloud Function
+      // `processarAutomacaoInadimplencia`, 15/30/45 dias) — mesmo padrao
+      // exato de `notificacoesMensalidade` acima: o proprio aluno le o
+      // proprio historico, staff le de qualquer aluno, e so a Cloud
+      // Function (Admin SDK) grava; o app cliente nunca escreve (nem o
+      // aluno, nem o staff, ninguem dispara uma mensagem na mao por
+      // aqui).
+      match /mensagensWhatsapp/{mensagemId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if false;
+      }
+
       // Fichas de treino: o proprio aluno le a propria (pra ver o treino
       // do dia); staff le qualquer uma; escrever exige a permissao
       // especifica de treino (nao basta ser staff generico).

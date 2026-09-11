@@ -203,6 +203,29 @@ class AlunoService {
     }, SetOptions(merge: true));
   }
 
+  /// Reativa um aluno que ficou `Aluno.ativo == false` pela automação de
+  /// inadimplência (30 dias de atraso, ver `functions/lib/inadimplencia.js`)
+  /// — ou por qualquer outro motivo de inativação manual. Encerra o ciclo
+  /// de inadimplência anterior e começa um novo: `proximoVencimento` é
+  /// recalculado a partir de HOJE (1 mês à frente), nunca a partir do
+  /// vencimento antigo — os meses em que o aluno ficou afastado nunca são
+  /// cobrados retroativamente. `dataInativacao` é preservada como
+  /// histórico (não apagada); só `dataReativacao` é atualizada.
+  Future<void> reativarAluno(
+    String uid, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final agora = DateTime.now();
+    await _alunos.doc(uid).set({
+      'ativo': true,
+      'dataReativacao': Timestamp.fromDate(agora),
+      'proximoVencimento': Timestamp.fromDate(adicionarUmMes(agora)),
+      'reativadoPorUid': staffUid,
+      'reativadoPorNome': staffNome,
+    }, SetOptions(merge: true));
+  }
+
   /// Avança `Aluno.proximoVencimento` em 1 mês a partir de [vencimentoOriginal]
   /// (o vencimento da cobrança que acabou de ser paga) — usado por
   /// [registrarRecebimento] só quando a cobrança recebida está vinculada a

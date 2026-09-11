@@ -162,7 +162,7 @@ void main() {
   });
 
   group('operações que DEVEM alterar os campos operacionais continuam funcionando', () {
-    testWidgets('AlunoService.reativarAluno ainda ativa o aluno e define novo vencimento', () async {
+    test('AlunoService.reativarAluno ainda ativa o aluno e define novo vencimento', () async {
       final alunoService = FakeAlunoService(
         aluno: Aluno(
           uid: 'aluno-1',

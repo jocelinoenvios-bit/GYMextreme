@@ -10,6 +10,7 @@ import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
 import '../models/conta_receber.dart';
 import '../models/endereco.dart';
+import '../models/historico_treino.dart';
 import '../models/matricula.dart';
 import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
@@ -40,6 +41,14 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _treinos(String uid) =>
       _alunos.doc(uid).collection('treinos');
+
+  /// Registros de presença/frequência (treino realizado/falta) —
+  /// SEMPRE separada de `treinos` (a ficha prescrita): a ficha nunca
+  /// depende de existir registro aqui. Ver `HistoricoTreino` e a regra
+  /// em `firestore.rules` (só staff com `criarTreinos`/`editarTreinos`
+  /// grava; o aluno só lê o próprio).
+  CollectionReference<Map<String, dynamic>> _historicoTreinos(String uid) =>
+      _alunos.doc(uid).collection('historicoTreinos');
 
   CollectionReference<Map<String, dynamic>> _pagamentos(String uid) =>
       _alunos.doc(uid).collection('pagamentos');
@@ -529,6 +538,9 @@ class AlunoService {
       grupoMuscular: treino.grupoMuscular,
       ordem: treino.ordem,
       exercicios: treino.exercicios,
+      diaSemana: treino.diaSemana,
+      objetivo: treino.objetivo,
+      vigenciaAte: treino.vigenciaAte,
     );
     return salvarTreino(
       alunoUid,
@@ -566,6 +578,36 @@ class AlunoService {
       staffUid: staffUid,
       staffNome: staffNome,
     );
+  }
+
+  /// Histórico de presença/frequência do aluno, mais recente primeiro —
+  /// nunca inclui a ficha prescrita em si (ver `watchTreinos`), só os
+  /// registros de realizado/falta que o staff confirmou.
+  Stream<List<HistoricoTreino>> watchHistoricoTreinos(String uid) {
+    return _historicoTreinos(uid)
+        .orderBy('data', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => HistoricoTreino.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
+  }
+
+  /// Registra presença/falta de um treino numa data — só quem tem
+  /// `criarTreinos`/`editarTreinos` pode chamar isso (reforçado em
+  /// `firestore.rules`); o aluno nunca grava o próprio histórico.
+  Future<String> registrarHistoricoTreino(
+    String uid,
+    HistoricoTreino registro, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final dados = registro.toFirestore();
+    dados['registradoPorUid'] = staffUid;
+    dados['registradoPorNome'] = staffNome;
+    final ref = await _historicoTreinos(uid).add(dados);
+    return ref.id;
   }
 
   /// Cria a conta de login (Firebase Auth) e os documentos de cadastro

@@ -6,6 +6,7 @@ import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/avaliacao_fisica.dart';
 import 'package:gymextreme_app/models/conta_receber.dart';
 import 'package:gymextreme_app/models/endereco.dart';
+import 'package:gymextreme_app/models/historico_treino.dart';
 import 'package:gymextreme_app/models/matricula.dart';
 import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/termo_aceite.dart';
@@ -28,6 +29,7 @@ class FakeAlunoService implements AlunoService {
     this.fichasAlunos = const [],
     this.matriculas = const [],
     this.contasReceber = const [],
+    this.historicoTreinos = const [],
   });
 
   Aluno? aluno;
@@ -43,6 +45,7 @@ class FakeAlunoService implements AlunoService {
   List<Aluno> fichasAlunos;
   List<Matricula> matriculas;
   List<ContaReceber> contasReceber;
+  List<HistoricoTreino> historicoTreinos;
 
   Aluno? ultimoAlunoSalvo;
   Anamnese? ultimaAnamneseSalva;
@@ -52,6 +55,7 @@ class FakeAlunoService implements AlunoService {
   String? ultimaContaExcluidaId;
   ContaReceber? ultimaContaAtualizada;
   ContaReceber? ultimoRecebimentoRegistrado;
+  HistoricoTreino? ultimoHistoricoRegistrado;
 
   /// Preenchido só quando [registrarRecebimento] recebeu `matriculaId` +
   /// `vencimentoOriginal` — simula o avanço de `Aluno.proximoVencimento`
@@ -347,9 +351,41 @@ class FakeAlunoService implements AlunoService {
         letra: treino.letra,
         grupoMuscular: treino.grupoMuscular,
         ordem: treino.ordem,
+        ativo: treino.ativo,
         exercicios: treino.exercicios,
+        diaSemana: treino.diaSemana,
+        objetivo: treino.objetivo,
+        vigenciaAte: treino.vigenciaAte,
       ),
     ];
+    return id;
+  }
+
+  @override
+  Stream<List<HistoricoTreino>> watchHistoricoTreinos(String uid) =>
+      Stream.value(historicoTreinos);
+
+  @override
+  Future<String> registrarHistoricoTreino(
+    String uid,
+    HistoricoTreino registro, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final id = registro.id ?? 'historico-${historicoTreinos.length + 1}';
+    final salvo = HistoricoTreino(
+      id: id,
+      treinoId: registro.treinoId,
+      data: registro.data,
+      diaSemana: registro.diaSemana,
+      status: registro.status,
+      observacoes: registro.observacoes,
+      registradoPorUid: staffUid,
+      registradoPorNome: staffNome,
+      registradoEm: DateTime.now(),
+    );
+    historicoTreinos = [...historicoTreinos, salvo];
+    ultimoHistoricoRegistrado = salvo;
     return id;
   }
 
@@ -373,6 +409,9 @@ class FakeAlunoService implements AlunoService {
         grupoMuscular: treino.grupoMuscular,
         ordem: treino.ordem,
         exercicios: treino.exercicios,
+        diaSemana: treino.diaSemana,
+        objetivo: treino.objetivo,
+        vigenciaAte: treino.vigenciaAte,
       ),
       staffUid: staffUid,
       staffNome: staffNome,

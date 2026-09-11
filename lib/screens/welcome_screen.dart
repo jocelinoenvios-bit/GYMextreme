@@ -20,6 +20,7 @@ import '../theme/app_colors.dart';
 import '../utils/status_acesso.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
+import 'area_aluno/meu_perfil_screen.dart';
 import 'area_aluno/meus_treinos_screen.dart';
 import 'caixa/caixa_screen.dart';
 import 'contas_pagar/contas_pagar_list_screen.dart';
@@ -320,6 +321,20 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.assignment_outlined),
                 label: const Text('MEUS TREINOS'),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MeuPerfilScreen(
+                      usuario: user,
+                      uid: uid,
+                      alunoService: alunoService,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.person_outline),
+                label: const Text('MEU PERFIL'),
               ),
             ],
             if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[

@@ -84,6 +84,9 @@ class Treino {
     this.ordem = 0,
     this.ativo = true,
     this.exercicios = const [],
+    this.diaSemana,
+    this.objetivo,
+    this.vigenciaAte,
     this.criadoPorUid,
     this.criadoPorNome,
     this.criadoEm,
@@ -111,6 +114,23 @@ class Treino {
 
   final List<TreinoExercicio> exercicios;
 
+  /// Dia da semana em que este treino é prescrito, na convenção de
+  /// `DateTime.weekday` (1 = segunda ... 7 = domingo). Nulo em treinos
+  /// antigos (criados antes deste campo existir) ou quando o personal
+  /// não vincula o treino a um dia fixo — a ficha do aluno (ver
+  /// `MinhaFichaScreen`) trata esse caso mostrando o treino numa seção
+  /// separada, "sem dia definido", em vez de escondê-lo.
+  final int? diaSemana;
+
+  /// Objetivo deste treino especificamente (ex.: "Hipertrofia",
+  /// "Emagrecimento") — texto livre, diferente do objetivo geral da
+  /// anamnese. Nulo quando não preenchido.
+  final String? objetivo;
+
+  /// Data até quando esta ficha vale, quando o personal define um
+  /// período (ex.: treino de 6 semanas). Nulo = validade indefinida.
+  final DateTime? vigenciaAte;
+
   final String? criadoPorUid;
   final String? criadoPorNome;
   final DateTime? criadoEm;
@@ -121,6 +141,7 @@ class Treino {
   factory Treino.fromFirestore(String id, Map<String, dynamic> data) {
     final criadoEm = data['criadoEm'];
     final atualizadoEm = data['atualizadoEm'];
+    final vigenciaAte = data['vigenciaAte'];
     final exerciciosData = data['exercicios'] as List<dynamic>? ?? const [];
     return Treino(
       id: id,
@@ -136,6 +157,9 @@ class Treino {
             ),
           )
           .toList(),
+      diaSemana: (data['diaSemana'] as num?)?.toInt(),
+      objetivo: data['objetivo'] as String?,
+      vigenciaAte: vigenciaAte is Timestamp ? vigenciaAte.toDate() : null,
       criadoPorUid: data['criadoPorUid'] as String?,
       criadoPorNome: data['criadoPorNome'] as String?,
       criadoEm: criadoEm is Timestamp ? criadoEm.toDate() : null,
@@ -153,6 +177,9 @@ class Treino {
       'ordem': ordem,
       'ativo': ativo,
       'exercicios': exercicios.map((e) => e.toFirestore()).toList(),
+      'diaSemana': diaSemana,
+      'objetivo': objetivo,
+      'vigenciaAte': vigenciaAte != null ? Timestamp.fromDate(vigenciaAte!) : null,
       if (criadoPorUid != null) 'criadoPorUid': criadoPorUid,
       if (criadoPorNome != null) 'criadoPorNome': criadoPorNome,
       'criadoEm': criadoEm != null ? Timestamp.fromDate(criadoEm!) : FieldValue.serverTimestamp(),
@@ -169,6 +196,9 @@ class Treino {
     int? ordem,
     bool? ativo,
     List<TreinoExercicio>? exercicios,
+    int? diaSemana,
+    String? objetivo,
+    DateTime? vigenciaAte,
   }) {
     return Treino(
       id: id,
@@ -178,6 +208,9 @@ class Treino {
       ordem: ordem ?? this.ordem,
       ativo: ativo ?? this.ativo,
       exercicios: exercicios ?? this.exercicios,
+      diaSemana: diaSemana ?? this.diaSemana,
+      objetivo: objetivo ?? this.objetivo,
+      vigenciaAte: vigenciaAte ?? this.vigenciaAte,
       criadoPorUid: criadoPorUid,
       criadoPorNome: criadoPorNome,
       criadoEm: criadoEm,
@@ -187,3 +220,17 @@ class Treino {
     );
   }
 }
+
+/// Rótulos dos 7 dias da semana, na convenção de `DateTime.weekday`
+/// (índice 1 = segunda ... 7 = domingo; índice 0 não usado, só pra
+/// alinhar com o weekday sem subtrair 1 toda hora).
+const List<String> diasSemanaLabels = [
+  '',
+  'Segunda',
+  'Terça',
+  'Quarta',
+  'Quinta',
+  'Sexta',
+  'Sábado',
+  'Domingo',
+];

@@ -111,7 +111,7 @@ void main() {
       // (2) Edita SÓ telefone/endereço — nenhum campo operacional é
       // tocado pela tela (não existe nem UI pra isso na aba Dados).
       await tester.enterText(find.widgetWithText(TextFormField, 'Telefone'), '11987654321');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Rua/Av.'), 'Rua Nova');
+      await tester.enterText(find.widgetWithText(TextField, 'Rua/Av.'), 'Rua Nova');
 
       // (3) Salva.
       await tester.tap(find.text('SALVAR'));

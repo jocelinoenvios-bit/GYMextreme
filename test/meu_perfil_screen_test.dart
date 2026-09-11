@@ -49,7 +49,7 @@ void main() {
       ('Minhas medidas', MinhasMedidasScreen),
       ('Minha anamnese', MinhaAnamneseScreen),
       ('Minha evolução', MinhaEvolucaoScreen),
-    ])
+    ]) {
       testWidgets('tocar em "${caso.$1}" navega pra tela correspondente', (tester) async {
         await tester.pumpWidget(_wrap(FakeAlunoService()));
         await tester.pump();
@@ -59,5 +59,6 @@ void main() {
 
         expect(find.byType(caso.$2), findsOneWidget);
       });
+    }
   });
 }

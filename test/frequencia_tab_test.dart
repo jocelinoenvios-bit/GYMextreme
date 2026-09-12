@@ -172,9 +172,13 @@ void main() {
       await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
       await irParaAbaPresenca(tester);
 
+      // A janela de 14 dias cobre o mesmo dia da semana duas vezes (hoje
+      // e hoje-7) — só "hoje" tem HistoricoTreino, então a ocorrência de
+      // 7 dias atrás aparece corretamente como "Não registrado" (nunca
+      // "Falta"), não some da lista.
       expect(find.text('Realizado'), findsOneWidget);
       expect(find.text('Falta'), findsNothing);
-      expect(find.text('Não registrado'), findsNothing);
+      expect(find.text('Não registrado'), findsOneWidget);
     });
 
     testWidgets('dia com HistoricoTreino "falta" aparece como Falta', (tester) async {
@@ -206,7 +210,10 @@ void main() {
         await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
         await irParaAbaPresenca(tester);
 
-        expect(find.text('Não registrado'), findsOneWidget);
+        // A janela de 14 dias cobre o mesmo dia da semana duas vezes
+        // (hoje e hoje-7); sem NENHUM HistoricoTreino, as duas
+        // ocorrências aparecem como "Não registrado".
+        expect(find.text('Não registrado'), findsNWidgets(2));
         expect(find.text('Falta'), findsNothing);
       },
     );

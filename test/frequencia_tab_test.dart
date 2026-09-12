@@ -152,7 +152,7 @@ void main() {
       hoje = DateTime(agora.year, agora.month, agora.day);
     });
 
-    Future<void> _irParaAbaPresenca(WidgetTester tester) async {
+    Future<void> irParaAbaPresenca(WidgetTester tester) async {
       await tester.tap(find.text('Presença de treino'));
       await tester.pumpAndSettle();
     }
@@ -170,7 +170,7 @@ void main() {
         ],
       );
       await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
-      await _irParaAbaPresenca(tester);
+      await irParaAbaPresenca(tester);
 
       expect(find.text('Realizado'), findsOneWidget);
       expect(find.text('Falta'), findsNothing);
@@ -190,7 +190,7 @@ void main() {
         ],
       );
       await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
-      await _irParaAbaPresenca(tester);
+      await irParaAbaPresenca(tester);
 
       expect(find.text('Falta'), findsOneWidget);
       expect(find.text('Realizado'), findsNothing);
@@ -204,7 +204,7 @@ void main() {
           historicoTreinos: const [], // nenhum registro pra nenhum dia
         );
         await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
-        await _irParaAbaPresenca(tester);
+        await irParaAbaPresenca(tester);
 
         expect(find.text('Não registrado'), findsOneWidget);
         expect(find.text('Falta'), findsNothing);
@@ -216,7 +216,7 @@ void main() {
     ) async {
       final alunoService = FakeAlunoService(treinos: const [], historicoTreinos: const []);
       await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
-      await _irParaAbaPresenca(tester);
+      await irParaAbaPresenca(tester);
 
       expect(
         find.text('Nenhum treino prescrito com dia da semana definido ainda.'),
@@ -232,7 +232,7 @@ void main() {
         historicoTreinos: const [],
       );
       await _carregar(tester, _wrap(alunoService, FakeAcessoService()));
-      await _irParaAbaPresenca(tester);
+      await irParaAbaPresenca(tester);
 
       expect(
         find.text('Nenhum treino prescrito com dia da semana definido ainda.'),

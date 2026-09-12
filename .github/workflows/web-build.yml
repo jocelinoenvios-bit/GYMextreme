@@ -6,11 +6,9 @@ name: Web build (versão para computador)
 # tambem como asset compactado de uma Release fixa "web-latest" (link
 # estavel), no mesmo espirito do workflow "Android debug APK".
 #
-# Se o secret FIREBASE_SERVICE_ACCOUNT estiver configurado (Settings >
-# Secrets and variables > Actions), tambem publica automaticamente no
-# Firebase Hosting do projeto gymextreme-42c98 (canal "live", URL fixa
-# https://gymextreme-42c98.web.app) — sem esse secret, o passo de deploy
-# e pulado e o build continua disponivel so pra download.
+# Este workflow NUNCA publica no Firebase Hosting nem em nenhum outro
+# ambiente — so builda e disponibiliza o artefato pra download manual.
+# Nao depende de nenhum secret do Firebase pra gerar o artefato.
 on:
   workflow_dispatch:
 
@@ -20,8 +18,6 @@ permissions:
 jobs:
   build-web:
     runs-on: ubuntu-latest
-    env:
-      TEM_FIREBASE_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -73,12 +69,3 @@ jobs:
           prerelease: true
           make_latest: false
           files: gymextreme-web.zip
-
-      - name: Publicar no Firebase Hosting (se o secret estiver configurado)
-        if: ${{ env.TEM_FIREBASE_SECRET == 'true' }}
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: gymextreme-42c98
-          channelId: live

@@ -31,6 +31,8 @@ const {
 const RULES_PATH = path.join(__dirname, '..', '..', '..', 'firestore.rules');
 const ADM_UID = 'staff-adm-teste-access';
 const ALUNO_UID = 'aluno-comum-teste-access';
+const FUNCIONARIO_COM_CATRACA_UID = 'func-com-catraca-teste-access';
+const FUNCIONARIO_SEM_CATRACA_UID = 'func-sem-catraca-teste-access';
 
 let testEnv;
 
@@ -44,6 +46,18 @@ test.before(async () => {
     const db = context.firestore();
     await db.collection('usuarios').doc(ADM_UID).set({ role: 'adm', nome: 'Admin Teste' });
     await db.collection('usuarios').doc(ALUNO_UID).set({ role: 'aluno', nome: 'Aluno Teste' });
+    await db.collection('usuarios').doc(FUNCIONARIO_COM_CATRACA_UID).set({
+      role: 'funcionario',
+      nome: 'Funcionário Com Controle de Catraca',
+      permissoes: ['controleCatraca'],
+    });
+    await db.collection('usuarios').doc(FUNCIONARIO_SEM_CATRACA_UID).set({
+      role: 'funcionario',
+      nome: 'Funcionário Sem Controle de Catraca',
+      // Tem OUTRA permissao de staff, mas nao controleCatraca — prova
+      // que a regra checa a permissao especifica, nao "e staff".
+      permissoes: ['frequencia'],
+    });
     await db.collection('dispositivosAcesso').doc('device-1').set({
       unidadeId: 'unidade-1',
       tipo: 'idface_pro',
@@ -71,6 +85,14 @@ function admDb() {
 
 function alunoDb() {
   return testEnv.authenticatedContext(ALUNO_UID).firestore();
+}
+
+function funcionarioComCatracaDb() {
+  return testEnv.authenticatedContext(FUNCIONARIO_COM_CATRACA_UID).firestore();
+}
+
+function funcionarioSemCatracaDb() {
+  return testEnv.authenticatedContext(FUNCIONARIO_SEM_CATRACA_UID).firestore();
 }
 
 function semAuthDb() {
@@ -135,6 +157,16 @@ test('ADM NAO consegue escrever/editar eventosAcesso direto', async () => {
 
 test('aluno nao le eventosAcesso', async () => {
   const db = alunoDb();
+  await assertFails(db.collection('eventosAcesso').doc('evento-1').get());
+});
+
+test('funcionário COM controleCatraca lê eventosAcesso (ver FrequenciaTab)', async () => {
+  const db = funcionarioComCatracaDb();
+  await assertSucceeds(db.collection('eventosAcesso').doc('evento-1').get());
+});
+
+test('funcionário SEM controleCatraca NAO le eventosAcesso, mesmo sendo staff', async () => {
+  const db = funcionarioSemCatracaDb();
   await assertFails(db.collection('eventosAcesso').doc('evento-1').get());
 });
 

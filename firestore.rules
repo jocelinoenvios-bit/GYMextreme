@@ -507,8 +507,12 @@ service cloud.firestore {
     // `controlIdNewUserIdentified` — nunca editado nem apagado depois de
     // criado, mesma logica de imutabilidade ja usada em
     // pagamentos/contasReceber/movimentacoes de caixa.
+    // Leitura exige a permissao especifica controleCatraca, nao so
+    // "e staff" — mesma correcao ja aplicada em avaliacoesFisicas
+    // (Fase 6): a permissao ja existia no catalogo, mas nunca era
+    // checada aqui, so escondida na UI. Ver FrequenciaTab.
     match /eventosAcesso/{eventoId} {
-      allow read: if ehStaff();
+      allow read: if temPermissao('controleCatraca');
       allow write: if false;
     }
   }

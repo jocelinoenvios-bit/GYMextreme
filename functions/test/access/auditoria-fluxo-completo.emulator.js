@@ -40,6 +40,8 @@ const { processarEventoIdentificacao } = require('../../lib/access/access-reques
 const { hashToken } = require('../../lib/access/device-auth');
 const { MOTIVO_NEGACAO, RESULTADO } = require('../../lib/access/motivos');
 const { avaliarPoliticaOffline, POLITICA_OFFLINE } = require('../../lib/access/offline-access-policy');
+const { configurarAcoesAbertura, vincularCredencial } = require('../../lib/access/device-sync-service');
+const { VARIAVEL_INTERVALO_MINIMO_MS } = require('../../lib/access/rate-limit');
 
 const db = getFirestore();
 
@@ -423,6 +425,271 @@ test('12b. politica ALLOW_SYNCHRONIZED_ACTIVE_USERS libera só quem já estava s
 
 test('12c. politica HYBRID: estrutura existe, comportamento NAO implementado (lança, não decide)', () => {
   assert.throws(() => avaliarPoliticaOffline({ politica: POLITICA_OFFLINE.HYBRID }));
+});
+
+// ---------------------------------------------------------------------
+// 13. Aluno inativo → DENY / STUDENT_INACTIVE
+// ---------------------------------------------------------------------
+test('13. aluno inativo -> DENY / STUDENT_INACTIVE', async () => {
+  const uid = 'auditoria-13-inativo';
+  await limparAluno(uid);
+  await prepararAluno(uid, {
+    userIdDispositivo: 'a13',
+    matriculaVencimento: new Date(2027, 0, 1),
+    proximoVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+    ativo: false,
+  });
+
+  const { corpo } = await chamar('a13', '13');
+
+  assert.equal(corpo.result.event, 6);
+  const evt = await db.collection('eventosAcesso').where('uuid', '==', 'auditoria-13').get();
+  assert.equal(evt.docs[0].data().motivo, MOTIVO_NEGACAO.STUDENT_INACTIVE);
+
+  await limparAluno(uid);
+});
+
+// ---------------------------------------------------------------------
+// 14. Credencial aponta pra aluno que nao existe (mais) -> DENY / INVALID_CREDENTIAL
+//     Diferente do cenario 5 (user_id NUNCA sincronizado, sem
+//     credencial nenhuma) — aqui a credencial existe, mas a referencia
+//     esta quebrada (ex.: aluno excluido depois de vincular).
+// ---------------------------------------------------------------------
+test('14. credencial aponta pra aluno inexistente -> DENY / INVALID_CREDENTIAL', async () => {
+  await db
+    .collection('dispositivosAcesso')
+    .doc(DEVICE_ID)
+    .collection('credenciais')
+    .doc('a14')
+    .set({ alunoUid: 'auditoria-14-aluno-nunca-existiu' });
+
+  const { corpo } = await chamar('a14', '14');
+
+  assert.equal(corpo.result.event, 6);
+  const evt = await db.collection('eventosAcesso').where('uuid', '==', 'auditoria-14').get();
+  assert.equal(evt.docs[0].data().motivo, MOTIVO_NEGACAO.INVALID_CREDENTIAL);
+
+  await db.collection('dispositivosAcesso').doc(DEVICE_ID).collection('credenciais').doc('a14').delete();
+});
+
+// ---------------------------------------------------------------------
+// 15. Rate limit -> DENY / RATE_LIMITED
+// ---------------------------------------------------------------------
+test('15. chamadas rapidas demais do mesmo dispositivo -> DENY / RATE_LIMITED', async () => {
+  // Dispositivo PROPRIO e isolado pra este teste — o DEVICE_ID
+  // compartilhado com o resto do arquivo ja tem `ultimaComunicacaoEm`
+  // recente (de todos os testes anteriores), o que invalidaria a
+  // suposicao de "primeira chamada sempre passa" abaixo.
+  const deviceRateLimit = 'idface-auditoria-rate-limit';
+  const tokenRateLimit = 'token-auditoria-rate-limit';
+  const uid = 'auditoria-15-rate-limit';
+
+  await limparAluno(uid);
+  await db.collection('dispositivosAcesso').doc(deviceRateLimit).set({
+    unidadeId: UNIDADE_ID,
+    tipo: 'idface_pro',
+    tokenHash: hashToken(tokenRateLimit),
+    ativo: true,
+  });
+  await prepararAluno(uid, { matriculaVencimento: new Date(2027, 0, 1) });
+  await db
+    .collection('dispositivosAcesso')
+    .doc(deviceRateLimit)
+    .collection('credenciais')
+    .doc('a15')
+    .set({ alunoUid: uid });
+
+  process.env[VARIAVEL_INTERVALO_MINIMO_MS] = '60000'; // 1 minuto
+  try {
+    const primeira = await processarEventoIdentificacao(db, {
+      payload: { device_id: deviceRateLimit, user_id: 'a15', uuid: 'auditoria-15a' },
+      deviceToken: tokenRateLimit,
+    });
+    assert.equal(primeira.corpo.result.event, 7); // primeira chamada deste dispositivo, sem "ultima comunicacao" ainda
+
+    const segunda = await processarEventoIdentificacao(db, {
+      payload: { device_id: deviceRateLimit, user_id: 'a15', uuid: 'auditoria-15b' },
+      deviceToken: tokenRateLimit,
+    });
+    assert.equal(segunda.corpo.result.event, 6);
+    const evt = await db.collection('eventosAcesso').where('uuid', '==', 'auditoria-15b').get();
+    assert.equal(evt.docs[0].data().motivo, MOTIVO_NEGACAO.RATE_LIMITED);
+  } finally {
+    delete process.env[VARIAVEL_INTERVALO_MINIMO_MS];
+  }
+
+  await limparAluno(uid);
+  await limparEventos('auditoria-15');
+  await db.collection('dispositivosAcesso').doc(deviceRateLimit).collection('credenciais').doc('a15').delete();
+  await db.collection('dispositivosAcesso').doc(deviceRateLimit).delete();
+});
+
+// ---------------------------------------------------------------------
+// 16. ALLOW com acao de abertura configurada por dispositivo -> a
+//     resposta inclui exatamente a acao sec_box confirmada fisicamente
+//     (id=65793, reason=3) pra ESTE dispositivo.
+// ---------------------------------------------------------------------
+test('16. ALLOW com acoesAbertura configurada no dispositivo -> resposta inclui a acao sec_box', async () => {
+  const uid = 'auditoria-16-secbox';
+  await limparAluno(uid);
+  await prepararAluno(uid, {
+    userIdDispositivo: 'a16',
+    matriculaVencimento: new Date(2027, 0, 1),
+    proximoVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+  });
+  await configurarAcoesAbertura(db, {
+    deviceId: DEVICE_ID,
+    acoes: [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }],
+  });
+
+  try {
+    const { corpo } = await chamar('a16', '16');
+
+    assert.equal(corpo.result.event, 7);
+    assert.deepEqual(corpo.result.actions, [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }]);
+  } finally {
+    // Nunca deixa a config de rele vazando pros outros testes deste arquivo.
+    await configurarAcoesAbertura(db, { deviceId: DEVICE_ID, acoes: [] });
+  }
+
+  await limparAluno(uid);
+});
+
+// ---------------------------------------------------------------------
+// 17. DENY nunca aciona o rele, MESMO com acoesAbertura configurada no
+//     dispositivo — a acao so e usada quando o resultado e ALLOW.
+// ---------------------------------------------------------------------
+test('17. DENY nao gera nenhuma acao de abertura, mesmo com sec_box configurado no dispositivo', async () => {
+  const uid = 'auditoria-17-deny-com-rele-configurado';
+  await limparAluno(uid);
+  await prepararAluno(uid, {
+    userIdDispositivo: 'a17',
+    matriculaVencimento: new Date(2027, 0, 1),
+    proximoVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+    bloqueado: true, // qualquer motivo de DENY serve aqui
+  });
+  await configurarAcoesAbertura(db, {
+    deviceId: DEVICE_ID,
+    acoes: [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }],
+  });
+
+  try {
+    const { corpo } = await chamar('a17', '17');
+
+    assert.equal(corpo.result.event, 6);
+    assert.deepEqual(corpo.result.actions, []);
+  } finally {
+    await configurarAcoesAbertura(db, { deviceId: DEVICE_ID, acoes: [] });
+  }
+
+  await limparAluno(uid);
+});
+
+// ---------------------------------------------------------------------
+// 18. Multiplos dispositivos -> cada um resolve suas PROPRIAS
+//     credenciais (o mesmo userIdDispositivo em dois dispositivos
+//     diferentes aponta pra alunos diferentes, sem contaminacao cruzada).
+// ---------------------------------------------------------------------
+test('18. multiplos dispositivos resolvem cada um suas proprias credenciais', async () => {
+  const deviceB = 'idface-auditoria-device-b';
+  const uidA = 'auditoria-18-aluno-device-a';
+  const uidB = 'auditoria-18-aluno-device-b';
+  const tokenB = 'token-auditoria-device-b';
+
+  await limparAluno(uidA);
+  await limparAluno(uidB);
+  await db
+    .collection('dispositivosAcesso')
+    .doc(deviceB)
+    .set({ unidadeId: UNIDADE_ID, tipo: 'idface_pro', tokenHash: hashToken(tokenB), ativo: true });
+
+  // MESMO userIdDispositivo ("mesmo-user-id") nos dois dispositivos,
+  // vinculado a alunos DIFERENTES — a numeracao interna do iDFace nao
+  // e globalmente unica, so unica DENTRO de cada dispositivo.
+  await prepararAluno(uidA, {
+    userIdDispositivo: 'mesmo-user-id',
+    matriculaVencimento: new Date(2027, 0, 1),
+    proximoVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+  });
+  await db.collection('alunos').doc(uidB).set({
+    ativo: true,
+    bloqueado: false,
+    unidadeId: UNIDADE_ID,
+    proximoVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+  });
+  await db.collection('alunos').doc(uidB).collection('matriculas').add({
+    status: 'ativa',
+    planoId: PLANO_ID,
+    dataVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+  });
+  await vincularCredencial(db, { deviceId: deviceB, userIdDispositivo: 'mesmo-user-id', alunoUid: uidB });
+
+  const eventoDeviceA = await processarEventoIdentificacao(db, {
+    payload: { device_id: DEVICE_ID, user_id: 'mesmo-user-id', uuid: 'auditoria-18-a' },
+    deviceToken: DEVICE_TOKEN,
+  });
+  const eventoDeviceB = await processarEventoIdentificacao(db, {
+    payload: { device_id: deviceB, user_id: 'mesmo-user-id', uuid: 'auditoria-18-b' },
+    deviceToken: tokenB,
+  });
+
+  assert.equal(eventoDeviceA.corpo.result.event, 7);
+  assert.equal(eventoDeviceB.corpo.result.event, 7);
+
+  const evtA = await db.collection('eventosAcesso').where('uuid', '==', 'auditoria-18-a').get();
+  const evtB = await db.collection('eventosAcesso').where('uuid', '==', 'auditoria-18-b').get();
+  assert.equal(evtA.docs[0].data().alunoUid, uidA);
+  assert.equal(evtB.docs[0].data().alunoUid, uidB);
+  assert.notEqual(evtA.docs[0].data().alunoUid, evtB.docs[0].data().alunoUid);
+
+  await limparAluno(uidA);
+  await limparAluno(uidB);
+  await db.collection('dispositivosAcesso').doc(deviceB).collection('credenciais').doc('mesmo-user-id').delete();
+  await db.collection('dispositivosAcesso').doc(deviceB).delete();
+  await limparEventos('auditoria-18');
+});
+
+// ---------------------------------------------------------------------
+// 19. Replay do mesmo evento (mesmo uuid), COM acao configurada -> a
+//     resposta continua consistente (mesma acao) em toda reenvio, mas
+//     nunca gera um SEGUNDO registro em eventosAcesso (complementa o
+//     teste 9). Nao existe aqui um token de autorizacao reutilizavel
+//     (diferente do fluxo antigo via academias/.../autorizacoesAcesso,
+//     que tem assinatura+expiracao) — cada chamada e reavaliada do zero
+//     contra o estado ATUAL do aluno, entao um reenvio nunca "reabre"
+//     baseado em uma decisao antiga: se o aluno mudou de estado entre
+//     as chamadas, a proxima resposta reflete o estado novo.
+// ---------------------------------------------------------------------
+test('19. replay do mesmo uuid com sec_box configurado -> resposta consistente, nunca duplica o registro', async () => {
+  const uid = 'auditoria-19-replay-com-rele';
+  await limparAluno(uid);
+  await prepararAluno(uid, {
+    userIdDispositivo: 'a19',
+    matriculaVencimento: new Date(2027, 0, 1),
+    proximoVencimento: Timestamp.fromDate(new Date(2027, 0, 1)),
+  });
+  await configurarAcoesAbertura(db, {
+    deviceId: DEVICE_ID,
+    acoes: [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }],
+  });
+
+  try {
+    const r1 = await chamar('a19', '19');
+    const r2 = await chamar('a19', '19');
+    const r3 = await chamar('a19', '19');
+
+    for (const r of [r1, r2, r3]) {
+      assert.equal(r.corpo.result.event, 7);
+      assert.deepEqual(r.corpo.result.actions, [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }]);
+    }
+
+    const evt = await db.collection('eventosAcesso').where('uuid', '==', 'auditoria-19').get();
+    assert.equal(evt.size, 1, 'reenvio do mesmo uuid nao pode gerar mais de um evento gravado');
+  } finally {
+    await configurarAcoesAbertura(db, { deviceId: DEVICE_ID, acoes: [] });
+  }
+
+  await limparAluno(uid);
 });
 
 test.after(async () => {

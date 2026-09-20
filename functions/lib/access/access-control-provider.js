@@ -52,11 +52,16 @@
  *   userName: string|null,
  *   portalId: string|null,
  *   mensagem: string,
+ *   acoesAbertura?: Array<{action: string, parameters: Record<string, unknown>}>,
  * }) => RespostaIdentificacao} construirResposta
  *   Monta a resposta HTTP no formato que ESTE fabricante espera, a
  *   partir da decisão já tomada por `AccessAuthorizationService`. Nunca
  *   decide ALLOW/DENY sozinho — só formata uma decisão que já veio
- *   pronta.
+ *   pronta. `acoesAbertura`, quando informado, são as ações de
+ *   acionamento específicas do dispositivo que originou o evento (ver
+ *   `dispositivosAcesso/{id}.acoesAbertura` — nunca assumidas iguais
+ *   entre dispositivos diferentes); cada provider decide se/como usa
+ *   isso (o do Control iD usa via `resolverAcoesAbertura`).
  */
 
 module.exports = {};

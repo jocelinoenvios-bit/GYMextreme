@@ -122,6 +122,40 @@ async function desvincularCredencial(db, { deviceId, userIdDispositivo }) {
 }
 
 /**
+ * Configura a(s) ação(ões) de abertura (relé) ESPECÍFICA(S) deste
+ * dispositivo — ex.: `[{action: 'sec_box', parameters: {id: 65793,
+ * reason: 3}}]`, confirmado fisicamente num iDFace Pro com MAE/SecBox.
+ * Grava em `dispositivosAcesso/{deviceId}.acoesAbertura`, lido por
+ * `access-request-handler.js` e repassado pro
+ * `AccessControlProvider.construirResposta` (ver
+ * `control-id-adapter.js#resolverAcoesAbertura`) só quando o resultado
+ * é ALLOW.
+ *
+ * O `id` do SecBox/MAE (e a ação em si — "sec_box"/"door"/"catra",
+ * dependendo de como o relé está fisicamente ligado) é por dispositivo
+ * de propósito: NUNCA assuma que o mesmo `id` serve pra outro
+ * dispositivo/unidade — cada catraca tem seu próprio relé físico.
+ *
+ * Sobrescreve qualquer configuração anterior deste dispositivo (não
+ * mescla arrays). Só grava no Firestore — não confirma nada no
+ * aparelho físico.
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {{ deviceId: string, acoes: Array<{action: string, parameters: Record<string, unknown>}> }} dados
+ */
+async function configurarAcoesAbertura(db, { deviceId, acoes }) {
+  if (!deviceId) throw new Error('deviceId e obrigatorio.');
+  if (!Array.isArray(acoes)) {
+    throw new Error('acoes e obrigatorio (array de {action, parameters}) — ver docstring.');
+  }
+
+  await db.collection('dispositivosAcesso').doc(deviceId).set(
+    { acoesAbertura: acoes, acoesAberturaAtualizadoEm: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+}
+
+/**
  * NÃO IMPLEMENTADO — depende de falar com a Access API do próprio
  * dispositivo (`login.fcgi` + endpoint de criação de usuário), cujo
  * formato exato não foi possível confirmar (bloqueio de rede impediu
@@ -160,6 +194,7 @@ module.exports = {
   desativarDispositivo,
   vincularCredencial,
   desvincularCredencial,
+  configurarAcoesAbertura,
   sincronizarUsuarioNoDispositivo,
   removerUsuarioDoDispositivo,
 };

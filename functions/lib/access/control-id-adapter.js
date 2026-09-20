@@ -14,27 +14,35 @@ const VARIAVEL_ACAO_ABERTURA = 'CONTROLID_ACAO_ABERTURA_JSON';
 /**
  * Resolve a lista de `actions` enviada numa resposta de acesso liberado.
  *
- * A CONFIRMAR NO EQUIPAMENTO: o nome exato da ação de abertura e seus
- * parâmetros dependem de como o módulo de acionamento (relé) está
- * fisicamente ligado ao iDFace Pro — relé interno do próprio aparelho
- * usa a ação "door", relé externo via módulo MAE usa "sec_box", e uma
- * catraca com giro controlado usa "catra" (parâmetro `allow`:
- * "clockwise" | "anticlockwise" | "both"). NENHUM desses foi confirmado
- * na documentação primária (bloqueio de rede impediu acessar
- * controlid.com.br neste ambiente) nem testado no equipamento físico —
- * por isso esta função NUNCA assume um valor por padrão: sem a variável
- * de ambiente `CONTROLID_ACAO_ABERTURA_JSON` configurada, retorna lista
- * vazia (o dispositivo recebe `event: 7`, "pode passar", mas nenhuma
- * instrução de acionamento — o comportamento do relé nesse caso também
- * é algo a observar na Fase de validação física).
+ * CONFIRMADO fisicamente (ver histórico do projeto): o iDFace de
+ * laboratório abre via `{action: 'sec_box', parameters: {id: 65793,
+ * reason: 3}}`. Esse `id` é do SecBox/MAE de UM dispositivo físico
+ * específico — nunca assumido igual entre dispositivos diferentes
+ * (cada catraca/unidade tem seu próprio relé). Por isso a fonte
+ * primária é sempre `acoesConfiguradas` (lido de
+ * `dispositivosAcesso/{deviceId}.acoesAbertura`, ver
+ * `device-sync-service.js#configurarAcoesAbertura`) — específico do
+ * dispositivo que efetivamente chamou.
  *
- * Configuração esperada (só depois de confirmar no equipamento): um
- * JSON de um array de `{action, parameters}`, ex.:
- * `CONTROLID_ACAO_ABERTURA_JSON='[{"action":"catra","parameters":{"allow":"both"}}]'`.
+ * A variável de ambiente `CONTROLID_ACAO_ABERTURA_JSON` continua como
+ * FALLBACK GLOBAL, só por compatibilidade (comportamento anterior à
+ * configuração por dispositivo) — evitar usá-la assim que houver mais
+ * de um dispositivo com relés diferentes, já que ela vale pra todos.
  *
+ * Sem nenhuma das duas fontes configuradas, retorna lista vazia (nunca
+ * assume um comando de relé) — o dispositivo recebe `event: 7`, "pode
+ * passar", mas nenhuma instrução de acionamento.
+ *
+ * @param {Array<{action: string, parameters: Record<string, unknown>}>} [acoesConfiguradas]
+ *   Ações específicas do dispositivo que fez a chamada (prioridade
+ *   máxima quando presente e não-vazia).
  * @returns {Array<{action: string, parameters: Record<string, unknown>}>}
  */
-function resolverAcoesAbertura() {
+function resolverAcoesAbertura(acoesConfiguradas) {
+  if (Array.isArray(acoesConfiguradas) && acoesConfiguradas.length > 0) {
+    return acoesConfiguradas;
+  }
+
   const configuracao = process.env[VARIAVEL_ACAO_ABERTURA];
   if (!configuracao) return [];
 
@@ -114,9 +122,17 @@ function interpretarEventoIdentificacao(payload) {
  *   userName: string|null,
  *   portalId: string|null,
  *   mensagem: string,
+ *   acoesAbertura?: Array<{action: string, parameters: Record<string, unknown>}>,
  * }} params
  */
-function construirRespostaIdentificacao({ resultado, userIdDispositivo, userName, portalId, mensagem }) {
+function construirRespostaIdentificacao({
+  resultado,
+  userIdDispositivo,
+  userName,
+  portalId,
+  mensagem,
+  acoesAbertura,
+}) {
   const autorizado = resultado === RESULTADO.ALLOW;
   return {
     result: {
@@ -124,7 +140,7 @@ function construirRespostaIdentificacao({ resultado, userIdDispositivo, userName
       user_id: userIdDispositivo,
       user_name: userName,
       portal_id: portalId || '1',
-      actions: autorizado ? resolverAcoesAbertura() : [],
+      actions: autorizado ? resolverAcoesAbertura(acoesAbertura) : [],
       message: mensagem,
     },
   };

@@ -27,6 +27,7 @@ const {
   desativarDispositivo,
   vincularCredencial,
   desvincularCredencial,
+  configurarAcoesAbertura,
 } = require('../../lib/access/device-sync-service');
 const { hashToken, resolverDispositivo } = require('../../lib/access/device-auth');
 
@@ -88,6 +89,28 @@ test('vincularCredencial grava o mapeamento user_id -> alunoUid, desvincularCred
   await desvincularCredencial(db, { deviceId, userIdDispositivo: '3001' });
   credencial = await db.collection('dispositivosAcesso').doc(deviceId).collection('credenciais').doc('3001').get();
   assert.equal(credencial.exists, false);
+
+  await limpar(deviceId);
+});
+
+test('configurarAcoesAbertura grava a acao especifica deste dispositivo (ex.: sec_box confirmado fisicamente)', async () => {
+  const { deviceId } = await cadastrarDispositivo(db, {
+    unidadeId: 'unidade-teste-sync',
+    tipo: 'idface_pro',
+  });
+
+  await configurarAcoesAbertura(db, {
+    deviceId,
+    acoes: [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }],
+  });
+
+  const doc = await db.collection('dispositivosAcesso').doc(deviceId).get();
+  assert.deepEqual(doc.data().acoesAbertura, [{ action: 'sec_box', parameters: { id: 65793, reason: 3 } }]);
+
+  // Sobrescreve, nunca mescla — reconfigurar troca a lista inteira.
+  await configurarAcoesAbertura(db, { deviceId, acoes: [] });
+  const docDepois = await db.collection('dispositivosAcesso').doc(deviceId).get();
+  assert.deepEqual(docDepois.data().acoesAbertura, []);
 
   await limpar(deviceId);
 });

@@ -6,6 +6,7 @@ const {
   vincularCredencial,
   desvincularCredencial,
   cadastrarDispositivo,
+  configurarAcoesAbertura,
   sincronizarUsuarioNoDispositivo,
   removerUsuarioDoDispositivo,
 } = require('../../lib/access/device-sync-service');
@@ -32,6 +33,14 @@ test('desvincularCredencial exige deviceId e userIdDispositivo', async () => {
 test('cadastrarDispositivo exige unidadeId e tipo', async () => {
   await assert.rejects(() => cadastrarDispositivo(dbNuncaChamado(), { tipo: 'idface_pro' }));
   await assert.rejects(() => cadastrarDispositivo(dbNuncaChamado(), { unidadeId: 'u1' }));
+});
+
+test('configurarAcoesAbertura exige deviceId e acoes (array)', async () => {
+  await assert.rejects(() => configurarAcoesAbertura(dbNuncaChamado(), { acoes: [] }));
+  await assert.rejects(() => configurarAcoesAbertura(dbNuncaChamado(), { deviceId: 'd' }));
+  await assert.rejects(() =>
+    configurarAcoesAbertura(dbNuncaChamado(), { deviceId: 'd', acoes: 'nao-e-um-array' }),
+  );
 });
 
 test('sincronizarUsuarioNoDispositivo NAO esta implementado — sempre lanca, nunca finge sincronizar', async () => {

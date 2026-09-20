@@ -236,6 +236,11 @@ async function processarEventoIdentificacao(db, { payload, deviceToken, provider
           decisao.resultado === RESULTADO.ALLOW
             ? 'Acesso liberado'
             : mensagemParaMotivo(decisao.motivo),
+        // Ação de abertura ESPECÍFICA deste dispositivo (ver
+        // device-sync-service.js#configurarAcoesAbertura) — nunca
+        // assumida igual entre dispositivos diferentes. O provider só
+        // usa isso quando o resultado é ALLOW (ver control-id-adapter.js).
+        acoesAbertura: dispositivo.data.acoesAbertura,
       }),
     };
   } catch (err) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gif/gif.dart';
 import 'package:video_player/video_player.dart';
@@ -189,7 +191,12 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       if (mounted) {
         setState(() => _diagnosticoVideo = '$erro\n$stack');
       }
-      await controller.dispose();
+      // NUNCA aguardar aqui: quando initialize() falha antes de resolver
+      // o Completer interno do video_player, dispose() fica esperando
+      // esse mesmo Completer pra sempre — travaria o fallback pro GIF
+      // indefinidamente. Dispose é limpeza best-effort; não deve bloquear
+      // a cadeia vídeo → GIF.
+      unawaited(controller.dispose().catchError((_) {}));
     }
   }
 

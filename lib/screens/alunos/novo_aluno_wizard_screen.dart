@@ -445,7 +445,13 @@ class _PassoDadosState extends State<_PassoDados> {
   final _contatoEmergenciaNomeController = TextEditingController();
   final _contatoEmergenciaTelefoneController = TextEditingController();
   final _observacoesController = TextEditingController();
-  final _diaVencimentoController = TextEditingController();
+  // Pré-preenchido com o dia de hoje: aluno novo começa hoje, então a
+  // cobrança seguinte (1 mês depois) cai no mesmo dia do mês — evita ter
+  // que digitar isso manualmente a cada cadastro. Continua editável pra
+  // quem precisar ajustar.
+  final _diaVencimentoController = TextEditingController(
+    text: '${DateTime.now().day}',
+  );
 
   Sexo? _sexo;
   DateTime? _dataNascimento;
@@ -879,7 +885,8 @@ class _PassoDadosState extends State<_PassoDados> {
               decoration: const InputDecoration(
                 labelText: 'Dia de vencimento',
                 helperText:
-                    'Dia do mês em que a mensalidade vence (1-31), não uma data',
+                    'Calculado automaticamente (próxima cobrança, 1 mês a '
+                    'partir de hoje) — pode editar se precisar.',
               ),
               validator: validarDiaVencimento,
             ),

@@ -62,10 +62,10 @@ class _HistoricoTreinosScreenState extends State<HistoricoTreinosScreen> {
                       onAnterior: () => setState(() => _semanaOffset--),
                       onProxima: () => setState(() => _semanaOffset++),
                     ),
-                    const Divider(height: 1, color: AppColors.surfaceHigh),
+                    Divider(height: 1, color: AppColors.surfaceHigh),
                     Expanded(
                       child: treinosAtivos.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Padding(
                                 padding: EdgeInsets.all(24),
                                 child: Text(
@@ -122,12 +122,12 @@ class _NavegacaoSemana extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onAnterior,
-            icon: const Icon(Icons.chevron_left, color: AppColors.textPrimary),
+            icon: Icon(Icons.chevron_left, color: AppColors.textPrimary),
             tooltip: 'Semana anterior',
           ),
           Text(
             '${_fmt(inicio)} — ${_fmt(fim)}',
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
           ),
           IconButton(
             onPressed: podeAvancar ? onProxima : null,
@@ -194,13 +194,13 @@ class _DiaLinha extends StatelessWidget {
             width: 80,
             child: Text(
               diasSemanaLabels[diaSemana],
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
             child: Text(
               treinoDoDia.map((t) => 'Treino ${t.letra}').join(', '),
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
               overflow: TextOverflow.ellipsis,
             ),
           ),

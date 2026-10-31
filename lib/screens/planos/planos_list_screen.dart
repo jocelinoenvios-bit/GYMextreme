@@ -81,7 +81,7 @@ class PlanosListScreen extends StatelessWidget {
                   child: SelectableText(
                     'Erro ao carregar os planos.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -98,7 +98,7 @@ class PlanosListScreen extends StatelessWidget {
                       ? 'Nenhum plano cadastrado ainda. Toque em "+" para criar o primeiro.'
                       : 'Nenhum plano cadastrado ainda.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
             );
@@ -161,7 +161,7 @@ class _PlanoCard extends StatelessWidget {
                   color: AppColors.textSecondary.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   'Inativo',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                 ),
@@ -171,15 +171,15 @@ class _PlanoCard extends StatelessWidget {
         subtitle: Text(
           '${formatarReais(plano.valor)} · ${plano.duracaoDias} dias'
           '${plano.descricao != null ? ' · ${plano.descricao}' : ''}',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         trailing: podeExcluir
             ? IconButton(
                 tooltip: 'Excluir plano',
-                icon: const Icon(Icons.delete_outline, color: AppColors.textSecondary),
+                icon: Icon(Icons.delete_outline, color: AppColors.textSecondary),
                 onPressed: onExcluir,
               )
-            : (onTap != null ? const Icon(Icons.chevron_right, color: AppColors.textSecondary) : null),
+            : (onTap != null ? Icon(Icons.chevron_right, color: AppColors.textSecondary) : null),
       ),
     );
   }

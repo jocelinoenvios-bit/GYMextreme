@@ -71,7 +71,7 @@ class _ExerciciosDaCategoriaScreenState extends State<ExerciciosDaCategoriaScree
           ),
           Expanded(
             child: exercicios.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: Text(
@@ -167,7 +167,7 @@ class CartaoExercicio extends StatelessWidget {
                 children: [
                   Text(
                     exercicio.nomeExibicao,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                       fontSize: 14.5,
@@ -184,7 +184,7 @@ class CartaoExercicio extends StatelessWidget {
                       ),
                       child: Text(
                         labelDificuldade(exercicio.dificuldade).toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.gold,
                           fontSize: 10.5,
                           fontWeight: FontWeight.bold,
@@ -196,7 +196,7 @@ class CartaoExercicio extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right, color: AppColors.textSecondary),
           ],
         ),
       ),
@@ -231,7 +231,7 @@ class _ThumbnailFallback extends StatelessWidget {
     return Container(
       color: AppColors.surface,
       alignment: Alignment.center,
-      child: const Icon(Icons.fitness_center_outlined, color: AppColors.textSecondary, size: 22),
+      child: Icon(Icons.fitness_center_outlined, color: AppColors.textSecondary, size: 22),
     );
   }
 }

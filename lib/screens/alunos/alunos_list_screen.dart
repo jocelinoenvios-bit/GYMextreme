@@ -123,7 +123,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                 child: SelectableText(
                   'Erro ao carregar os alunos.\n\n${snapshot.error}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.error),
+                  style: TextStyle(color: AppColors.error),
                 ),
               ),
             ),
@@ -141,7 +141,7 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
               child: Text(
                 'Nenhum aluno encontrado para "$_busca".',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
             ),
           );
@@ -151,17 +151,17 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
           padding: const EdgeInsets.only(bottom: 88),
           itemCount: alunos.length,
           separatorBuilder: (context, index) =>
-              const Divider(height: 1, color: AppColors.surfaceHigh),
+              Divider(height: 1, color: AppColors.surfaceHigh),
           itemBuilder: (context, index) {
             final aluno = alunos[index];
             return ListTile(
-              leading: const CircleAvatar(
+              leading: CircleAvatar(
                 backgroundColor: AppColors.surfaceHigh,
                 child: Icon(Icons.fitness_center_outlined, color: AppColors.gold),
               ),
               title: Text(aluno.nome),
-              subtitle: Text(aluno.email, style: const TextStyle(color: AppColors.textSecondary)),
-              trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              subtitle: Text(aluno.email, style: TextStyle(color: AppColors.textSecondary)),
+              trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => AlunoDetailScreen(

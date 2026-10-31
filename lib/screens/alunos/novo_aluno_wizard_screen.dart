@@ -111,7 +111,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Nome, contato, documento e endereço do aluno.',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
@@ -141,7 +141,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
                   ),
                 ],
               )
-            : const Padding(
+            : Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Dados salvos.',
@@ -155,7 +155,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'As 13 perguntas da ficha de anamnese do aluno.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -189,7 +189,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'As 15 regras do regulamento, com aceite digital do aluno.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -221,7 +221,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Peso, altura, IMC e circunferências — pode ser preenchida '
               'agora ou depois, na ficha do aluno.',
               style: TextStyle(color: AppColors.textSecondary),
@@ -266,7 +266,7 @@ class _IndicadorDePasso extends StatelessWidget {
       children: [
         Text(
           'Passo ${passoAtual + 1} de ${titulos.length}: ${titulos[passoAtual]}',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.gold,
             fontWeight: FontWeight.bold,
           ),
@@ -369,13 +369,13 @@ class _PassoConcluido extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.check_circle_outline,
                 color: AppColors.gold,
                 size: 64,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Aluno cadastrado com sucesso.',
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
                 textAlign: TextAlign.center,
@@ -612,7 +612,7 @@ class _PassoDadosState extends State<_PassoDados> {
   @override
   Widget build(BuildContext context) {
     if (_concluido) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
         child: Text('Dados salvos.', style: TextStyle(color: AppColors.gold)),
       );
@@ -639,7 +639,7 @@ class _PassoDadosState extends State<_PassoDados> {
                         ? MemoryImage(_fotoBytes!)
                         : null,
                     child: _fotoBytes == null
-                        ? const Icon(
+                        ? Icon(
                             Icons.person_outline,
                             size: 40,
                             color: AppColors.gold,
@@ -654,11 +654,11 @@ class _PassoDadosState extends State<_PassoDados> {
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.camera_alt,
                           size: 16,
                           color: AppColors.black,
@@ -900,7 +900,7 @@ class _PassoDadosState extends State<_PassoDados> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleCriar,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(

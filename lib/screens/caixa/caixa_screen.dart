@@ -65,7 +65,7 @@ class CaixaScreen extends StatelessWidget {
                   child: SelectableText(
                     'Erro ao carregar o caixa.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -123,13 +123,13 @@ class _SemCaixaAberto extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.point_of_sale_outlined,
               color: AppColors.textSecondary,
               size: 56,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Nenhum caixa aberto no momento.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary),
@@ -228,7 +228,7 @@ class _CaixaAbertoView extends StatelessWidget {
                       if (caixa.abertoEm != null)
                         Text(
                           _formatarDataHora(caixa.abertoEm!),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -238,7 +238,7 @@ class _CaixaAbertoView extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     'Aberto por ${caixa.abertoPorNome}',
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 4),
                   Text('Saldo inicial: ${formatarReais(caixa.valorInicial)}'),
@@ -253,7 +253,7 @@ class _CaixaAbertoView extends StatelessWidget {
               AppColors.gold,
             ),
             _LinhaTotal('Total de retiradas', totalRetiradas, AppColors.error),
-            const Divider(height: 24, color: AppColors.surfaceHigh),
+            Divider(height: 24, color: AppColors.surfaceHigh),
             _LinhaTotal(
               'Saldo esperado',
               saldoEsperado,
@@ -314,7 +314,7 @@ class _CaixaAbertoView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (movimentacoes.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Nenhuma movimentação ainda.',
@@ -423,7 +423,7 @@ class _MovimentacaoTile extends StatelessWidget {
                 if (mov.descricao != null)
                   Text(
                     mov.descricao!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -431,7 +431,7 @@ class _MovimentacaoTile extends StatelessWidget {
                 Text(
                   '${_formatarHora(mov.criadoEm)} · ${mov.staffNome}'
                   '${mov.formaPagamento != null ? ' · ${mov.formaPagamento}' : ''}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
                   ),
@@ -521,7 +521,7 @@ class _AbrirCaixaDialogState extends State<_AbrirCaixaDialog> {
               const SizedBox(height: 8),
               Text(
                 _erro!,
-                style: const TextStyle(color: AppColors.error, fontSize: 12),
+                style: TextStyle(color: AppColors.error, fontSize: 12),
               ),
             ],
           ],
@@ -636,7 +636,7 @@ class _MovimentacaoDialogState extends State<_MovimentacaoDialog> {
               const SizedBox(height: 8),
               Text(
                 _erro!,
-                style: const TextStyle(color: AppColors.error, fontSize: 12),
+                style: TextStyle(color: AppColors.error, fontSize: 12),
               ),
             ],
           ],
@@ -677,7 +677,7 @@ class _HistoricoCaixasScreen extends StatelessWidget {
         builder: (context, snapshot) {
           final caixas = snapshot.data ?? [];
           if (caixas.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
@@ -721,7 +721,7 @@ class _HistoricoCaixasScreen extends StatelessWidget {
                         ),
                         Text(
                           _formatarDataHora(caixa.abertoEm),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -742,7 +742,7 @@ class _HistoricoCaixasScreen extends StatelessWidget {
                         'Esperado: ${formatarReais(caixa.valorEsperadoNoFechamento ?? 0)} · '
                         'Contado: ${formatarReais(caixa.valorContado ?? 0)} · '
                         'Diferença: ${formatarReais(caixa.diferenca ?? 0)}',
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
                     ],
                   ],

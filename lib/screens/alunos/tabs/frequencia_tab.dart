@@ -95,7 +95,7 @@ class _MensagemCentralizada extends StatelessWidget {
         child: Text(
           mensagem,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
       ),
     );
@@ -161,7 +161,7 @@ class _EventoAcessoCard extends StatelessWidget {
             children: [
               Text(
                 _formatarDataHora(evento.criadoEm),
-                style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -178,13 +178,13 @@ class _EventoAcessoCard extends StatelessWidget {
           ),
           if (!evento.autorizado) ...[
             const SizedBox(height: 6),
-            Text(evento.motivoLabel, style: const TextStyle(color: AppColors.textSecondary)),
+            Text(evento.motivoLabel, style: TextStyle(color: AppColors.textSecondary)),
           ],
           if (evento.metodo != null) ...[
             const SizedBox(height: 4),
             Text(
               'Método: ${evento.metodo}',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
             ),
           ],
         ],
@@ -338,12 +338,12 @@ class _LinhaPresencaCard extends StatelessWidget {
             children: [
               Text(
                 _formatarData(linha.data),
-                style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
               Text(
                 'Treino ${linha.treino.letra} — ${linha.treino.nome}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
               ),
             ],
           ),

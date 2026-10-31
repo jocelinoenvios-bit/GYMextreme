@@ -163,7 +163,7 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
                       child: SelectableText(
                         'Erro ao carregar as contas a receber.\n\n${contasSnapshot.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.error),
+                        style: TextStyle(color: AppColors.error),
                       ),
                     ),
                   ),
@@ -209,7 +209,7 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
                               child: Text(
                                 'Nenhuma cobrança encontrada.',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: AppColors.textSecondary),
+                                style: TextStyle(color: AppColors.textSecondary),
                               ),
                             ),
                           )
@@ -397,12 +397,12 @@ class _ContaReceberCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(conta.descricao, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(conta.descricao, style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
           Text(
             'Vencimento: ${formatarData(conta.vencimento)} · ${formatarReais(conta.valorLiquido)}'
             '${conta.status == StatusContaReceber.pago ? ' · pago em ${formatarData(conta.dataPagamento!)}' : ''}',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           if (onEditar != null || onExcluir != null || onReceber != null) ...[
             const SizedBox(height: 10),

@@ -279,7 +279,7 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       // Nem vídeo nem GIF disponíveis pra este exercício — não deveria
       // acontecer no catálogo atual (todo exercício tem ao menos um dos
       // dois), mas evita quebrar a tela se algum dia acontecer.
-      return const Center(
+      return Center(
         child: Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary, size: 40),
       );
     }
@@ -300,9 +300,9 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, color: AppColors.textSecondary, size: 40),
+            Icon(Icons.cloud_off_outlined, color: AppColors.textSecondary, size: 40),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Mídia indisponível offline',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
               textAlign: TextAlign.center,

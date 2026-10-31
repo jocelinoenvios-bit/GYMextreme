@@ -104,7 +104,7 @@ class ProdutoDetailScreen extends StatelessWidget {
           }
           final produto = snapshot.data;
           if (produto == null) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
@@ -156,7 +156,7 @@ class ProdutoDetailScreen extends StatelessWidget {
                                   color: AppColors.textSecondary.withValues(alpha: 0.16),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Inativo',
                                   style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                                 ),
@@ -166,7 +166,7 @@ class ProdutoDetailScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${produto.codigo} · ${produto.categoria}',
-                          style: const TextStyle(color: AppColors.textSecondary),
+                          style: TextStyle(color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 16),
                         if (_podeVerEstoque) ...[
@@ -187,7 +187,7 @@ class ProdutoDetailScreen extends StatelessWidget {
                           _LinhaDetalhe('Fornecedor', produto.fornecedor!),
                         if (_podeVerEstoque && produto.estoqueBaixo) ...[
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Estoque abaixo do mínimo.',
                             style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
                           ),
@@ -278,7 +278,7 @@ class ProdutoDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     if (movimentacoes.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Text(
                           'Nenhuma movimentação ainda.',
@@ -320,7 +320,7 @@ class _LinhaDetalhe extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(label, style: TextStyle(color: AppColors.textSecondary)),
           Text(
             valor,
             style: TextStyle(
@@ -370,13 +370,13 @@ class _MovimentacaoTile extends StatelessWidget {
                 if (mov.motivo != null)
                   Text(
                     mov.motivo!,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                 Text(
                   '${formatarDataHora(mov.criadoEm)} · ${mov.staffNome} · '
                   '${formatarQuantidade(mov.estoqueAnterior)} → '
                   '${formatarQuantidade(mov.estoquePosterior)} $unidadeMedida',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                 ),
               ],
             ),
@@ -494,7 +494,7 @@ class _MovimentacaoEstoqueDialogState extends State<_MovimentacaoEstoqueDialog> 
           children: [
             Text(
               widget.produto.nome,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -522,7 +522,7 @@ class _MovimentacaoEstoqueDialogState extends State<_MovimentacaoEstoqueDialog> 
             ),
             if (_erro != null) ...[
               const SizedBox(height: 8),
-              Text(_erro!, style: const TextStyle(color: AppColors.error, fontSize: 12)),
+              Text(_erro!, style: TextStyle(color: AppColors.error, fontSize: 12)),
             ],
           ],
         ),

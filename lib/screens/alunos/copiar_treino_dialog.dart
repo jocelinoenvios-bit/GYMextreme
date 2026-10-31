@@ -47,7 +47,7 @@ class _CopiarTreinoDialogState extends State<CopiarTreinoDialog> {
       if (mounted) {
         setState(() => _copiando = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao copiar o treino. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -92,7 +92,7 @@ class _CopiarTreinoDialogState extends State<CopiarTreinoDialog> {
             .where((a) => a.uid != widget.alunoDestinoUid)
             .toList();
         if (alunos.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'Nenhum outro aluno cadastrado.',
               style: TextStyle(color: AppColors.textSecondary),
@@ -128,7 +128,7 @@ class _CopiarTreinoDialogState extends State<CopiarTreinoDialog> {
         if (treinos.isEmpty) {
           return Text(
             '${_origemSelecionada!.nome} ainda não tem nenhum treino cadastrado.',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: AppColors.textSecondary),
           );
         }
         return ListView.builder(
@@ -141,7 +141,7 @@ class _CopiarTreinoDialogState extends State<CopiarTreinoDialog> {
                 backgroundColor: AppColors.gold,
                 child: Text(
                   treino.letra,
-                  style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
                 ),
               ),
               title: Text(treino.nome),

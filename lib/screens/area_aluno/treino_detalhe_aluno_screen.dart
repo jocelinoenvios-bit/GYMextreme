@@ -4,6 +4,7 @@ import '../../models/exercise_model.dart';
 import '../../models/treino.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/texto_contornado.dart';
 import 'treino_execucao_screen.dart';
 
 /// Ficha completa de UM treino prescrito, somente leitura — nome,
@@ -34,7 +35,7 @@ class TreinoDetalheAlunoScreen extends StatelessWidget {
           children: [
             Text(
               treino.nome,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -60,9 +61,10 @@ class TreinoDetalheAlunoScreen extends StatelessWidget {
             if (treino.vigenciaAte != null)
               _LinhaInfo('Válido até', _formatarData(treino.vigenciaAte!)),
             const SizedBox(height: 20),
-            const Text(
+            TextoContornado(
               'Exercícios',
-              style: TextStyle(
+              espessura: 1.6,
+              estilo: TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
@@ -70,7 +72,7 @@ class TreinoDetalheAlunoScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (treino.exercicios.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
                   'Este treino ainda não tem exercícios cadastrados.',
@@ -166,12 +168,12 @@ class _LinhaInfo extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           children: [
             TextSpan(text: '$rotulo: '),
             TextSpan(
               text: valor,
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -218,7 +220,7 @@ class _ExercicioTile extends StatelessWidget {
             backgroundColor: AppColors.gold,
             child: Text(
               '$numero',
-              style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold, fontSize: 12),
+              style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),
           const SizedBox(width: 12),
@@ -228,18 +230,18 @@ class _ExercicioTile extends StatelessWidget {
               children: [
                 Text(
                   exercicio?.nomeExibicao ?? 'Exercício não encontrado',
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                 ),
                 if (resumo.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text(resumo, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
+                  Text(resumo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
                 ],
                 if (treinoExercicio.observacoes != null &&
                     treinoExercicio.observacoes!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     treinoExercicio.observacoes!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12.5,
                       fontStyle: FontStyle.italic,

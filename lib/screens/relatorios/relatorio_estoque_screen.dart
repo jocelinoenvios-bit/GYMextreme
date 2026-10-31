@@ -89,7 +89,7 @@ class _RelatorioEstoqueScreenState extends State<RelatorioEstoqueScreen> {
               child: Text(
                 'Erro ao carregar.\n\n${snapshot.error}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
+                style: TextStyle(color: AppColors.error),
               ),
             );
           }
@@ -130,7 +130,7 @@ class _RelatorioEstoqueScreenState extends State<RelatorioEstoqueScreen> {
               ),
               const SizedBox(height: 8),
               if (abaixoDoMinimo.isEmpty)
-                const Text(
+                Text(
                   'Nenhum produto abaixo do mínimo.',
                   style: TextStyle(color: AppColors.textSecondary),
                 )
@@ -190,7 +190,7 @@ class _RelatorioEstoqueScreenState extends State<RelatorioEstoqueScreen> {
                     if (movSnap.hasError) {
                       return Text(
                         'Erro ao carregar movimentações.\n\n${movSnap.error}',
-                        style: const TextStyle(color: AppColors.error),
+                        style: TextStyle(color: AppColors.error),
                       );
                     }
 
@@ -215,7 +215,7 @@ class _RelatorioEstoqueScreenState extends State<RelatorioEstoqueScreen> {
                         ),
                         const SizedBox(height: 12),
                         if (filtradas.isEmpty)
-                          const Text(
+                          Text(
                             'Nenhuma movimentação no período selecionado.',
                             style: TextStyle(color: AppColors.textSecondary),
                           )
@@ -254,7 +254,7 @@ class _CartaoNumero extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(valor, style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 20)),
-          Text(titulo, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(titulo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         ],
       ),
     );
@@ -282,7 +282,7 @@ class _LinhaProduto extends StatelessWidget {
           Expanded(child: Text(nome)),
           Text(
             detalhe,
-            style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -328,7 +328,7 @@ class _LinhaMovimentacao extends StatelessWidget {
                 if (mov.motivo != null && mov.motivo!.isNotEmpty)
                   Text(
                     mov.motivo!,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                   ),
               ],
             ),

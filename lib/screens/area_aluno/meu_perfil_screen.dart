@@ -126,8 +126,8 @@ class _ItemPerfil extends StatelessWidget {
           child: Icon(icone, color: AppColors.goldBright),
         ),
         title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitulo, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        subtitle: Text(subtitulo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
       ),
     );
   }

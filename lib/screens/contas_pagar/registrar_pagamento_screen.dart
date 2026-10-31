@@ -176,7 +176,7 @@ class _RegistrarPagamentoScreenState extends State<RegistrarPagamentoScreen> {
                   '${widget.conta.fornecedor} · '
                   'Vencimento: ${_formatarData(widget.conta.vencimento)} · '
                   'Valor esperado: ${formatarReais(widget.conta.valorFinal)}',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -185,7 +185,7 @@ class _RegistrarPagamentoScreenState extends State<RegistrarPagamentoScreen> {
                             'saída no caixa.'
                       : 'Nenhum caixa aberto — este pagamento não gera nenhuma '
                             'movimentação de caixa.',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
@@ -228,7 +228,7 @@ class _RegistrarPagamentoScreenState extends State<RegistrarPagamentoScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Data do pagamento'),
                   subtitle: Text(_formatarData(_dataPagamento)),
-                  trailing: const Icon(Icons.calendar_today_outlined, color: AppColors.gold),
+                  trailing: Icon(Icons.calendar_today_outlined, color: AppColors.gold),
                   onTap: _escolherData,
                 ),
                 const SizedBox(height: 14),
@@ -250,7 +250,7 @@ class _RegistrarPagamentoScreenState extends State<RegistrarPagamentoScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : _handleConfirmar,
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(

@@ -152,7 +152,7 @@ class _MatriculasListScreenState extends State<MatriculasListScreen> {
                           child: SelectableText(
                             'Erro ao carregar as matrículas.\n\n${matriculasSnapshot.error}',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.error),
+                            style: TextStyle(color: AppColors.error),
                           ),
                         ),
                       ),
@@ -190,7 +190,7 @@ class _MatriculasListScreenState extends State<MatriculasListScreen> {
                                   child: Text(
                                     'Nenhuma matrícula encontrada.',
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(color: AppColors.textSecondary),
+                                    style: TextStyle(color: AppColors.textSecondary),
                                   ),
                                 ),
                               )
@@ -378,19 +378,19 @@ class _MatriculaCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             plano?.nome ?? 'Plano não encontrado',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
             '${formatarData(matricula.dataInicio)} — ${formatarData(matricula.dataVencimento)} '
             '· ${formatarReais(matricula.valorContratado)}',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           if (matricula.observacao != null) ...[
             const SizedBox(height: 4),
             Text(
               matricula.observacao!,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
           ],
           if (podeGerenciar) ...[

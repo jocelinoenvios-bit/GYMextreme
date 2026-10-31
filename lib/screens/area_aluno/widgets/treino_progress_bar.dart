@@ -32,7 +32,7 @@ class TreinoProgressBar extends StatelessWidget {
             children: [
               Text(
                 'Exercício $exercicioAtual de $totalExercicios',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
@@ -40,7 +40,7 @@ class TreinoProgressBar extends StatelessWidget {
               ),
               Text(
                 '${(progresso.clamp(0, 1) * 100).round()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.gold,
                   fontSize: 11.5,
                   fontWeight: FontWeight.bold,
@@ -55,7 +55,7 @@ class TreinoProgressBar extends StatelessWidget {
               value: progresso.clamp(0, 1).toDouble(),
               minHeight: 5,
               backgroundColor: AppColors.surfaceHigh,
-              valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+              valueColor: AlwaysStoppedAnimation(AppColors.gold),
             ),
           ),
         ],

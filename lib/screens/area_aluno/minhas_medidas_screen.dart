@@ -29,7 +29,7 @@ class MinhasMedidasScreen extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return const Center(
+              return Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
@@ -42,7 +42,7 @@ class MinhasMedidasScreen extends StatelessWidget {
 
             final avaliacoes = snapshot.data ?? [];
             if (avaliacoes.isEmpty) {
-              return const Center(
+              return Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
@@ -102,7 +102,7 @@ class _AvaliacaoCardState extends State<_AvaliacaoCard> {
             children: [
               Text(
                 _formatarData(avaliacao.data),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
@@ -143,7 +143,7 @@ class _AvaliacaoCardState extends State<_AvaliacaoCard> {
                 children: [
                   Text(
                     _expandido ? 'Ocultar circunferências' : 'Ver ${circunferencias.length} circunferências',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -176,7 +176,7 @@ class _AvaliacaoCardState extends State<_AvaliacaoCard> {
             const SizedBox(height: 10),
             Text(
               avaliacao.observacoes!,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
         ],
@@ -200,12 +200,12 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
         children: [
           TextSpan(text: '$label: '),
           TextSpan(
             text: valor,
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
           ),
         ],
       ),

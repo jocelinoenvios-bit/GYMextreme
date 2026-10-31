@@ -169,7 +169,7 @@ class _AbaContasReceber extends StatelessWidget {
             child: Text(
               'Erro ao carregar.\n\n${snapshot.error}',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.error),
+              style: TextStyle(color: AppColors.error),
             ),
           );
         }
@@ -179,7 +179,7 @@ class _AbaContasReceber extends StatelessWidget {
         final totais = calcularTotaisContasReceber(filtradas);
 
         if (filtradas.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'Nenhuma cobrança encontrada no período.',
               style: TextStyle(color: AppColors.textSecondary),
@@ -234,7 +234,7 @@ class _AbaContasPagar extends StatelessWidget {
             child: Text(
               'Erro ao carregar.\n\n${snapshot.error}',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.error),
+              style: TextStyle(color: AppColors.error),
             ),
           );
         }
@@ -244,7 +244,7 @@ class _AbaContasPagar extends StatelessWidget {
         final totais = calcularTotaisContasPagar(filtradas);
 
         if (filtradas.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'Nenhuma despesa encontrada no período.',
               style: TextStyle(color: AppColors.textSecondary),
@@ -297,7 +297,7 @@ class _CartaoTotais extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$quantidade registro(s) no período', style: const TextStyle(color: AppColors.textSecondary)),
+          Text('$quantidade registro(s) no período', style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           for (final (label, valor, cor) in linhas)
             Padding(
@@ -350,7 +350,7 @@ class _LinhaConta extends StatelessWidget {
                 Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   '$subtitulo · $statusLabel',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -394,14 +394,14 @@ class _AbaCaixa extends StatelessWidget {
             child: Text(
               'Erro ao carregar.\n\n${snapshot.error}',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.error),
+              style: TextStyle(color: AppColors.error),
             ),
           );
         }
 
         final dados = snapshot.data!;
         if (dados.caixaAberto == null) {
-          return const Center(
+          return Center(
             child: Text(
               'Nenhum caixa aberto no momento.',
               style: TextStyle(color: AppColors.textSecondary),
@@ -432,7 +432,7 @@ class _AbaCaixa extends StatelessWidget {
                 children: [
                   Text(
                     'Aberto por ${dados.caixaAberto!.abertoPorNome}',
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -450,7 +450,7 @@ class _AbaCaixa extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             if (filtradas.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Nenhuma movimentação no período.',

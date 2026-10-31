@@ -58,7 +58,7 @@ class FuncionariosListScreen extends StatelessWidget {
                       child: SelectableText(
                         'Erro ao carregar os funcionários.\n\n${snapshot.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.error),
+                        style: TextStyle(color: AppColors.error),
                       ),
                     ),
                   ),
@@ -67,7 +67,7 @@ class FuncionariosListScreen extends StatelessWidget {
 
               final funcionarios = snapshot.data ?? [];
               if (funcionarios.isEmpty) {
-                return const Center(
+                return Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(
@@ -84,7 +84,7 @@ class FuncionariosListScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 88),
                 itemCount: funcionarios.length,
                 separatorBuilder: (context, index) =>
-                    const Divider(height: 1, color: AppColors.surfaceHigh),
+                    Divider(height: 1, color: AppColors.surfaceHigh),
                 itemBuilder: (context, index) {
                   final funcionario = funcionarios[index];
                   String? cargoNome;
@@ -96,16 +96,16 @@ class FuncionariosListScreen extends StatelessWidget {
                   }
 
                   return ListTile(
-                    leading: const CircleAvatar(
+                    leading: CircleAvatar(
                       backgroundColor: AppColors.surfaceHigh,
                       child: Icon(Icons.badge_outlined, color: AppColors.gold),
                     ),
                     title: Text(funcionario.nome),
                     subtitle: Text(
                       cargoNome ?? funcionario.role.welcomeLabel,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.chevron_right,
                       color: AppColors.textSecondary,
                     ),

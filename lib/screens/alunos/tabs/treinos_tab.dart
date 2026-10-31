@@ -74,7 +74,7 @@ class TreinosTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.add, color: AppColors.gold),
+              leading: Icon(Icons.add, color: AppColors.gold),
               title: const Text('Criar treino novo'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -82,7 +82,7 @@ class TreinosTab extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.copy_all_outlined, color: AppColors.gold),
+              leading: Icon(Icons.copy_all_outlined, color: AppColors.gold),
               title: const Text('Copiar treino de outro aluno'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -113,7 +113,7 @@ class TreinosTab extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Text(
                 'Erro ao carregar os treinos.',
                 style: TextStyle(color: AppColors.error),
@@ -131,7 +131,7 @@ class TreinosTab extends StatelessWidget {
                       ? 'Nenhum treino cadastrado ainda. Toque em "+" para criar o primeiro.'
                       : 'Nenhum treino cadastrado ainda.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
             );
@@ -218,7 +218,7 @@ class _TreinoCard extends StatelessWidget {
           backgroundColor: AppColors.gold,
           child: Text(
             treino.letra,
-            style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(treino.nome),
@@ -228,19 +228,19 @@ class _TreinoCard extends StatelessWidget {
               treino.grupoMuscular!,
             '${treino.exercicios.length} exercício(s)',
           ].join(' • '),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
               tooltip: 'Executar treino',
-              icon: const Icon(Icons.play_circle_outline, color: AppColors.gold),
+              icon: Icon(Icons.play_circle_outline, color: AppColors.gold),
               onPressed: onExecutar,
             ),
             if (podeEditar)
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
                 onSelected: (acao) {
                   if (acao == 'presenca') onRegistrarPresenca?.call();
                   if (acao == 'duplicar') onDuplicar();
@@ -257,7 +257,7 @@ class _TreinoCard extends StatelessWidget {
                 ],
               )
             else
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(Icons.chevron_right, color: AppColors.textSecondary),
           ],
         ),
       ),
@@ -392,7 +392,7 @@ class _RegistrarPresencaDialogState extends State<_RegistrarPresencaDialog> {
         ElevatedButton(
           onPressed: _isSaving ? null : _confirmar,
           child: _isSaving
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),

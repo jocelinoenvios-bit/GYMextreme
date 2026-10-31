@@ -97,7 +97,7 @@ class _EnviarMensagemScreenState extends State<EnviarMensagemScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
-                    return const Padding(
+                    return Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: LinearProgressIndicator(color: AppColors.gold),
                     );
@@ -151,7 +151,7 @@ class _EnviarMensagemScreenState extends State<EnviarMensagemScreen> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _handleEnviar,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(

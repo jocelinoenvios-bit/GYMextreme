@@ -99,7 +99,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
     }
     if (!abriu && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Não foi possível abrir o WhatsApp.'),
           backgroundColor: AppColors.error,
         ),
@@ -119,7 +119,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao salvar. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -173,7 +173,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
   }
 
   Widget _buildInativo(BuildContext context) {
-    const cor = AppColors.textSecondary;
+    final cor = AppColors.textSecondary;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -191,13 +191,13 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
             widget.dataInativacao != null
                 ? 'Inativo desde ${_formatarData(widget.dataInativacao!)}'
                 : 'Inativo.',
-            style: const TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: AppColors.textPrimary),
           ),
           if (widget.dataReativacao != null) ...[
             const SizedBox(height: 4),
             Text(
               'Última reativação: ${_formatarData(widget.dataReativacao!)}',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
             ),
           ],
           if (_podeReceber) ...[
@@ -245,7 +245,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
             widget.proximoVencimento != null
                 ? 'Próximo vencimento: ${_formatarData(widget.proximoVencimento!)}'
                 : 'Nenhuma cobrança configurada ainda.',
-            style: const TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: AppColors.textPrimary),
           ),
           if (_podeReceber) ...[
             const SizedBox(height: 14),

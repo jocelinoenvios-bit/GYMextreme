@@ -145,7 +145,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
   Future<void> _handleSave() async {
     if (_nomeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe um nome para o treino.'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Informe um nome para o treino.'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -288,7 +288,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
               ],
             ),
             if (_exercicios.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Nenhum exercício adicionado ainda.',
@@ -326,7 +326,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSave,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
@@ -374,13 +374,13 @@ class _ExercicioTreinoTile extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onEditar,
-        leading: const Icon(Icons.drag_handle, color: AppColors.textSecondary),
+        leading: Icon(Icons.drag_handle, color: AppColors.textSecondary),
         title: Text(exercicio?.nomeExibicao ?? 'Exercício não encontrado'),
         subtitle: resumo.isEmpty
             ? null
-            : Text(resumo, style: const TextStyle(color: AppColors.textSecondary)),
+            : Text(resumo, style: TextStyle(color: AppColors.textSecondary)),
         trailing: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textSecondary),
+          icon: Icon(Icons.close, color: AppColors.textSecondary),
           onPressed: onRemover,
         ),
       ),

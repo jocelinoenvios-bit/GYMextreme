@@ -146,7 +146,7 @@ class _AnamneseTabState extends State<AnamneseTab> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao salvar. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -180,7 +180,7 @@ class _AnamneseTabState extends State<AnamneseTab> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   'Respondida em ${_formatarData(_respondidoEm!)}',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
                 ),
               ),
 
@@ -356,7 +356,7 @@ class _AnamneseTabState extends State<AnamneseTab> {
             ),
 
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Caro aluno, sua ficha será elaborada com base nas suas '
               'respostas. A omissão de algum item é de sua inteira '
               'responsabilidade.',
@@ -367,7 +367,7 @@ class _AnamneseTabState extends State<AnamneseTab> {
               ElevatedButton(
                 onPressed: _isSaving ? null : _handleSave,
                 child: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
@@ -375,7 +375,7 @@ class _AnamneseTabState extends State<AnamneseTab> {
                     : const Text('SALVAR ANAMNESE'),
               )
             else
-              const Text(
+              Text(
                 'Você não tem permissão para editar a anamnese deste aluno.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
@@ -411,8 +411,8 @@ class _Pergunta extends StatelessWidget {
             text: TextSpan(
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               children: [
-                TextSpan(text: '$numero. ', style: const TextStyle(color: AppColors.gold)),
-                TextSpan(text: texto, style: const TextStyle(color: AppColors.textPrimary)),
+                TextSpan(text: '$numero. ', style: TextStyle(color: AppColors.gold)),
+                TextSpan(text: texto, style: TextStyle(color: AppColors.textPrimary)),
               ],
             ),
           ),

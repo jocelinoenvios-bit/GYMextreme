@@ -91,7 +91,7 @@ class _AlunosPorFiltroScreenState extends State<AlunosPorFiltroScreen> {
                             child: SelectableText(
                               'Erro ao carregar os alunos.\n\n${snapshot.error}',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.error),
+                              style: TextStyle(color: AppColors.error),
                             ),
                           ),
                         ),
@@ -118,7 +118,7 @@ class _AlunosPorFiltroScreenState extends State<AlunosPorFiltroScreen> {
                                 ? 'Nenhum aluno encontrado para "$_busca".'
                                 : 'Nenhum aluno em "${widget.filtro.label}".',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(color: AppColors.textSecondary),
                           ),
                         ),
                       );
@@ -206,7 +206,7 @@ class _CartaoAluno extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 23,
               backgroundColor: AppColors.surfaceHigh,
               child: Icon(Icons.fitness_center_outlined, color: AppColors.gold),
@@ -218,7 +218,7 @@ class _CartaoAluno extends StatelessWidget {
                 children: [
                   Text(
                     aluno.nome,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -232,7 +232,7 @@ class _CartaoAluno extends StatelessWidget {
                   ],
                   Text(
                     aluno.email,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -309,7 +309,7 @@ class _BotaoMensagemRapida extends StatelessWidget {
       child: InkWell(
         onTap: onPressed,
         customBorder: const CircleBorder(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(8),
           child: Icon(Icons.send_outlined, color: AppColors.black, size: 18),
         ),

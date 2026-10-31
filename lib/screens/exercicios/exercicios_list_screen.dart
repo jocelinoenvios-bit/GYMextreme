@@ -93,7 +93,7 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return const Center(
+                  return Center(
                     child: Text(
                       'Erro ao carregar a Biblioteca Oficial de Exercícios.',
                       style: TextStyle(color: AppColors.error),
@@ -121,7 +121,7 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
 
   Widget _buildResultadosBusca(List<ExerciseModel> resultados) {
     if (resultados.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
@@ -153,7 +153,7 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
       ..sort();
 
     if (categorias.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
@@ -242,14 +242,14 @@ class _CardCategoria extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.fitness_center_outlined, color: AppColors.gold, size: 24),
+            Icon(Icons.fitness_center_outlined, color: AppColors.gold, size: 24),
             const SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
                 fontSize: 12,

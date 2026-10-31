@@ -45,7 +45,7 @@ class ExecucaoBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
       ),
@@ -62,9 +62,9 @@ class ExecucaoBottomBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.timer_outlined, color: AppColors.gold, size: 18),
+            Icon(Icons.timer_outlined, color: AppColors.gold, size: 18),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'DESCANSO',
               style: TextStyle(
                 color: AppColors.textSecondary,
@@ -76,7 +76,7 @@ class ExecucaoBottomBar extends StatelessWidget {
             const Spacer(),
             Text(
               _formatarTempo(segundosRestantes),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.goldBright,
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
@@ -92,7 +92,7 @@ class ExecucaoBottomBar extends StatelessWidget {
             value: progresso.toDouble(),
             minHeight: 6,
             backgroundColor: AppColors.surfaceHigh,
-            valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+            valueColor: AlwaysStoppedAnimation(AppColors.gold),
           ),
         ),
         const SizedBox(height: 12),
@@ -100,7 +100,7 @@ class ExecucaoBottomBar extends StatelessWidget {
           onPressed: onPularDescanso,
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(46),
-            side: const BorderSide(color: AppColors.surfaceHigh),
+            side: BorderSide(color: AppColors.surfaceHigh),
             foregroundColor: AppColors.textPrimary,
           ),
           child: const Text('PULAR DESCANSO'),
@@ -120,7 +120,7 @@ class ExecucaoBottomBar extends StatelessWidget {
             Text(
               'Prescrito: ${prescricao.series}×${prescricao.repeticoes}'
               '${prescricao.cargaKg != null ? ' · ${_formatarCarga(prescricao.cargaKg!)}kg' : ''}',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
             ),
           ],
         ),
@@ -132,7 +132,7 @@ class ExecucaoBottomBar extends StatelessWidget {
                 controller: cargaController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontFeatures: [FontFeature.tabularFigures()],

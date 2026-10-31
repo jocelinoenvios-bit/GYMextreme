@@ -33,7 +33,7 @@ class MensagensScreen extends StatelessWidget {
                   child: Text(
                     'Erro ao carregar as mensagens.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               );
@@ -41,7 +41,7 @@ class MensagensScreen extends StatelessWidget {
 
             final mensagens = snapshot.data ?? const <Mensagem>[];
             if (mensagens.isEmpty) {
-              return const Center(
+              return Center(
                 child: Padding(
                   padding: EdgeInsets.all(32),
                   child: Column(
@@ -107,12 +107,12 @@ class _CartaoMensagem extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.fitness_center_outlined, color: AppColors.gold, size: 16),
+              Icon(Icons.fitness_center_outlined, color: AppColors.gold, size: 16),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   mensagem.remetenteNome,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 12.5,
@@ -122,14 +122,14 @@ class _CartaoMensagem extends StatelessWidget {
               if (mensagem.criadoEm != null)
                 Text(
                   _formatarDataHora(mensagem.criadoEm!),
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             mensagem.texto,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
           ),
         ],
       ),

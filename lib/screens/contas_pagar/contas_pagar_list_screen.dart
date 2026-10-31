@@ -147,7 +147,7 @@ class _ContasPagarListScreenState extends State<ContasPagarListScreen> {
                   child: SelectableText(
                     'Erro ao carregar as contas a pagar.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -218,7 +218,7 @@ class _ContasPagarListScreenState extends State<ContasPagarListScreen> {
                           child: Text(
                             'Nenhuma despesa encontrada.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(color: AppColors.textSecondary),
                           ),
                         ),
                       )
@@ -437,13 +437,13 @@ class _ContaPagarCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             '${conta.descricao} · ${conta.categoria}',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
             'Vencimento: ${formatarData(conta.vencimento)} · ${formatarReais(conta.valorFinal)}'
             '${conta.status == StatusContaPagar.pago ? ' · pago em ${formatarData(conta.dataPagamento!)}' : ''}',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           if (onEditar != null || onExcluir != null || onPagar != null) ...[
             const SizedBox(height: 10),

@@ -60,7 +60,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
               child: Text(
                 'Erro ao carregar.\n\n${snapshot.error}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
+                style: TextStyle(color: AppColors.error),
               ),
             );
           }
@@ -84,7 +84,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
               ),
               const SizedBox(height: 16),
               if (_avaliacoesFuture == null)
-                const Text(
+                Text(
                   'Selecione um aluno para ver a evolução física.',
                   style: TextStyle(color: AppColors.textSecondary),
                 )
@@ -101,7 +101,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
                     if (avSnap.hasError) {
                       return Text(
                         'Erro ao carregar avaliações.\n\n${avSnap.error}',
-                        style: const TextStyle(color: AppColors.error),
+                        style: TextStyle(color: AppColors.error),
                       );
                     }
 
@@ -110,7 +110,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
                     // primeiro), então inverte só pra exibição.
                     final avaliacoes = (avSnap.data ?? []).reversed.toList();
                     if (avaliacoes.isEmpty) {
-                      return const Text(
+                      return Text(
                         'Nenhuma avaliação física registrada para este aluno.',
                         style: TextStyle(color: AppColors.textSecondary),
                       );
@@ -199,7 +199,7 @@ class _CartaoAvaliacao extends StatelessWidget {
                   .map(
                     (f) => Text(
                       '${f.label}: ${avaliacao.circunferenciasCm[f.key]!.toStringAsFixed(1)}cm',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                   )
                   .toList(),
@@ -209,7 +209,7 @@ class _CartaoAvaliacao extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               avaliacao.observacoes!,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
           ],
         ],

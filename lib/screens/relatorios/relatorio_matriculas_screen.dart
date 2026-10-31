@@ -68,7 +68,7 @@ class _RelatorioMatriculasScreenState extends State<RelatorioMatriculasScreen> {
               child: Text(
                 'Erro ao carregar.\n\n${snapshot.error}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
+                style: TextStyle(color: AppColors.error),
               ),
             );
           }
@@ -179,7 +179,7 @@ class _CartaoNumero extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(valor, style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 22)),
-          Text(titulo, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(titulo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         ],
       ),
     );

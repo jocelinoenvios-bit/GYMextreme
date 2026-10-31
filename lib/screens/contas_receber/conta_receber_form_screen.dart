@@ -282,7 +282,7 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Vencimento'),
                   subtitle: Text(_formatarData(_vencimento)),
-                  trailing: const Icon(Icons.calendar_today_outlined, color: AppColors.gold),
+                  trailing: Icon(Icons.calendar_today_outlined, color: AppColors.gold),
                   onTap: _podeEditar ? _escolherVencimento : null,
                 ),
                 const SizedBox(height: 14),
@@ -304,7 +304,7 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                   ElevatedButton(
                     onPressed: _isSaving ? null : _handleSave,
                     child: _isSaving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
@@ -315,7 +315,7 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                         : Text(widget._ehEdicao ? 'SALVAR ALTERAÇÕES' : 'CRIAR COBRANÇA'),
                   )
                 else
-                  const Text(
+                  Text(
                     'Cobranças pagas ou canceladas não podem mais ser editadas.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.textSecondary),

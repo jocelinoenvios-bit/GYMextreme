@@ -177,7 +177,7 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
                 Text(
                   'Vencimento: ${_formatarData(widget.conta.vencimento)} · '
                   'Valor esperado: ${formatarReais(widget.conta.valorLiquido)}',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -186,11 +186,11 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
                             'entrada no caixa.'
                       : 'Nenhum caixa aberto — este recebimento não gera nenhuma '
                             'movimentação de caixa.',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
                 if (widget.conta.matriculaId != null) ...[
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Cobrança vinculada a uma matrícula — confirmar aqui também '
                     'libera o acesso do aluno (avança o próximo vencimento).',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
@@ -237,7 +237,7 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Data do recebimento'),
                   subtitle: Text(_formatarData(_dataPagamento)),
-                  trailing: const Icon(Icons.calendar_today_outlined, color: AppColors.gold),
+                  trailing: Icon(Icons.calendar_today_outlined, color: AppColors.gold),
                   onTap: _escolherData,
                 ),
                 const SizedBox(height: 14),
@@ -259,7 +259,7 @@ class _RegistrarRecebimentoScreenState extends State<RegistrarRecebimentoScreen>
                 ElevatedButton(
                   onPressed: _isSaving ? null : _handleConfirmar,
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(

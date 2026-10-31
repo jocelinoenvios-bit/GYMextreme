@@ -18,7 +18,9 @@ import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/status_acesso.dart';
+import '../theme/tema_controller.dart';
 import '../widgets/gymextreme_logo.dart';
+import '../widgets/texto_contornado.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'alunos/enviar_mensagem_screen.dart';
 import 'area_aluno/meus_dados_aluno_screen.dart';
@@ -92,7 +94,7 @@ class WelcomeScreen extends StatelessWidget {
             Center(
               child: Text(
                 'Erro ao carregar seu perfil.',
-                style: const TextStyle(color: AppColors.error),
+                style: TextStyle(color: AppColors.error),
               ),
             ),
           );
@@ -102,7 +104,7 @@ class WelcomeScreen extends StatelessWidget {
         if (user == null) {
           return _scaffoldGenerico(
             context,
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
@@ -211,13 +213,15 @@ class WelcomeScreen extends StatelessWidget {
                 children: [
                   Icon(_iconFor(user.role), color: AppColors.gold, size: 48),
                   const SizedBox(height: 14),
-                  Text(
+                  TextoContornado(
                     'Bem-vindo, ${user.nome}',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    estilo:
+                        Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.bold,
+                        ) ??
+                        const TextStyle(),
                   ),
                 ],
               ),
@@ -240,9 +244,10 @@ class WelcomeScreen extends StatelessWidget {
                 label: const Text('MEUS TREINOS'),
               ),
               const SizedBox(height: 28),
-              const Text(
+              TextoContornado(
                 'MEU PERFIL',
-                style: TextStyle(
+                espessura: 1.4,
+                estilo: TextStyle(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -334,6 +339,11 @@ class WelcomeScreen extends StatelessWidget {
   /// Painel de configurações (nome completo, e-mail, sair) — aberto pelo
   /// botão de engrenagem da tela inicial do aluno.
   void _abrirConfiguracoes(BuildContext context, AppUser user) {
+    // Pego aqui, e não lá dentro: o `builder` roda numa rota nova, e
+    // assim o seletor de tema some sozinho num teste que monte a tela
+    // sem o app em volta (onde não existe TemaEscopo).
+    final temaController = TemaEscopo.of(context);
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -348,9 +358,10 @@ class WelcomeScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                TextoContornado(
                   'Configurações',
-                  style: TextStyle(
+                  espessura: 1.6,
+                  estilo: TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -359,14 +370,38 @@ class WelcomeScreen extends StatelessWidget {
                 const SizedBox(height: 18),
                 Text(
                   user.nome,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(user.email, style: const TextStyle(color: AppColors.textSecondary)),
+                Text(user.email, style: TextStyle(color: AppColors.textSecondary)),
+                if (temaController != null) ...[
+                  const SizedBox(height: 24),
+                  Divider(color: AppColors.surfaceHigh, height: 1),
+                  const SizedBox(height: 20),
+                  Text(
+                    'APARÊNCIA',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SeletorTema(
+                    controller: temaController,
+                    // Fecha o painel junto: o próprio painel foi montado
+                    // com as cores do tema antigo (o fundo dele vem de um
+                    // parâmetro do showModalBottomSheet, não reconstrói),
+                    // e fechando o usuário já vê a tela inteira no tema
+                    // novo.
+                    aoTrocar: () => Navigator.of(sheetContext).pop(),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -375,10 +410,10 @@ class WelcomeScreen extends StatelessWidget {
                       Navigator.of(sheetContext).pop();
                       _sair();
                     },
-                    icon: const Icon(Icons.logout, color: AppColors.error),
-                    label: const Text('SAIR', style: TextStyle(color: AppColors.error)),
+                    icon: Icon(Icons.logout, color: AppColors.error),
+                    label: Text('SAIR', style: TextStyle(color: AppColors.error)),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.error),
+                      side: BorderSide(color: AppColors.error),
                     ),
                   ),
                 ),
@@ -404,10 +439,12 @@ class WelcomeScreen extends StatelessWidget {
           children: [
             Icon(_iconFor(user.role), color: AppColors.gold, size: 56),
             const SizedBox(height: 16),
-            Text(
+            TextoContornado(
               'Bem-vindo, ${user.role.welcomeLabel}',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium,
+              estilo:
+                  Theme.of(context).textTheme.headlineMedium ??
+                  const TextStyle(),
             ),
             const SizedBox(height: 28),
             GridView.count(
@@ -656,7 +693,7 @@ class _TileMenuPerfil extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 11.5, height: 1.2),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 11.5, height: 1.2),
           ),
         ],
       ),
@@ -679,7 +716,7 @@ class _AcessoSuspenso extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, color: AppColors.error, size: 56),
+            Icon(Icons.lock_outline, color: AppColors.error, size: 56),
             const SizedBox(height: 16),
             Text(
               'Acesso suspenso',
@@ -689,7 +726,7 @@ class _AcessoSuspenso extends StatelessWidget {
               ).textTheme.headlineMedium?.copyWith(color: AppColors.error),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Sua mensalidade permanece em atraso. Seu acesso ao '
               'aplicativo e à academia foi bloqueado até a regularização '
               'do pagamento.',
@@ -697,12 +734,174 @@ class _AcessoSuspenso extends StatelessWidget {
               style: TextStyle(color: AppColors.textPrimary, height: 1.5),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Procure a recepção para regularizar.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// As duas opções de tema, cada uma com uma miniatura da tela — mais
+/// direto que um interruptor "modo escuro", que não diz como o claro vai
+/// ficar.
+class _SeletorTema extends StatelessWidget {
+  const _SeletorTema({required this.controller, required this.aoTrocar});
+
+  final TemaController controller;
+  final VoidCallback aoTrocar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _OpcaoTema(
+            rotulo: 'Escuro',
+            icone: Icons.dark_mode_outlined,
+            tema: TemaApp.escuro,
+            selecionado: controller.tema == TemaApp.escuro,
+            fundoMiniatura: PaletaApp.escura.black,
+            traco: PaletaApp.escura.surfaceHigh,
+            controller: controller,
+            aoTrocar: aoTrocar,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _OpcaoTema(
+            rotulo: 'Claro',
+            icone: Icons.light_mode_outlined,
+            tema: TemaApp.claro,
+            selecionado: controller.tema == TemaApp.claro,
+            fundoMiniatura: PaletaApp.clara.black,
+            traco: PaletaApp.clara.surfaceHigh,
+            controller: controller,
+            aoTrocar: aoTrocar,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OpcaoTema extends StatelessWidget {
+  const _OpcaoTema({
+    required this.rotulo,
+    required this.icone,
+    required this.tema,
+    required this.selecionado,
+    required this.fundoMiniatura,
+    required this.traco,
+    required this.controller,
+    required this.aoTrocar,
+  });
+
+  final String rotulo;
+  final IconData icone;
+  final TemaApp tema;
+  final bool selecionado;
+
+  /// Cores fixas da paleta que a opção representa, não da paleta ativa —
+  /// é uma amostra do tema, tem que se parecer com ele mesmo quando o
+  /// outro está ligado.
+  final Color fundoMiniatura;
+  final Color traco;
+
+  final TemaController controller;
+  final VoidCallback aoTrocar;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: selecionado
+          ? null
+          : () {
+              aoTrocar();
+              controller.trocar(tema);
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceHigh,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selecionado ? AppColors.gold : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: fundoMiniatura,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _LinhaMiniatura(cor: AppColors.gold, largura: 0.6),
+                  const SizedBox(height: 5),
+                  _LinhaMiniatura(cor: traco, largura: 0.95),
+                  const SizedBox(height: 4),
+                  _LinhaMiniatura(cor: traco, largura: 0.75),
+                ],
+              ),
+            ),
+            const SizedBox(height: 9),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icone,
+                  size: 15,
+                  color: selecionado ? AppColors.gold : AppColors.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  rotulo,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selecionado
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LinhaMiniatura extends StatelessWidget {
+  const _LinhaMiniatura({required this.cor, required this.largura});
+
+  final Color cor;
+
+  /// Fração da largura disponível, pra miniatura parecer um texto.
+  final double largura;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: largura,
+      child: Container(
+        height: 4,
+        decoration: BoxDecoration(
+          color: cor,
+          borderRadius: BorderRadius.circular(99),
         ),
       ),
     );

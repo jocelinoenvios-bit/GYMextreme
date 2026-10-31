@@ -38,7 +38,7 @@ class SimpleLineChart extends StatelessWidget {
             pontos.isEmpty
                 ? 'Sem dados suficientes para o gráfico.'
                 : '${pontos.single.valor.toStringAsFixed(1)}$sufixo',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
         ),
       );
@@ -68,7 +68,7 @@ class SimpleLineChart extends StatelessWidget {
             right: 0,
             child: Text(
               '${maxValor.toStringAsFixed(1)}$sufixo',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
           ),
           Positioned(
@@ -76,7 +76,7 @@ class SimpleLineChart extends StatelessWidget {
             right: 0,
             child: Text(
               '${minValor.toStringAsFixed(1)}$sufixo',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
           ),
         ],

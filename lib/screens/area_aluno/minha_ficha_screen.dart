@@ -40,7 +40,7 @@ class MinhaFichaScreen extends StatelessWidget {
 
             final todos = (snapshot.data ?? []).where((t) => t.ativo).toList();
             if (todos.isEmpty) {
-              return const Center(
+              return Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
@@ -117,7 +117,7 @@ class _DiaSection extends StatelessWidget {
         children: [
           Text(
             titulo,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.gold,
               fontWeight: FontWeight.bold,
               fontSize: 13,
@@ -126,7 +126,7 @@ class _DiaSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (treinos.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 4),
               child: Text(
                 'Nenhum treino prescrito.',
@@ -171,7 +171,7 @@ class _TreinoCard extends StatelessWidget {
           backgroundColor: AppColors.gold,
           child: Text(
             treino.letra,
-            style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(treino.nome),
@@ -181,9 +181,9 @@ class _TreinoCard extends StatelessWidget {
               treino.grupoMuscular!,
             '${treino.exercicios.length} exercício(s)',
           ].join(' • '),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
       ),
     );
   }

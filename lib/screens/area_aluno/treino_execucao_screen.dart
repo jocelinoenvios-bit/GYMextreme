@@ -269,7 +269,7 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
                   child: Text(
                     'série ${(_seriesConcluidas + 1).clamp(1, _prescricaoAtual.series).toInt()}'
                     ' de ${_prescricaoAtual.series}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.goldBright,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -343,12 +343,12 @@ class _ErroCarregamentoView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 56),
+            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 56),
             const SizedBox(height: 16),
             Text(
               mensagem,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -375,9 +375,9 @@ class _TreinoConcluidoView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.emoji_events_rounded, color: AppColors.goldBright, size: 64),
+            Icon(Icons.emoji_events_rounded, color: AppColors.goldBright, size: 64),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Treino concluído!',
               style: TextStyle(
                 color: AppColors.textPrimary,
@@ -388,7 +388,7 @@ class _TreinoConcluidoView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '$totalExercicios exercícios finalizados',
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 28),
             SizedBox(

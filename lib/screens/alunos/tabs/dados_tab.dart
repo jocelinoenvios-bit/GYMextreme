@@ -155,7 +155,7 @@ class _DadosTabState extends State<DadosTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.gold),
+              leading: Icon(Icons.photo_camera_outlined, color: AppColors.gold),
               title: const Text('Tirar foto'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -163,7 +163,7 @@ class _DadosTabState extends State<DadosTab> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.gold),
+              leading: Icon(Icons.photo_library_outlined, color: AppColors.gold),
               title: const Text('Escolher da galeria'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -233,7 +233,7 @@ class _DadosTabState extends State<DadosTab> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao salvar. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -271,7 +271,7 @@ class _DadosTabState extends State<DadosTab> {
                         : (_fotoUrl != null ? NetworkImage(_fotoUrl!) : null)
                               as ImageProvider?,
                     child: (_fotoNovaBytes == null && _fotoUrl == null)
-                        ? const Icon(Icons.person_outline, size: 44, color: AppColors.gold)
+                        ? Icon(Icons.person_outline, size: 44, color: AppColors.gold)
                         : null,
                   ),
                   Positioned(
@@ -282,12 +282,12 @@ class _DadosTabState extends State<DadosTab> {
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                         ),
                         child: _isUploadingFoto
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
@@ -295,7 +295,7 @@ class _DadosTabState extends State<DadosTab> {
                                   color: AppColors.black,
                                 ),
                               )
-                            : const Icon(Icons.camera_alt, size: 18, color: AppColors.black),
+                            : Icon(Icons.camera_alt, size: 18, color: AppColors.black),
                       ),
                     ),
                   ),
@@ -519,7 +519,7 @@ class _DadosTabState extends State<DadosTab> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSave,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
@@ -545,7 +545,7 @@ class _SecaoTitulo extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         texto,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.gold,
           fontWeight: FontWeight.bold,
           fontSize: 14,
@@ -574,9 +574,9 @@ class _ReadOnlyField extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+          Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
           const SizedBox(height: 2),
-          Text(value, style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+          Text(value, style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import '../../constants/musculos.dart';
 import '../../models/exercise_model.dart';
 import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/texto_contornado.dart';
 import '../area_aluno/widgets/exercicio_midia.dart';
 
 /// Ficha de referência de um exercício da Biblioteca Oficial — usada ao
@@ -87,9 +88,10 @@ class _ExercicioDetailScreenState extends State<ExercicioDetailScreen> {
           ),
           if (exercicio.passoAPassoExibicao.isNotEmpty) ...[
             const SizedBox(height: 24),
-            const Text(
+            TextoContornado(
               'Instruções',
-              style: TextStyle(
+              espessura: 1.6,
+              estilo: TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
@@ -104,12 +106,12 @@ class _ExercicioDetailScreenState extends State<ExercicioDetailScreen> {
                   children: [
                     Text(
                       '${index + 1}. ',
-                      style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
                     ),
                     Expanded(
                       child: Text(
                         exercicio.passoAPassoExibicao[index],
-                        style: const TextStyle(color: AppColors.textPrimary, height: 1.4),
+                        style: TextStyle(color: AppColors.textPrimary, height: 1.4),
                       ),
                     ),
                   ],
@@ -139,7 +141,7 @@ class _InfoChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
     );
   }

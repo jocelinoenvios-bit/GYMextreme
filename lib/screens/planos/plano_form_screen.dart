@@ -70,7 +70,7 @@ class _PlanoFormScreenState extends State<PlanoFormScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao salvar o plano. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -138,7 +138,7 @@ class _PlanoFormScreenState extends State<PlanoFormScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Plano ativo'),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Planos inativos somem da lista de novas matrículas, sem '
                     'afetar matrículas já contratadas.',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
@@ -151,7 +151,7 @@ class _PlanoFormScreenState extends State<PlanoFormScreen> {
               ElevatedButton(
                 onPressed: _isSaving ? null : _handleSave,
                 child: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),

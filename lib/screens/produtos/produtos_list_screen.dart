@@ -83,7 +83,7 @@ class _ProdutosListScreenState extends State<ProdutosListScreen> {
                   child: SelectableText(
                     'Erro ao carregar os produtos.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -186,7 +186,7 @@ class _ProdutosListScreenState extends State<ProdutosListScreen> {
                           child: Text(
                             'Nenhum produto encontrado.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(color: AppColors.textSecondary),
                           ),
                         ),
                       )
@@ -239,7 +239,7 @@ class _ProdutoCard extends StatelessWidget {
                   color: AppColors.textSecondary.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   'Inativo',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                 ),
@@ -252,7 +252,7 @@ class _ProdutoCard extends StatelessWidget {
                   color: AppColors.error.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   'Estoque baixo',
                   style: TextStyle(color: AppColors.error, fontSize: 11),
                 ),
@@ -265,9 +265,9 @@ class _ProdutoCard extends StatelessWidget {
           '${formatarReais(produto.precoVenda)} · '
           'Estoque: ${produto.estoqueAtual == produto.estoqueAtual.roundToDouble() ? produto.estoqueAtual.toStringAsFixed(0) : produto.estoqueAtual} '
           '${produto.unidadeMedida}',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
       ),
     );
   }

@@ -76,7 +76,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Informe o e-mail cadastrado. Voce vai receber um link para '
             'criar uma nova senha.',
             style: TextStyle(color: AppColors.textSecondary),
@@ -105,7 +105,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ElevatedButton(
             onPressed: _isLoading ? null : _handleSendResetEmail,
             child: _isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
@@ -124,13 +124,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.mark_email_read_outlined, color: AppColors.gold, size: 56),
+        Icon(Icons.mark_email_read_outlined, color: AppColors.gold, size: 56),
         const SizedBox(height: 16),
         Text(
           'Enviamos um link de redefinicao de senha para '
           '${_emailController.text.trim()}. Verifique sua caixa de entrada.',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
         const SizedBox(height: 24),
         ElevatedButton(

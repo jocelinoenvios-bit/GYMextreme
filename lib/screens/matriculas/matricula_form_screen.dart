@@ -181,7 +181,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'A matrícula ativa atual (se houver) é encerrada '
                     'automaticamente ao confirmar.',
                     style: TextStyle(
@@ -197,7 +197,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                       if (snapshot.connectionState ==
                               ConnectionState.waiting &&
                           !snapshot.hasData) {
-                        return const Padding(
+                        return Padding(
                           padding: EdgeInsets.symmetric(vertical: 8),
                           child: LinearProgressIndicator(
                             color: AppColors.gold,
@@ -292,7 +292,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Início'),
                   subtitle: Text(_formatarData(_dataInicio)),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.calendar_today_outlined,
                     color: AppColors.gold,
                   ),
@@ -302,7 +302,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Vencimento'),
                   subtitle: Text(_formatarData(_dataVencimento)),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.calendar_today_outlined,
                     color: AppColors.gold,
                   ),
@@ -344,7 +344,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : _handleSave,
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(

@@ -104,7 +104,7 @@ class _FecharCaixaScreenState extends State<FecharCaixaScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Calculado a partir do valor inicial + todas as '
                   'movimentações registradas até agora.',
                   style: TextStyle(
@@ -167,7 +167,7 @@ class _FecharCaixaScreenState extends State<FecharCaixaScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : _handleFechar,
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(

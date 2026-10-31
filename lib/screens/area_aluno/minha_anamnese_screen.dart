@@ -29,7 +29,7 @@ class MinhaAnamneseScreen extends StatelessWidget {
             final anamnese = snapshot.data;
             final linhas = anamnese == null ? const <_LinhaAnamnese>[] : _linhasDe(anamnese);
             if (anamnese == null || linhas.isEmpty) {
-              return const Center(
+              return Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
@@ -49,7 +49,7 @@ class MinhaAnamneseScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
                       'Respondida em ${_formatarData(anamnese.respondidoEm!)}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
                     ),
                   ),
                 for (final linha in linhas) _LinhaTile(linha: linha),
@@ -177,7 +177,7 @@ class _LinhaTile extends StatelessWidget {
         children: [
           Text(
             linha.pergunta,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.gold,
               fontWeight: FontWeight.w600,
               fontSize: 13,
@@ -186,7 +186,7 @@ class _LinhaTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             linha.resposta,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14.5, height: 1.3),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 14.5, height: 1.3),
           ),
         ],
       ),

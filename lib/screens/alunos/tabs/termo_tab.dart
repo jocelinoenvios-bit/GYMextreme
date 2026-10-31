@@ -6,6 +6,7 @@ import '../../../models/app_user.dart';
 import '../../../models/termo_aceite.dart';
 import '../../../services/aluno_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/texto_contornado.dart';
 
 /// Replica o "REGULAMENTO" / Termo de Responsabilidade em papel, com
 /// aceite digital no lugar da assinatura manuscrita.
@@ -58,7 +59,7 @@ class _TermoTabState extends State<TermoTab> {
   Future<void> _handleAceitar() async {
     if (_nomeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Informe o nome de quem está assinando.'),
           backgroundColor: AppColors.error,
         ),
@@ -68,7 +69,7 @@ class _TermoTabState extends State<TermoTab> {
 
     if (_menorDeIdade && _responsavelController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Aluno menor de idade: informe o nome do responsável que está assinando.',
           ),
@@ -96,7 +97,7 @@ class _TermoTabState extends State<TermoTab> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao registrar o aceite. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -133,9 +134,10 @@ class _TermoTabState extends State<TermoTab> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           children: [
-            const Text(
+            TextoContornado(
               'REGULAMENTO',
-              style: TextStyle(
+              espessura: 1.6,
+              estilo: TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -148,7 +150,7 @@ class _TermoTabState extends State<TermoTab> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: RichText(
                   text: TextSpan(
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       height: 1.5,
                       color: AppColors.textPrimary,
@@ -156,7 +158,7 @@ class _TermoTabState extends State<TermoTab> {
                     children: [
                       TextSpan(
                         text: '${(index + 1).toString().padLeft(2, '0')}. ',
-                        style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
                       ),
                       TextSpan(text: regulamentoRegras[index]),
                     ],
@@ -164,7 +166,7 @@ class _TermoTabState extends State<TermoTab> {
                 ),
               );
             }),
-            const Divider(height: 32, color: AppColors.surfaceHigh),
+            Divider(height: 32, color: AppColors.surfaceHigh),
 
             if (termo != null && termo.aceito)
               _AceiteConfirmado(termo: termo)
@@ -202,13 +204,14 @@ class _AceiteConfirmado extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.verified_outlined, color: AppColors.gold),
               SizedBox(width: 8),
-              Text(
+              TextoContornado(
                 'Termo aceito',
-                style: TextStyle(
+                espessura: 1.6,
+                estilo: TextStyle(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
@@ -218,16 +221,16 @@ class _AceiteConfirmado extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text('Assinatura: ${termo.nomeAssinatura ?? '-'}',
-              style: const TextStyle(color: AppColors.textPrimary)),
+              style: TextStyle(color: AppColors.textPrimary)),
           if (termo.responsavel != null && termo.responsavel!.isNotEmpty)
             Text('Responsável: ${termo.responsavel}',
-                style: const TextStyle(color: AppColors.textPrimary)),
+                style: TextStyle(color: AppColors.textPrimary)),
           if (termo.aceitoEm != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 'Aceito em ${_formatarDataHora(termo.aceitoEm!)}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
               ),
             ),
         ],
@@ -271,7 +274,7 @@ class _AceiteForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'DECLARO ACEITAR AS NORMAS DESTE REGULAMENTO',
           style: TextStyle(
             color: AppColors.textPrimary,
@@ -287,7 +290,7 @@ class _AceiteForm extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         if (menorDeIdade)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(bottom: 10),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,7 +339,7 @@ class _AceiteForm extends StatelessWidget {
         ElevatedButton(
           onPressed: onSubmit,
           child: isSaving
-              ? const SizedBox(
+              ? SizedBox(
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),

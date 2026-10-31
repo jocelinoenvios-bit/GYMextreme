@@ -118,7 +118,7 @@ class _Secao extends StatelessWidget {
         children: [
           Text(
             titulo.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.gold,
               fontWeight: FontWeight.bold,
               fontSize: 12,
@@ -146,12 +146,12 @@ class _Linha extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(fontSize: 13.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary),
           children: [
             TextSpan(text: '$rotulo: '),
             TextSpan(
               text: valor,
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
             ),
           ],
         ),

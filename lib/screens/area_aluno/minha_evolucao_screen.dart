@@ -49,7 +49,7 @@ class _MinhaEvolucaoScreenState extends State<MinhaEvolucaoScreen> {
                         : 'Você tem só 1 avaliação registrada — a evolução aparece a '
                               'partir da segunda.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ),
               );
@@ -114,7 +114,7 @@ class _MinhaEvolucaoScreenState extends State<MinhaEvolucaoScreen> {
                     ),
                 ],
                 if (pesoPontos.length < 2 && imcPontos.length < 2 && circunferenciasDisponiveis.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Text(
                       'Ainda não há duas avaliações com o mesmo dado preenchido pra '
@@ -183,7 +183,7 @@ class _EvolucaoCard extends StatelessWidget {
         children: [
           Text(
             titulo,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.gold,
               fontWeight: FontWeight.bold,
               fontSize: 15,
@@ -240,7 +240,7 @@ class _Metrica extends StatelessWidget {
       children: [
         Text(
           rotulo,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
         ),
         const SizedBox(height: 2),
         Text(

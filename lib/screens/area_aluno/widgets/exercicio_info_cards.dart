@@ -28,7 +28,7 @@ class ExercicioInfoList extends StatelessWidget {
             Expanded(
               child: Text(
                 exercicio.nomeExibicao,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
@@ -173,7 +173,7 @@ class _ListaNumerada extends StatelessWidget {
               children: [
                 Text(
                   '${i + 1}.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -183,7 +183,7 @@ class _ListaNumerada extends StatelessWidget {
                 Expanded(
                   child: Text(
                     itens[i],
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.4),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.4),
                   ),
                 ),
               ],
@@ -210,14 +210,14 @@ class _ListaComMarcador extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 6, right: 8),
                   child: Icon(Icons.circle, size: 4, color: AppColors.textSecondary),
                 ),
                 Expanded(
                   child: Text(
                     item,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.4),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.4),
                   ),
                 ),
               ],

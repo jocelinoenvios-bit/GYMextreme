@@ -213,18 +213,43 @@ class AlunoService {
     return _avaliacoes(uid).add(avaliacao.toFirestore());
   }
 
-  /// Mensagens recebidas pelo aluno, mais recente primeiro.
+  /// Mensagens que o aluno vê, mais recente primeiro — sem as que ele
+  /// mesmo tirou da lista (que continuam existindo pro staff, ver
+  /// [arquivarMensagem]).
   Stream<List<Mensagem>> watchMensagens(String uid) {
     return _mensagens(uid)
         .orderBy('criadoEm', descending: true)
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => Mensagem.fromFirestore(doc.id, doc.data())).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) => Mensagem.fromFirestore(doc.id, doc.data()))
+              .where((mensagem) => !mensagem.arquivadaPeloAluno)
+              .toList(),
         );
   }
 
-  /// Envia uma mensagem pro aluno [uid] — exige a permissão `chat` (ver
+  /// Tudo que a equipe já enviou, de todos os alunos, mais recente
+  /// primeiro.
+  ///
+  /// Varre as subcoleções `mensagens` de todos os alunos de uma vez
+  /// (collection group) em vez de consultar aluno por aluno. Exige um
+  /// índice de escopo "grupo de coleções" no campo `criadoEm` — ver
+  /// `firestore.indexes.json`. O [limite] existe porque essa lista só
+  /// cresce: ninguém rola três anos de avisos.
+  Stream<List<Mensagem>> watchMensagensEnviadas({int limite = 300}) {
+    return _firestore
+        .collectionGroup('mensagens')
+        .orderBy('criadoEm', descending: true)
+        .limit(limite)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Mensagem.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
+  }
+
+  /// Envia um aviso pro aluno [uid] — exige a permissão `chat` (ver
   /// `firestore.rules`), reforçada aqui só pela UI (o botão "Enviar
   /// mensagem" já fica escondido sem a permissão).
   Future<void> enviarMensagem(
@@ -232,14 +257,44 @@ class AlunoService {
     required String texto,
     required String remetenteUid,
     required String remetenteNome,
+    required String alunoNome,
   }) {
     return _mensagens(uid).add(
       Mensagem(
         texto: texto,
         remetenteUid: remetenteUid,
         remetenteNome: remetenteNome,
+        alunoUid: uid,
+        alunoNome: alunoNome,
       ).toFirestore(),
     );
+  }
+
+  /// Marca como lidas as mensagens que o aluno acabou de ver. Recebe a
+  /// lista pronta (em vez de consultar de novo) porque quem chama já tem
+  /// o snapshot aberto na tela.
+  Future<void> marcarMensagensComoLidas(String uid, Iterable<String> ids) {
+    if (ids.isEmpty) return Future.value();
+    final lote = _firestore.batch();
+    for (final id in ids) {
+      lote.update(_mensagens(uid).doc(id), {
+        'lidaEm': FieldValue.serverTimestamp(),
+      });
+    }
+    return lote.commit();
+  }
+
+  /// O aluno tira o aviso da lista dele. Não apaga: o staff continua
+  /// vendo nas enviadas que o aviso foi dado.
+  Future<void> arquivarMensagem(String uid, String mensagemId) {
+    return _mensagens(uid).doc(mensagemId).update({'arquivadaPeloAluno': true});
+  }
+
+  /// O staff apaga de vez — some dos dois lados. É o caminho pra quem
+  /// mandou errado (editar não existe de propósito: o aluno pode já ter
+  /// lido o texto antigo).
+  Future<void> apagarMensagem(String uid, String mensagemId) {
+    return _mensagens(uid).doc(mensagemId).delete();
   }
 
   /// Historico de pagamentos registrados pela recepcao, mais recente

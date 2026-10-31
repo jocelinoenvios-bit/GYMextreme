@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import 'mensagens_enviadas_lista.dart';
 
 /// Envia uma mensagem avulsa pra um aluno específico — só pra quem tem a
 /// permissão `Permission.chat` (concedida pelo ADM, ver
@@ -62,6 +63,7 @@ class _EnviarMensagemScreenState extends State<EnviarMensagemScreen> {
         texto: texto,
         remetenteUid: widget.staffAtual.uid,
         remetenteNome: widget.staffAtual.nome,
+        alunoNome: aluno.nome,
       );
       if (mounted) {
         _textoController.clear();
@@ -84,86 +86,117 @@ class _EnviarMensagemScreenState extends State<EnviarMensagemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Enviar mensagem')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              StreamBuilder<List<AppUser>>(
-                stream: widget.alunoService.watchAlunos(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: LinearProgressIndicator(color: AppColors.gold),
-                    );
-                  }
-
-                  // Deduplica por uid e usa o uid como valor do dropdown —
-                  // mesmo motivo documentado em MatriculaFormScreen
-                  // (AppUser não tem == própria, comparar a instância
-                  // inteira quebra o dropdown quando o stream reemite).
-                  final alunosPorUid = <String, AppUser>{};
-                  for (final aluno in snapshot.data ?? const <AppUser>[]) {
-                    alunosPorUid[aluno.uid] = aluno;
-                  }
-                  final alunos = alunosPorUid.values.toList();
-                  final uidSelecionado = alunosPorUid.containsKey(_alunoSelecionado?.uid)
-                      ? _alunoSelecionado?.uid
-                      : null;
-
-                  return DropdownButtonFormField<String>(
-                    initialValue: uidSelecionado,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: 'Aluno',
-                      helperText: alunos.isEmpty ? 'Nenhum aluno cadastrado' : null,
-                    ),
-                    items: alunos
-                        .map(
-                          (aluno) => DropdownMenuItem(
-                            value: aluno.uid,
-                            child: Text(aluno.nome, overflow: TextOverflow.ellipsis),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: alunos.isEmpty
-                        ? null
-                        : (uid) => setState(() => _alunoSelecionado = alunosPorUid[uid]),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _textoController,
-                maxLines: 5,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Mensagem',
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _isSaving ? null : _handleEnviar,
-                icon: _isSaving
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: AppColors.black,
-                        ),
-                      )
-                    : const Icon(Icons.send_outlined),
-                label: const Text('ENVIAR'),
-              ),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mensagens'),
+          bottom: TabBar(
+            labelColor: AppColors.gold,
+            unselectedLabelColor: AppColors.textSecondary,
+            indicatorColor: AppColors.gold,
+            tabs: const [
+              Tab(text: 'ENVIAR'),
+              Tab(text: 'ENVIADAS'),
             ],
           ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildFormulario(),
+            MensagensEnviadasLista(alunoService: widget.alunoService),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormulario() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            StreamBuilder<List<AppUser>>(
+              stream: widget.alunoService.watchAlunos(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(color: AppColors.gold),
+                  );
+                }
+
+                // Deduplica por uid e usa o uid como valor do dropdown —
+                // mesmo motivo documentado em MatriculaFormScreen
+                // (AppUser não tem == própria, comparar a instância
+                // inteira quebra o dropdown quando o stream reemite).
+                final alunosPorUid = <String, AppUser>{};
+                for (final aluno in snapshot.data ?? const <AppUser>[]) {
+                  alunosPorUid[aluno.uid] = aluno;
+                }
+                final alunos = alunosPorUid.values.toList();
+                final uidSelecionado =
+                    alunosPorUid.containsKey(_alunoSelecionado?.uid)
+                    ? _alunoSelecionado?.uid
+                    : null;
+
+                return DropdownButtonFormField<String>(
+                  initialValue: uidSelecionado,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: 'Aluno',
+                    helperText: alunos.isEmpty
+                        ? 'Nenhum aluno cadastrado'
+                        : null,
+                  ),
+                  items: alunos
+                      .map(
+                        (aluno) => DropdownMenuItem(
+                          value: aluno.uid,
+                          child: Text(
+                            aluno.nome,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: alunos.isEmpty
+                      ? null
+                      : (uid) => setState(
+                          () => _alunoSelecionado = alunosPorUid[uid],
+                        ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _textoController,
+              maxLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Mensagem',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _isSaving ? null : _handleEnviar,
+              icon: _isSaving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.black,
+                      ),
+                    )
+                  : const Icon(Icons.send_outlined),
+              label: const Text('ENVIAR'),
+            ),
+          ],
         ),
       ),
     );

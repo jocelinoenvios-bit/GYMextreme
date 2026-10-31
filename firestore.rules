@@ -309,13 +309,22 @@ service cloud.firestore {
         allow write: if temPermissao('avaliacoesFisicas');
       }
 
-      // Mensagens enviadas por um membro da equipe pro aluno (tela
-      // "Enviar mensagem" do personal/ADM) — mesmo padrao de
-      // `avaliacoes` acima: so quem tem a permissao `chat` le/escreve
-      // mensagens de qualquer aluno; o proprio aluno sempre le as suas.
+      // Avisos enviados por um membro da equipe pro aluno (tela
+      // "Mensagens" do personal/ADM) — mesmo padrao de `avaliacoes`
+      // acima: so quem tem a permissao `chat` le/escreve avisos de
+      // qualquer aluno; o proprio aluno sempre le os seus.
+      //
+      // A comunicacao e de mao unica: o aluno NAO escreve avisos. A
+      // unica escrita que ele pode fazer e marcar como lido e tirar da
+      // propria lista — por isso o update dele e limitado a esses dois
+      // campos, e nunca ao texto ou ao remetente.
       match /mensagens/{mensagemId} {
         allow read: if request.auth != null &&
           (request.auth.uid == uid || temPermissao('chat'));
+        allow update: if request.auth != null &&
+          request.auth.uid == uid &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['lidaEm', 'arquivadaPeloAluno']);
         allow write: if temPermissao('chat');
       }
 
@@ -442,6 +451,15 @@ service cloud.firestore {
     // a granular `acessarContasReceber`, não `ehStaff()`.
     match /{path=**}/contasReceber/{contaId} {
       allow read: if temPermissao('acessarContasReceber');
+    }
+
+    // Mesma justificativa acima, para a aba "Enviadas" do personal/ADM
+    // (AlunoService.watchMensagensEnviadas), que cruza as mensagens de
+    // todos os alunos de uma vez pra responder "o que eu mandei, pra
+    // quem e quando". So leitura: apagar um aviso sempre passa pelo path
+    // completo do aluno (regra la em cima), nunca por uma query assim.
+    match /{path=**}/mensagens/{mensagemId} {
+      allow read: if temPermissao('chat');
     }
 
     // Controle de acesso da catraca (identificacao, autorizacao e

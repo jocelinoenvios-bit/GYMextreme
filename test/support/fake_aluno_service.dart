@@ -159,7 +159,13 @@ class FakeAlunoService implements AlunoService {
   }
 
   @override
-  Stream<List<Mensagem>> watchMensagens(String uid) => Stream.value(mensagens);
+  Stream<List<Mensagem>> watchMensagens(String uid) => Stream.value(
+    mensagens.where((mensagem) => !mensagem.arquivadaPeloAluno).toList(),
+  );
+
+  @override
+  Stream<List<Mensagem>> watchMensagensEnviadas({int limite = 300}) =>
+      Stream.value(mensagens);
 
   @override
   Future<void> enviarMensagem(
@@ -167,15 +173,56 @@ class FakeAlunoService implements AlunoService {
     required String texto,
     required String remetenteUid,
     required String remetenteNome,
+    required String alunoNome,
   }) async {
     final mensagem = Mensagem(
       texto: texto,
       remetenteUid: remetenteUid,
       remetenteNome: remetenteNome,
+      alunoUid: uid,
+      alunoNome: alunoNome,
       criadoEm: DateTime.now(),
     );
     ultimaMensagemEnviada = mensagem;
     mensagens = [...mensagens, mensagem];
+  }
+
+  /// Ids passados pra [marcarMensagensComoLidas], na ordem das chamadas.
+  List<String> idsMarcadosComoLidos = [];
+  List<String> idsArquivados = [];
+  List<String> idsApagados = [];
+
+  @override
+  Future<void> marcarMensagensComoLidas(String uid, Iterable<String> ids) async {
+    idsMarcadosComoLidos = [...idsMarcadosComoLidos, ...ids];
+    mensagens = [
+      for (final mensagem in mensagens)
+        if (ids.contains(mensagem.id))
+          Mensagem(
+            id: mensagem.id,
+            texto: mensagem.texto,
+            remetenteUid: mensagem.remetenteUid,
+            remetenteNome: mensagem.remetenteNome,
+            alunoUid: mensagem.alunoUid,
+            alunoNome: mensagem.alunoNome,
+            criadoEm: mensagem.criadoEm,
+            lidaEm: DateTime.now(),
+            arquivadaPeloAluno: mensagem.arquivadaPeloAluno,
+          )
+        else
+          mensagem,
+    ];
+  }
+
+  @override
+  Future<void> arquivarMensagem(String uid, String mensagemId) async {
+    idsArquivados = [...idsArquivados, mensagemId];
+  }
+
+  @override
+  Future<void> apagarMensagem(String uid, String mensagemId) async {
+    idsApagados = [...idsApagados, mensagemId];
+    mensagens = mensagens.where((m) => m.id != mensagemId).toList();
   }
 
   @override

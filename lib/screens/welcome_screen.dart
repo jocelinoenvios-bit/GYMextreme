@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/aluno.dart';
 import '../models/app_user.dart';
+import '../models/mensagem.dart';
 import '../models/permission.dart';
 import '../models/user_role.dart';
 import '../services/aluno_service.dart';
@@ -315,17 +316,30 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // O ícone não mostra bolinha de "não lida" até existir
-                  // contagem/estado de leitura real (ver `MensagensScreen` —
-                  // hoje só lista, sem marcar como lida).
-                  _TileMenuPerfil(
-                    icone: Icons.chat_bubble_outline,
-                    rotulo: 'Mensagens',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MensagensScreen(uid: uid, alunoService: alunoService),
-                      ),
-                    ),
+                  // Reaproveita o mesmo stream que a tela de mensagens
+                  // usa, em vez de uma consulta só de contagem: o volume
+                  // de avisos por aluno é pequeno e assim o selo zera
+                  // junto com a leitura, sem um segundo listener.
+                  StreamBuilder<List<Mensagem>>(
+                    stream: alunoService.watchMensagens(uid),
+                    builder: (context, snapshot) {
+                      final naoLidas = (snapshot.data ?? const <Mensagem>[])
+                          .where((mensagem) => !mensagem.lida)
+                          .length;
+                      return _TileMenuPerfil(
+                        icone: Icons.chat_bubble_outline,
+                        rotulo: 'Mensagens',
+                        naoLidas: naoLidas,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MensagensScreen(
+                              uid: uid,
+                              alunoService: alunoService,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -657,11 +671,19 @@ class _AvatarAluno extends StatelessWidget {
 /// celular, substitui o antigo card único "MEU PERFIL" (ver
 /// `MeuPerfilScreen`, cujos 5 destinos agora são acessados direto daqui).
 class _TileMenuPerfil extends StatelessWidget {
-  const _TileMenuPerfil({required this.icone, required this.rotulo, required this.onTap});
+  const _TileMenuPerfil({
+    required this.icone,
+    required this.rotulo,
+    required this.onTap,
+    this.naoLidas = 0,
+  });
 
   final IconData icone;
   final String rotulo;
   final VoidCallback onTap;
+
+  /// Quantidade no selo do canto. Zero esconde o selo.
+  final int naoLidas;
 
   @override
   Widget build(BuildContext context) {
@@ -678,13 +700,45 @@ class _TileMenuPerfil extends StatelessWidget {
           // sempre ocupa só o espaço que sobra depois da legenda, nunca
           // estoura, não importa o tamanho da tela ou da fonte.
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceHigh,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(icone, color: AppColors.gold, size: 26),
+            child: Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(icone, color: AppColors.gold, size: 26),
+                ),
+                if (naoLidas > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 18),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(color: AppColors.surfaceHigh, width: 2),
+                      ),
+                      child: Text(
+                        naoLidas > 9 ? '9+' : '$naoLidas',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 8),

@@ -33,7 +33,7 @@ void main() {
     });
 
     test(
-      'os 6 exercícios já existentes que casaram por nome ganharam vídeo sem perder nome/GIF/id',
+      'os 6 exercícios já existentes que casaram por nome ganharam vídeo sem perder nome/id',
       () async {
         const casados = {
           '0042': 'barbell front squat',
@@ -48,7 +48,10 @@ void main() {
           expect(exercicio, isNotNull, reason: 'id ${entry.key} deveria continuar existindo');
           expect(exercicio!.nome, entry.value);
           expect(exercicio.videoUrl, 'assets/exercicios/videos/${entry.key}.mp4');
-          expect(exercicio.gif360Url, isNotNull, reason: 'GIF original não deveria ter sido removido');
+          // GIF desligado de propósito pra TODO o catálogo (apareciam
+          // corrompidos em aparelho real) — só os exercícios com vídeo
+          // continuam com demonstração. Ver LocalExerciseRepository.
+          expect(exercicio.gif360Url, isNull);
         }
       },
     );
@@ -67,11 +70,11 @@ void main() {
       expect(ultimoNovo.videoUrl, 'assets/exercicios/videos/9044.mp4');
     });
 
-    test('exercício que não tem vídeo continua sem videoUrl (nada mudou pra ele)', () async {
+    test('exercício que não tem vídeo também não tem GIF (nenhum exercício carrega GIF hoje)', () async {
       final exercicio = await repo.buscarPorId('0001');
       expect(exercicio, isNotNull);
       expect(exercicio!.videoUrl, isNull);
-      expect(exercicio.gif360Url, isNotNull);
+      expect(exercicio.gif360Url, isNull);
     });
   });
 

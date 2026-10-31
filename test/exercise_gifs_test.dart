@@ -28,37 +28,26 @@ void main() {
     });
 
     test(
-      'os 1.394 exercícios da ExerciseDB têm gif360Url apontando pro Storage (não mais '
-      'asset local) e gif180Url sempre nulo (só a 360° é hospedada), e o arquivo-fonte '
-      '(180°/360°) de cada um ainda existe no repositório',
+      'nenhum exercício expõe gif360Url hoje — GIF foi desligado de propósito pro '
+      'catálogo inteiro (apareciam corrompidos em aparelho real); o arquivo-fonte '
+      '(180°/360°) continua no repositório, só não é mais pedido pelo app',
       () async {
         final todos = await repo.buscarTodos();
-        // 1.394 da ExerciseDB (todos com GIF) + 44 novos da Vital
-        // Animations (só vídeo, sem GIF) = 1.438.
+        // 1.394 da ExerciseDB + 44 novos da Vital Animations = 1.438.
         expect(todos.length, 1438);
 
-        final comGif = todos.where((e) => e.gif360Url != null).toList();
-        expect(comGif.length, 1394, reason: 'só os exercícios originais da ExerciseDB têm GIF');
+        expect(
+          todos.every((e) => e.gif360Url == null),
+          isTrue,
+          reason: 'LocalExerciseRepository deve passar temGif: false pra todo exercício',
+        );
 
-        for (final exercicio in comGif) {
-          expect(
-            exercicio.gif180Url,
-            isNull,
-            reason: '${exercicio.id}: gif180Url deveria ser sempre nulo — só a 360° é hospedada',
-          );
-          expect(
-            exercicio.gif360Url,
-            'exercicios/gifs/${exercicio.id}.gif',
-            reason: '${exercicio.id}: gif360Url não segue mais a convenção do Storage',
-          );
-          expect(
-            exercicio.temVarianteAltaResolucao,
-            isTrue,
-            reason: '${exercicio.id}: variante 360 não sinalizada',
-          );
-
-          _expectArquivoFonteExiste('assets/exercicios/gifs/${exercicio.id}.gif');
-          _expectArquivoFonteExiste('assets/exercicios/gifs_360/${exercicio.id}.gif');
+        // Os arquivos-fonte em si não foram apagados (só o app parou de
+        // pedir por eles) — confere uma amostra, não os 1.394, só pra
+        // garantir que ninguém removeu o repositório de origem junto.
+        for (final id in const ['0001', '0577', '1393']) {
+          _expectArquivoFonteExiste('assets/exercicios/gifs/$id.gif');
+          _expectArquivoFonteExiste('assets/exercicios/gifs_360/$id.gif');
         }
       },
     );

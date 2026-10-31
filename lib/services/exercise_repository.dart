@@ -99,10 +99,19 @@ class LocalExerciseRepository implements ExerciseRepository {
     final traducoes = await compute(_decodificarTraducoes, traducoesString);
     final videosPorId = await compute(_decodificarVideos, videosString);
     return {
+      // temGif: false pros dois lotes — os GIFs (ExerciseDB, via Firebase
+      // Storage) pararam de ser usados por decisão explícita (apareciam
+      // corrompidos em aparelho real); só os 50 exercícios com vídeo da
+      // Vital Animations continuam com demonstração. Os exercícios sem
+      // vídeo ficam sem nenhuma mídia até uma solução futura — decisão
+      // consciente, não um bug. Os arquivos de GIF em si (Storage e
+      // `assets/exercicios/gifs*`/script de upload) não foram apagados,
+      // só o app parou de pedir por eles.
       for (final item in bruto)
         (item['id'] as String): ExerciseModel.fromExerciseDbJson(
           item,
           traducoes: traducoes,
+          temGif: false,
           videosPorId: videosPorId,
         ),
       for (final item in brutoVitalAnimations)

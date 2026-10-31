@@ -8,6 +8,7 @@ import 'package:gymextreme_app/models/conta_receber.dart';
 import 'package:gymextreme_app/models/endereco.dart';
 import 'package:gymextreme_app/models/historico_treino.dart';
 import 'package:gymextreme_app/models/matricula.dart';
+import 'package:gymextreme_app/models/mensagem.dart';
 import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/termo_aceite.dart';
 import 'package:gymextreme_app/models/treino.dart';
@@ -30,6 +31,7 @@ class FakeAlunoService implements AlunoService {
     this.matriculas = const [],
     this.contasReceber = const [],
     this.historicoTreinos = const [],
+    this.mensagens = const [],
   });
 
   Aluno? aluno;
@@ -46,6 +48,7 @@ class FakeAlunoService implements AlunoService {
   List<Matricula> matriculas;
   List<ContaReceber> contasReceber;
   List<HistoricoTreino> historicoTreinos;
+  List<Mensagem> mensagens;
 
   Aluno? ultimoAlunoSalvo;
   Anamnese? ultimaAnamneseSalva;
@@ -56,6 +59,7 @@ class FakeAlunoService implements AlunoService {
   ContaReceber? ultimaContaAtualizada;
   ContaReceber? ultimoRecebimentoRegistrado;
   HistoricoTreino? ultimoHistoricoRegistrado;
+  Mensagem? ultimaMensagemEnviada;
   ({String staffUid, String staffNome, DateTime dataReativacao})? ultimaReativacao;
 
   /// Preenchido só quando [registrarRecebimento] recebeu `matriculaId` +
@@ -152,6 +156,26 @@ class FakeAlunoService implements AlunoService {
   Future<void> adicionarAvaliacao(String uid, AvaliacaoFisica avaliacao) async {
     ultimaAvaliacaoSalva = avaliacao;
     avaliacoes = [...avaliacoes, avaliacao];
+  }
+
+  @override
+  Stream<List<Mensagem>> watchMensagens(String uid) => Stream.value(mensagens);
+
+  @override
+  Future<void> enviarMensagem(
+    String uid, {
+    required String texto,
+    required String remetenteUid,
+    required String remetenteNome,
+  }) async {
+    final mensagem = Mensagem(
+      texto: texto,
+      remetenteUid: remetenteUid,
+      remetenteNome: remetenteNome,
+      criadoEm: DateTime.now(),
+    );
+    ultimaMensagemEnviada = mensagem;
+    mensagens = [...mensagens, mensagem];
   }
 
   @override

@@ -12,6 +12,7 @@ import '../models/conta_receber.dart';
 import '../models/endereco.dart';
 import '../models/historico_treino.dart';
 import '../models/matricula.dart';
+import '../models/mensagem.dart';
 import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
@@ -21,9 +22,10 @@ import '../utils/mensalidade_utils.dart';
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
 /// `alunos`), anamnese e termo de responsabilidade (campos dentro do
 /// mesmo documento), historico de avaliacoes fisicas, fichas de treino,
-/// matriculas e contas a receber (subcolecoes `alunos/{uid}/avaliacoes`,
-/// `alunos/{uid}/treinos`, `alunos/{uid}/matriculas` e
-/// `alunos/{uid}/contasReceber`).
+/// matriculas, contas a receber e mensagens (subcolecoes
+/// `alunos/{uid}/avaliacoes`, `alunos/{uid}/treinos`,
+/// `alunos/{uid}/matriculas`, `alunos/{uid}/contasReceber` e
+/// `alunos/{uid}/mensagens`).
 class AlunoService {
   AlunoService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -58,6 +60,12 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _contasReceber(String uid) =>
       _alunos.doc(uid).collection('contasReceber');
+
+  /// Mensagens enviadas por um membro da equipe pro aluno (ver
+  /// `Permission.chat`) — só envio manual por enquanto, sem avisos
+  /// automáticos ainda.
+  CollectionReference<Map<String, dynamic>> _mensagens(String uid) =>
+      _alunos.doc(uid).collection('mensagens');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
   ///
@@ -203,6 +211,35 @@ class AlunoService {
 
   Future<void> adicionarAvaliacao(String uid, AvaliacaoFisica avaliacao) {
     return _avaliacoes(uid).add(avaliacao.toFirestore());
+  }
+
+  /// Mensagens recebidas pelo aluno, mais recente primeiro.
+  Stream<List<Mensagem>> watchMensagens(String uid) {
+    return _mensagens(uid)
+        .orderBy('criadoEm', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Mensagem.fromFirestore(doc.id, doc.data())).toList(),
+        );
+  }
+
+  /// Envia uma mensagem pro aluno [uid] — exige a permissão `chat` (ver
+  /// `firestore.rules`), reforçada aqui só pela UI (o botão "Enviar
+  /// mensagem" já fica escondido sem a permissão).
+  Future<void> enviarMensagem(
+    String uid, {
+    required String texto,
+    required String remetenteUid,
+    required String remetenteNome,
+  }) {
+    return _mensagens(uid).add(
+      Mensagem(
+        texto: texto,
+        remetenteUid: remetenteUid,
+        remetenteNome: remetenteNome,
+      ).toFirestore(),
+    );
   }
 
   /// Historico de pagamentos registrados pela recepcao, mais recente

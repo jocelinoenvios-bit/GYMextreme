@@ -1,0 +1,171 @@
+import 'package:flutter/material.dart';
+
+import '../../models/app_user.dart';
+import '../../services/aluno_service.dart';
+import '../../theme/app_colors.dart';
+
+/// Envia uma mensagem avulsa pra um aluno específico — só pra quem tem a
+/// permissão `Permission.chat` (concedida pelo ADM, ver
+/// `FuncionarioFormScreen`). O aluno vê o que for enviado aqui na tela
+/// "Mensagens" da Área do Aluno (`MensagensScreen`).
+///
+/// Só o envio manual existe por enquanto — os avisos automáticos
+/// (vencimento de mensalidade, reengajamento depois de 45 dias sem vir)
+/// ficam pra uma etapa futura, com sua própria lógica de disparo.
+class EnviarMensagemScreen extends StatefulWidget {
+  const EnviarMensagemScreen({
+    super.key,
+    required this.alunoService,
+    required this.staffAtual,
+    this.alunoPreSelecionado,
+  });
+
+  final AlunoService alunoService;
+  final AppUser staffAtual;
+
+  /// Quando aberta a partir da ação rápida de um card na lista de alunos
+  /// (ver `AlunosPorFiltroScreen`), já chega com o aluno certo escolhido —
+  /// nesse caso o dropdown só confirma, não exige procurar de novo.
+  final AppUser? alunoPreSelecionado;
+
+  @override
+  State<EnviarMensagemScreen> createState() => _EnviarMensagemScreenState();
+}
+
+class _EnviarMensagemScreenState extends State<EnviarMensagemScreen> {
+  final _textoController = TextEditingController();
+  late AppUser? _alunoSelecionado = widget.alunoPreSelecionado;
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _textoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleEnviar() async {
+    final aluno = _alunoSelecionado;
+    final texto = _textoController.text.trim();
+    if (aluno == null) {
+      _mostrarErro('Selecione o aluno.');
+      return;
+    }
+    if (texto.isEmpty) {
+      _mostrarErro('Escreva a mensagem.');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      await widget.alunoService.enviarMensagem(
+        aluno.uid,
+        texto: texto,
+        remetenteUid: widget.staffAtual.uid,
+        remetenteNome: widget.staffAtual.nome,
+      );
+      if (mounted) {
+        _textoController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Mensagem enviada para ${aluno.nome}.')),
+        );
+      }
+    } catch (_) {
+      _mostrarErro('Erro ao enviar a mensagem. Tente novamente.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _mostrarErro(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem), backgroundColor: AppColors.error),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Enviar mensagem')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              StreamBuilder<List<AppUser>>(
+                stream: widget.alunoService.watchAlunos(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(color: AppColors.gold),
+                    );
+                  }
+
+                  // Deduplica por uid e usa o uid como valor do dropdown —
+                  // mesmo motivo documentado em MatriculaFormScreen
+                  // (AppUser não tem == própria, comparar a instância
+                  // inteira quebra o dropdown quando o stream reemite).
+                  final alunosPorUid = <String, AppUser>{};
+                  for (final aluno in snapshot.data ?? const <AppUser>[]) {
+                    alunosPorUid[aluno.uid] = aluno;
+                  }
+                  final alunos = alunosPorUid.values.toList();
+                  final uidSelecionado = alunosPorUid.containsKey(_alunoSelecionado?.uid)
+                      ? _alunoSelecionado?.uid
+                      : null;
+
+                  return DropdownButtonFormField<String>(
+                    initialValue: uidSelecionado,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Aluno',
+                      helperText: alunos.isEmpty ? 'Nenhum aluno cadastrado' : null,
+                    ),
+                    items: alunos
+                        .map(
+                          (aluno) => DropdownMenuItem(
+                            value: aluno.uid,
+                            child: Text(aluno.nome, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: alunos.isEmpty
+                        ? null
+                        : (uid) => setState(() => _alunoSelecionado = alunosPorUid[uid]),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _textoController,
+                maxLines: 5,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Mensagem',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _isSaving ? null : _handleEnviar,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.black,
+                        ),
+                      )
+                    : const Icon(Icons.send_outlined),
+                label: const Text('ENVIAR'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -20,8 +20,14 @@ import '../theme/app_colors.dart';
 import '../utils/status_acesso.dart';
 import '../widgets/gymextreme_logo.dart';
 import 'alunos/alunos_list_screen.dart';
-import 'area_aluno/meu_perfil_screen.dart';
+import 'alunos/enviar_mensagem_screen.dart';
+import 'area_aluno/meus_dados_aluno_screen.dart';
 import 'area_aluno/meus_treinos_screen.dart';
+import 'area_aluno/mensagens_screen.dart';
+import 'area_aluno/minha_anamnese_screen.dart';
+import 'area_aluno/minha_evolucao_screen.dart';
+import 'area_aluno/minha_ficha_screen.dart';
+import 'area_aluno/minhas_medidas_screen.dart';
 import 'caixa/caixa_screen.dart';
 import 'contas_pagar/contas_pagar_list_screen.dart';
 import 'contas_receber/contas_receber_list_screen.dart';
@@ -36,6 +42,11 @@ import 'relatorios/dashboard_screen.dart';
 /// individuais do usuario logado (ver `PermissionService`), nao mais um
 /// unico bloco "staff vs aluno". As demais telas de cada perfil chegam nos
 /// proximos modulos.
+///
+/// O aluno tem uma tela inicial própria (`_buildHomeAluno`), redesenhada
+/// pra ficar mais parecida com um app de rede social/menu de celular —
+/// staff continua com a tela genérica de sempre (`_scaffoldGenerico` +
+/// `_buildConteudoPadrao`).
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({
     super.key,
@@ -68,43 +79,30 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const GymExtremeLogo(compact: true),
-        actions: [
-          IconButton(
-            tooltip: 'Sair',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              // Remove o token FCM deste aparelho ANTES de sair — depois
-              // do signOut() o Firestore ja nao autoriza mais essa escrita
-              // (regra exige request.auth.uid == uid).
-              await notificacaoService.removerTokenDoAparelho(uid);
-              await authService.signOut();
-            },
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: StreamBuilder<AppUser?>(
-        stream: userService.watchUser(uid),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return StreamBuilder<AppUser?>(
+      stream: userService.watchUser(uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _scaffoldGenerico(context, const Center(child: CircularProgressIndicator()));
+        }
 
-          if (snapshot.hasError) {
-            return Center(
+        if (snapshot.hasError) {
+          return _scaffoldGenerico(
+            context,
+            Center(
               child: Text(
                 'Erro ao carregar seu perfil.',
                 style: const TextStyle(color: AppColors.error),
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          final user = snapshot.data;
-          if (user == null) {
-            return const Center(
+        final user = snapshot.data;
+        if (user == null) {
+          return _scaffoldGenerico(
+            context,
+            const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
@@ -115,28 +113,280 @@ class WelcomeScreen extends StatelessWidget {
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          if (user.role == UserRole.aluno) {
-            return StreamBuilder<Aluno?>(
-              stream: alunoService.watchAluno(uid),
-              builder: (context, alunoSnapshot) {
-                final status = calcularStatusAcesso(
-                  proximoVencimento: alunoSnapshot.data?.proximoVencimento,
-                );
-                if (status.status == StatusMensalidade.bloqueado) {
-                  return const _AcessoSuspenso();
-                }
-                return _buildConteudoPadrao(context, user);
-              },
-            );
-          }
+        if (user.role == UserRole.aluno) {
+          return StreamBuilder<Aluno?>(
+            stream: alunoService.watchAluno(uid),
+            builder: (context, alunoSnapshot) {
+              final status = calcularStatusAcesso(
+                proximoVencimento: alunoSnapshot.data?.proximoVencimento,
+              );
+              if (status.status == StatusMensalidade.bloqueado) {
+                return _scaffoldGenerico(context, const _AcessoSuspenso());
+              }
+              return _buildHomeAluno(context, user, alunoSnapshot.data);
+            },
+          );
+        }
 
-          return _buildConteudoPadrao(context, user);
-        },
+        return _scaffoldGenerico(context, _buildConteudoPadrao(context, user), user: user);
+      },
+    );
+  }
+
+  /// Scaffold "de sempre" (logo + botão de sair na AppBar) — usado pro
+  /// staff inteiro e pelos estados genéricos (carregando/erro/bloqueado)
+  /// de qualquer papel, inclusive aluno. Com [user] informado (telas de
+  /// staff já carregadas), ganha a engrenagem de configurações no canto
+  /// superior esquerdo — nome/e-mail saem da tela principal e vão pra lá,
+  /// mesmo padrão já usado na tela inicial do aluno. Sem [user] (telas de
+  /// carregando/erro/bloqueado), não tem o que mostrar nas configurações
+  /// ainda, então a engrenagem fica de fora.
+  Scaffold _scaffoldGenerico(BuildContext context, Widget body, {AppUser? user}) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: user == null
+            ? null
+            : IconButton(
+                tooltip: 'Configurações',
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: () => _abrirConfiguracoes(context, user),
+              ),
+        title: const GymExtremeLogo(compact: true),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Sair',
+            icon: const Icon(Icons.logout),
+            onPressed: () => _sair(),
+          ),
+        ],
       ),
+      body: SafeArea(child: body),
+    );
+  }
+
+  Future<void> _sair() async {
+    // Remove o token FCM deste aparelho ANTES de sair — depois do
+    // signOut() o Firestore ja nao autoriza mais essa escrita (regra
+    // exige request.auth.uid == uid).
+    await notificacaoService.removerTokenDoAparelho(uid);
+    await authService.signOut();
+  }
+
+  /// Tela inicial redesenhada do aluno: foto grande no canto superior
+  /// esquerdo da AppBar, saudação com o nome completo, os 2 atalhos
+  /// principais (Biblioteca/Meus treinos) e as funções que antes ficavam
+  /// escondidas atrás de "Meu Perfil" agora como ícones quadrados, estilo
+  /// menu de celular. Nome/e-mail e "Sair" saem da tela principal e vão
+  /// pra dentro do botão de engrenagem (canto inferior direito).
+  Widget _buildHomeAluno(BuildContext context, AppUser user, Aluno? aluno) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: _AvatarAluno(nome: user.nome, fotoUrl: aluno?.fotoUrl, raio: 20),
+        ),
+        leadingWidth: 56,
+        title: const GymExtremeLogo(compact: true),
+        centerTitle: true,
       ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Configurações',
+        backgroundColor: AppColors.gold,
+        foregroundColor: AppColors.black,
+        onPressed: () => _abrirConfiguracoes(context, user),
+        child: const Icon(Icons.settings_outlined),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Column(
+                children: [
+                  Icon(_iconFor(user.role), color: AppColors.gold, size: 48),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Bem-vindo, ${user.nome}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ExerciciosListScreen()),
+                ),
+                icon: const Icon(Icons.fitness_center_outlined),
+                label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MeusTreinosScreen(uid: uid, alunoService: alunoService),
+                  ),
+                ),
+                icon: const Icon(Icons.assignment_outlined),
+                label: const Text('MEUS TREINOS'),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                'MEU PERFIL',
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.85,
+                children: [
+                  _TileMenuPerfil(
+                    icone: Icons.badge_outlined,
+                    rotulo: 'Dados\npessoais',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MeusDadosAlunoScreen(
+                          usuario: user,
+                          uid: uid,
+                          alunoService: alunoService,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _TileMenuPerfil(
+                    icone: Icons.calendar_view_week_outlined,
+                    rotulo: 'Minha\nficha',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MinhaFichaScreen(uid: uid, alunoService: alunoService),
+                      ),
+                    ),
+                  ),
+                  _TileMenuPerfil(
+                    icone: Icons.straighten_outlined,
+                    rotulo: 'Minhas\nmedidas',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            MinhasMedidasScreen(uid: uid, alunoService: alunoService),
+                      ),
+                    ),
+                  ),
+                  _TileMenuPerfil(
+                    icone: Icons.assignment_outlined,
+                    rotulo: 'Minha\nanamnese',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            MinhaAnamneseScreen(uid: uid, alunoService: alunoService),
+                      ),
+                    ),
+                  ),
+                  _TileMenuPerfil(
+                    icone: Icons.show_chart_outlined,
+                    rotulo: 'Minha\nevolução',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            MinhaEvolucaoScreen(uid: uid, alunoService: alunoService),
+                      ),
+                    ),
+                  ),
+                  // O ícone não mostra bolinha de "não lida" até existir
+                  // contagem/estado de leitura real (ver `MensagensScreen` —
+                  // hoje só lista, sem marcar como lida).
+                  _TileMenuPerfil(
+                    icone: Icons.chat_bubble_outline,
+                    rotulo: 'Mensagens',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MensagensScreen(uid: uid, alunoService: alunoService),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Painel de configurações (nome completo, e-mail, sair) — aberto pelo
+  /// botão de engrenagem da tela inicial do aluno.
+  void _abrirConfiguracoes(BuildContext context, AppUser user) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Configurações',
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  user.nome,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(user.email, style: const TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      _sair();
+                    },
+                    icon: const Icon(Icons.logout, color: AppColors.error),
+                    label: const Text('SAIR', style: TextStyle(color: AppColors.error)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.error),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -159,199 +409,162 @@ class WelcomeScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(height: 8),
-            Text(
-              user.nome,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            const SizedBox(height: 28),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 3,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.85,
+              children: [
+                if (PermissionService.has(user, Permission.relatorios))
+                  _TileMenuPerfil(
+                    icone: Icons.dashboard_outlined,
+                    rotulo: 'Painel e\nrelatórios',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DashboardScreen(
+                          alunoService: alunoService,
+                          caixaService: caixaService,
+                          contaPagarService: contaPagarService,
+                          produtoService: produtoService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.gerenciarAlunos))
+                  _TileMenuPerfil(
+                    icone: Icons.groups_outlined,
+                    rotulo: 'Gerenciar\nalunos',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AlunosListScreen(
+                          alunoService: alunoService,
+                          storageService: storageService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.chat))
+                  _TileMenuPerfil(
+                    icone: Icons.send_outlined,
+                    rotulo: 'Enviar\nmensagem',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EnviarMensagemScreen(
+                          alunoService: alunoService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.acessarPlanos))
+                  _TileMenuPerfil(
+                    icone: Icons.card_membership_outlined,
+                    rotulo: 'Planos',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PlanosListScreen(
+                          planoService: planoService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.matriculas))
+                  _TileMenuPerfil(
+                    icone: Icons.assignment_ind_outlined,
+                    rotulo: 'Matrículas',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MatriculasListScreen(
+                          alunoService: alunoService,
+                          planoService: planoService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.acessarContasReceber))
+                  _TileMenuPerfil(
+                    icone: Icons.receipt_long_outlined,
+                    rotulo: 'Contas a\nreceber',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ContasReceberListScreen(
+                          alunoService: alunoService,
+                          caixaService: caixaService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.acessarControleCaixa))
+                  _TileMenuPerfil(
+                    icone: Icons.point_of_sale_outlined,
+                    rotulo: 'Controle de\ncaixa',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CaixaScreen(
+                          caixaService: caixaService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.acessarContasPagar))
+                  _TileMenuPerfil(
+                    icone: Icons.request_quote_outlined,
+                    rotulo: 'Contas a\npagar',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ContasPagarListScreen(
+                          contaPagarService: contaPagarService,
+                          caixaService: caixaService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.acessarProdutos))
+                  _TileMenuPerfil(
+                    icone: Icons.inventory_2_outlined,
+                    rotulo: 'Produtos',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ProdutosListScreen(
+                          produtoService: produtoService,
+                          staffAtual: user,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.bibliotecaExercicios))
+                  _TileMenuPerfil(
+                    icone: Icons.fitness_center_outlined,
+                    rotulo: 'Biblioteca de\nexercícios',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ExerciciosListScreen()),
+                    ),
+                  ),
+                if (PermissionService.has(user, Permission.gerenciarFuncionarios))
+                  _TileMenuPerfil(
+                    icone: Icons.badge_outlined,
+                    rotulo: 'Gerenciar\nfuncionários',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => FuncionariosListScreen(
+                          funcionarioService: funcionarioService,
+                          cargoService: cargoService,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            Text(user.email, style: const TextStyle(color: AppColors.textSecondary)),
-            if (PermissionService.has(user, Permission.relatorios)) ...[
-              const SizedBox(height: 28),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DashboardScreen(
-                      alunoService: alunoService,
-                      caixaService: caixaService,
-                      contaPagarService: contaPagarService,
-                      produtoService: produtoService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.dashboard_outlined),
-                label: const Text('PAINEL E RELATÓRIOS'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.gerenciarAlunos)) ...[
-              const SizedBox(height: 28),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AlunosListScreen(
-                      alunoService: alunoService,
-                      storageService: storageService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.groups_outlined),
-                label: const Text('GERENCIAR ALUNOS'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.acessarPlanos)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PlanosListScreen(
-                      planoService: planoService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.card_membership_outlined),
-                label: const Text('PLANOS'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.matriculas)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MatriculasListScreen(
-                      alunoService: alunoService,
-                      planoService: planoService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.assignment_ind_outlined),
-                label: const Text('MATRÍCULAS'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.acessarContasReceber)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ContasReceberListScreen(
-                      alunoService: alunoService,
-                      caixaService: caixaService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('CONTAS A RECEBER'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.acessarControleCaixa)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CaixaScreen(
-                      caixaService: caixaService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.point_of_sale_outlined),
-                label: const Text('CONTROLE DE CAIXA'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.acessarContasPagar)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ContasPagarListScreen(
-                      contaPagarService: contaPagarService,
-                      caixaService: caixaService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.request_quote_outlined),
-                label: const Text('CONTAS A PAGAR'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.acessarProdutos)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ProdutosListScreen(
-                      produtoService: produtoService,
-                      staffAtual: user,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.inventory_2_outlined),
-                label: const Text('PRODUTOS'),
-              ),
-            ],
-            // Permission.bibliotecaExercicios é uma permissão de staff (o
-            // aluno nunca tem nenhuma, por blindagem em
-            // PermissionService.effectivePermissions) — mas a Biblioteca
-            // Oficial é só um catálogo de referência, sem escrita, então
-            // faz sentido pro aluno também ver, sem depender do sistema
-            // de permissões de equipe.
-            if (user.role == UserRole.aluno ||
-                PermissionService.has(user, Permission.bibliotecaExercicios)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ExerciciosListScreen(),
-                  ),
-                ),
-                icon: const Icon(Icons.fitness_center_outlined),
-                label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
-              ),
-            ],
-            if (user.role == UserRole.aluno) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MeusTreinosScreen(uid: uid, alunoService: alunoService),
-                  ),
-                ),
-                icon: const Icon(Icons.assignment_outlined),
-                label: const Text('MEUS TREINOS'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MeuPerfilScreen(
-                      usuario: user,
-                      uid: uid,
-                      alunoService: alunoService,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.person_outline),
-                label: const Text('MEU PERFIL'),
-              ),
-            ],
-            if (PermissionService.has(user, Permission.gerenciarFuncionarios)) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => FuncionariosListScreen(
-                      funcionarioService: funcionarioService,
-                      cargoService: cargoService,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.badge_outlined),
-                label: const Text('GERENCIAR FUNCIONÁRIOS'),
-              ),
-            ],
           ],
         ),
       ),
@@ -369,6 +582,77 @@ class WelcomeScreen extends StatelessWidget {
       case UserRole.aluno:
         return Icons.fitness_center_outlined;
     }
+  }
+}
+
+/// Foto do aluno (ou círculo com a inicial do nome, se não tiver foto
+/// cadastrada) — usada no canto superior esquerdo da AppBar da tela
+/// inicial do aluno.
+class _AvatarAluno extends StatelessWidget {
+  const _AvatarAluno({required this.nome, required this.fotoUrl, required this.raio});
+
+  final String nome;
+  final String? fotoUrl;
+  final double raio;
+
+  @override
+  Widget build(BuildContext context) {
+    final inicial = nome.trim().isEmpty ? '?' : nome.trim()[0].toUpperCase();
+    return CircleAvatar(
+      radius: raio,
+      backgroundColor: AppColors.surfaceHigh,
+      backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl!) : null,
+      child: fotoUrl == null
+          ? Text(
+              inicial,
+              style: TextStyle(
+                color: AppColors.gold,
+                fontWeight: FontWeight.bold,
+                fontSize: raio * 0.8,
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+/// Um ícone quadrado de cantos arredondados + rótulo — estilo menu de
+/// celular, substitui o antigo card único "MEU PERFIL" (ver
+/// `MeuPerfilScreen`, cujos 5 destinos agora são acessados direto daqui).
+class _TileMenuPerfil extends StatelessWidget {
+  const _TileMenuPerfil({required this.icone, required this.rotulo, required this.onTap});
+
+  final IconData icone;
+  final String rotulo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(icone, color: AppColors.gold, size: 26),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            rotulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 11.5, height: 1.25),
+          ),
+        ],
+      ),
+    );
   }
 }
 

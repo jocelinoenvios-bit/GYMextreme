@@ -309,6 +309,16 @@ service cloud.firestore {
         allow write: if temPermissao('avaliacoesFisicas');
       }
 
+      // Mensagens enviadas por um membro da equipe pro aluno (tela
+      // "Enviar mensagem" do personal/ADM) — mesmo padrao de
+      // `avaliacoes` acima: so quem tem a permissao `chat` le/escreve
+      // mensagens de qualquer aluno; o proprio aluno sempre le as suas.
+      match /mensagens/{mensagemId} {
+        allow read: if request.auth != null &&
+          (request.auth.uid == uid || temPermissao('chat'));
+        allow write: if temPermissao('chat');
+      }
+
       // Historico de pagamentos de mensalidade — so quem tem a permissao
       // especifica de receber mensalidade pode registrar (nao basta ser
       // staff generico); o proprio aluno so le, nunca escreve.

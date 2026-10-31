@@ -632,11 +632,17 @@ class _TileMenuPerfil extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          AspectRatio(
-            aspectRatio: 1,
+          // Expanded (não AspectRatio) de propósito: a célula do
+          // GridView tem altura FIXA (childAspectRatio), então insistir
+          // num quadrado perfeito baseado na largura da célula podia
+          // sobrar pouco espaço pra legenda de 2 linhas e estourar por
+          // baixo (bug real, visto em aparelho físico) — Expanded
+          // sempre ocupa só o espaço que sobra depois da legenda, nunca
+          // estoura, não importa o tamanho da tela ou da fonte.
+          Expanded(
             child: Container(
+              width: double.infinity,
               decoration: BoxDecoration(
                 color: AppColors.surfaceHigh,
                 borderRadius: BorderRadius.circular(18),
@@ -648,7 +654,9 @@ class _TileMenuPerfil extends StatelessWidget {
           Text(
             rotulo,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 11.5, height: 1.25),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 11.5, height: 1.2),
           ),
         ],
       ),

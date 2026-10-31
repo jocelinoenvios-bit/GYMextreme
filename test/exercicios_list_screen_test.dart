@@ -71,14 +71,18 @@ Future<void> _carregar(WidgetTester tester, Widget tela) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('lista os exercicios da Biblioteca Oficial', (tester) async {
+  testWidgets('lista as categorias (grupos musculares) como cards', (tester) async {
     await _carregar(
       tester,
       ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
     );
 
-    expect(find.text('3/4 sit-up'), findsOneWidget);
-    expect(find.text('lever chest press'), findsOneWidget);
+    // Catálogo de teste tem só "waist" (Abdômen) e "chest" (Peito) — a
+    // tela principal mostra as categorias, não os exercícios direto.
+    expect(find.text('Abdômen'), findsOneWidget);
+    expect(find.text('Peito'), findsOneWidget);
+    expect(find.text('3/4 sit-up'), findsNothing);
+    expect(find.text('lever chest press'), findsNothing);
   });
 
   testWidgets('busca por nome filtra a lista', (tester) async {
@@ -94,19 +98,33 @@ void main() {
     expect(find.text('3/4 sit-up'), findsNothing);
   });
 
-  testWidgets('filtro por grupo muscular restringe a lista', (tester) async {
+  testWidgets('tocar numa categoria abre só os exercícios dela', (tester) async {
     await _carregar(
       tester,
       ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
     );
 
-    // 'Peito' aparece duas vezes (o chip de filtro e o subtítulo do
-    // item "lever chest press") — mira especificamente no ChoiceChip.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Peito'));
+    await tester.tap(find.text('Peito'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('lever chest press'), findsOneWidget);
+    expect(find.text('3/4 sit-up'), findsNothing);
+  });
+
+  testWidgets('buscar por nome na tela principal cruza todas as categorias', (tester) async {
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
+
+    await tester.enterText(find.byType(TextField), 'lever');
     await tester.pump();
 
     expect(find.text('lever chest press'), findsOneWidget);
     expect(find.text('3/4 sit-up'), findsNothing);
+    // A busca substitui a grade de categorias — nenhuma aparece mais.
+    expect(find.text('Abdômen'), findsNothing);
+    expect(find.text('Peito'), findsNothing);
   });
 
   testWidgets('tocar num exercicio sem onSelecionar abre o detalhe', (tester) async {
@@ -114,6 +132,9 @@ void main() {
       tester,
       ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
     );
+
+    await tester.tap(find.text('Abdômen'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('3/4 sit-up'));
     // Sem pumpAndSettle: o GIF do detalhe roda em loop infinito
@@ -180,6 +201,8 @@ void main() {
         if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
       }
 
+      await tester.tap(find.text('Peito'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('lever chest press'));
       await tester.pumpAndSettle();
 

@@ -21,7 +21,6 @@
     "test:audit": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/auditoria-fluxo-completo.emulator.js\"",
     "test:simulacao:catraca": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/simulacao-catraca.emulator.js\"",
     "mock:idface": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node scripts/mock-idface.js\"",
-    "upload:gifs": "node scripts/upload-gifs-storage.js",
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {

@@ -15,10 +15,9 @@ Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 class _FakeExerciseRepository implements ExerciseRepository {
   const _FakeExerciseRepository();
 
-  // gif360Url no padrão de produção (caminho do Storage, não um asset
-  // do bundle) — a lista/ficha resolvem via `GifCacheService`
-  // (`FakeGifCacheService` nos testes abaixo), nunca lendo o asset
-  // bundle do Flutter diretamente.
+  // videoUrl presente nos dois: a Biblioteca só lista exercícios com
+  // vídeo hoje (ExerciciosListScreen filtra por temVideoComplementar),
+  // então o fake precisa refletir isso ou a lista fica vazia.
   static const _catalogo = <ExerciseModel>[
     ExerciseModel(
       id: '0001',
@@ -30,6 +29,7 @@ class _FakeExerciseRepository implements ExerciseRepository {
       categoria: 'strength',
       movementFamily: 'sit up',
       gif360Url: 'exercicios/gifs/0001.gif',
+      videoUrl: 'exercicios/videos/0001.mp4',
     ),
     ExerciseModel(
       id: '0577',
@@ -41,6 +41,7 @@ class _FakeExerciseRepository implements ExerciseRepository {
       categoria: 'strength',
       movementFamily: 'chest press',
       gif360Url: 'exercicios/gifs/0577.gif',
+      videoUrl: 'exercicios/videos/0577.mp4',
     ),
   ];
 

@@ -49,7 +49,13 @@ class _ExerciciosListScreenState extends State<ExerciciosListScreen> {
   void initState() {
     super.initState();
     _gifCacheService = widget.gifCacheService ?? FirebaseGifCacheService();
-    _futureTodos = widget.repository.buscarTodos();
+    // Só exercícios com vídeo (ver temVideoComplementar) entram na
+    // Biblioteca hoje — o resto do catálogo (sem GIF nem vídeo, desde
+    // que o GIF foi desligado) fica fora da listagem inteira, não só
+    // sem miniatura.
+    _futureTodos = widget.repository.buscarTodos().then(
+      (lista) => lista.where((e) => e.temVideoComplementar).toList(),
+    );
   }
 
   @override

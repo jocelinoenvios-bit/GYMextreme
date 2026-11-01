@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import 'treino_execucao_screen.dart';
 
 /// Lista dos treinos do próprio aluno — só visualização e execução, sem
@@ -26,7 +27,7 @@ class MeusTreinosScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
@@ -39,7 +40,7 @@ class MeusTreinosScreen extends StatelessWidget {
 
           final treinos = (snapshot.data ?? []).where((treino) => treino.ativo).toList();
           if (treinos.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
@@ -80,9 +81,10 @@ class _TreinoTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onTap,
@@ -91,7 +93,7 @@ class _TreinoTile extends StatelessWidget {
           backgroundColor: AppColors.gold,
           child: Text(
             treino.letra,
-            style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(treino.nome),
@@ -101,9 +103,9 @@ class _TreinoTile extends StatelessWidget {
               treino.grupoMuscular!,
             '${treino.exercicios.length} exercício(s)',
           ].join(' • '),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
-        trailing: const Icon(Icons.play_circle_outline, color: AppColors.gold),
+        trailing: Icon(Icons.play_circle_outline, color: AppColors.gold),
       ),
     );
   }

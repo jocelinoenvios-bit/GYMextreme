@@ -6,6 +6,7 @@ import '../../models/exercise_model.dart';
 import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../services/exercise_repository.dart';
+import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
 import 'widgets/exercicio_info_cards.dart';
 import 'widgets/exercicio_media_stage.dart';
@@ -32,6 +33,7 @@ class TreinoExecucaoScreen extends StatefulWidget {
     required this.treinoId,
     this.repository = const LocalExerciseRepository(),
     this.buscarTreino = _buscarTreinoPadrao,
+    this.gifCacheService,
   });
 
   final String alunoUid;
@@ -41,6 +43,10 @@ class TreinoExecucaoScreen extends StatefulWidget {
   /// Injetável pra teste — o padrão lê de verdade do Firestore via
   /// [AlunoService.buscarTreino].
   final Future<Treino?> Function(String alunoUid, String treinoId) buscarTreino;
+
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa o
+  /// padrão de `ExercicioMidia` (`FirebaseGifCacheService()`).
+  final GifCacheService? gifCacheService;
 
   static Future<Treino?> _buscarTreinoPadrao(String alunoUid, String treinoId) {
     return AlunoService().buscarTreino(alunoUid, treinoId);
@@ -226,7 +232,7 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
                   child: Text(
                     'série ${(_seriesConcluidas + 1).clamp(1, _prescricaoAtual.series).toInt()}'
                     ' de ${_prescricaoAtual.series}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.goldBright,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -255,7 +261,10 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
                     controller: _scrollController,
                     child: Column(
                       children: [
-                        ExercicioMediaStage(exercise: _prescricaoAtual.exercise),
+                        ExercicioMediaStage(
+                          exercise: _prescricaoAtual.exercise,
+                          gifCacheService: widget.gifCacheService,
+                        ),
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: ExercicioInfoList(prescricao: _prescricaoAtual),
@@ -296,12 +305,12 @@ class _ErroCarregamentoView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 56),
+            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 56),
             const SizedBox(height: 16),
             Text(
               mensagem,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -328,9 +337,9 @@ class _TreinoConcluidoView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.emoji_events_rounded, color: AppColors.goldBright, size: 64),
+            Icon(Icons.emoji_events_rounded, color: AppColors.goldBright, size: 64),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Treino concluído!',
               style: TextStyle(
                 color: AppColors.textPrimary,
@@ -341,7 +350,7 @@ class _TreinoConcluidoView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '$totalExercicios exercícios finalizados',
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 28),
             SizedBox(

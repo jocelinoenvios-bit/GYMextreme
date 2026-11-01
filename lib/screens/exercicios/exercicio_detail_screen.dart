@@ -5,18 +5,52 @@ import '../../constants/equipamentos.dart';
 import '../../constants/grupos_musculares.dart';
 import '../../constants/musculos.dart';
 import '../../models/exercise_model.dart';
+import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
+import '../area_aluno/widgets/exercicio_midia.dart';
 
 /// Ficha de referência de um exercício da Biblioteca Oficial — usada ao
 /// navegar a biblioteca (fora do fluxo de execução do treino, que tem
 /// sua própria tela dedicada com player/controles).
-class ExercicioDetailScreen extends StatelessWidget {
-  const ExercicioDetailScreen({super.key, required this.exercicio});
+///
+/// Mostra a mídia animada de verdade — vídeo da Vital Animations
+/// (`videoUrl`) quando existir, GIF (`gif360Url`) caso contrário —,
+/// não só o primeiro quadro — mesmo
+/// padrão de `ExercicioMediaStage`/`ExercicioFullscreenScreen`, mas sem
+/// os controles manuais (aqui é só referência, sempre em loop).
+class ExercicioDetailScreen extends StatefulWidget {
+  const ExercicioDetailScreen({super.key, required this.exercicio, this.gifCacheService});
 
   final ExerciseModel exercicio;
 
+  /// Injetável pra teste (`FakeGifCacheService`) — em produção usa o
+  /// padrão de `ExercicioMidia` (`FirebaseGifCacheService()`).
+  final GifCacheService? gifCacheService;
+
+  @override
+  State<ExercicioDetailScreen> createState() => _ExercicioDetailScreenState();
+}
+
+class _ExercicioDetailScreenState extends State<ExercicioDetailScreen> {
+  late final ExercicioMidiaController _midiaController;
+
+  @override
+  void initState() {
+    super.initState();
+    _midiaController = ExercicioMidiaController(tocandoInicial: true);
+  }
+
+  @override
+  void dispose() {
+    _midiaController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final exercicio = widget.exercicio;
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     return Scaffold(
       appBar: AppBar(title: Text(exercicio.nomeExibicao, overflow: TextOverflow.ellipsis)),
       body: ListView(
@@ -28,10 +62,12 @@ class ExercicioDetailScreen extends StatelessWidget {
               aspectRatio: 1,
               child: Container(
                 color: AppColors.stage,
-                child: Image.asset(
-                  exercicio.gif180Url,
+                child: ExercicioMidia(
+                  exercise: exercicio,
+                  controller: _midiaController,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const _GifIndisponivel(),
+                  reduceMotion: reduceMotion,
+                  gifCacheService: widget.gifCacheService,
                 ),
               ),
             ),
@@ -52,7 +88,7 @@ class ExercicioDetailScreen extends StatelessWidget {
           ),
           if (exercicio.passoAPassoExibicao.isNotEmpty) ...[
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Instruções',
               style: TextStyle(
                 color: AppColors.gold,
@@ -69,12 +105,12 @@ class ExercicioDetailScreen extends StatelessWidget {
                   children: [
                     Text(
                       '${index + 1}. ',
-                      style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
                     ),
                     Expanded(
                       child: Text(
                         exercicio.passoAPassoExibicao[index],
-                        style: const TextStyle(color: AppColors.textPrimary, height: 1.4),
+                        style: TextStyle(color: AppColors.textPrimary, height: 1.4),
                       ),
                     ),
                   ],
@@ -98,27 +134,15 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Text(
         label,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
-    );
-  }
-}
-
-class _GifIndisponivel extends StatelessWidget {
-  const _GifIndisponivel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      alignment: Alignment.center,
-      child: const Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary, size: 40),
     );
   }
 }

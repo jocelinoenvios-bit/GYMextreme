@@ -6,6 +6,7 @@ import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import '../exercicios/exercicios_list_screen.dart';
 
 const _letrasDisponiveis = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -40,7 +41,10 @@ class TreinoFormScreen extends StatefulWidget {
 class _TreinoFormScreenState extends State<TreinoFormScreen> {
   final _nomeController = TextEditingController();
   final _grupoMuscularController = TextEditingController();
+  final _objetivoController = TextEditingController();
   String _letra = _letrasDisponiveis.first;
+  int? _diaSemana;
+  DateTime? _vigenciaAte;
   late List<TreinoExercicio> _exercicios;
   late final Future<List<ExerciseModel>> _futureBiblioteca;
   bool _isSaving = false;
@@ -51,7 +55,10 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
     final treino = widget.treino;
     _nomeController.text = treino?.nome ?? 'Treino $_letra';
     _grupoMuscularController.text = treino?.grupoMuscular ?? '';
+    _objetivoController.text = treino?.objetivo ?? '';
     _letra = treino?.letra ?? _letrasDisponiveis.first;
+    _diaSemana = treino?.diaSemana;
+    _vigenciaAte = treino?.vigenciaAte;
     _exercicios = [...(treino?.exercicios ?? const [])];
     _futureBiblioteca = widget.repository.buscarTodos();
   }
@@ -60,7 +67,19 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
   void dispose() {
     _nomeController.dispose();
     _grupoMuscularController.dispose();
+    _objetivoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selecionarVigencia() async {
+    final agora = DateTime.now();
+    final data = await showDatePicker(
+      context: context,
+      initialDate: _vigenciaAte ?? agora,
+      firstDate: DateTime(agora.year - 1),
+      lastDate: DateTime(agora.year + 5),
+    );
+    if (data != null) setState(() => _vigenciaAte = data);
   }
 
   Future<void> _adicionarExercicio() async {
@@ -127,7 +146,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
   Future<void> _handleSave() async {
     if (_nomeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe um nome para o treino.'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Informe um nome para o treino.'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -141,12 +160,20 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
               letra: _letra,
               grupoMuscular: _grupoMuscularController.text.trim(),
               exercicios: _exercicios,
+              diaSemana: _diaSemana,
+              objetivo: _objetivoController.text.trim(),
+              vigenciaAte: _vigenciaAte,
             )
           : Treino(
               nome: _nomeController.text.trim(),
               letra: _letra,
               grupoMuscular: _grupoMuscularController.text.trim(),
               exercicios: _exercicios,
+              diaSemana: _diaSemana,
+              objetivo: _objetivoController.text.trim().isEmpty
+                  ? null
+                  : _objetivoController.text.trim(),
+              vigenciaAte: _vigenciaAte,
             );
       await widget.alunoService.salvarTreino(
         widget.alunoUid,
@@ -207,6 +234,48 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
                 helperText: 'Ex.: Peito e tríceps',
               ),
             ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _objetivoController,
+              decoration: const InputDecoration(
+                labelText: 'Objetivo',
+                helperText: 'Ex.: Hipertrofia, emagrecimento',
+              ),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int?>(
+              initialValue: _diaSemana,
+              decoration: const InputDecoration(labelText: 'Dia da semana'),
+              items: [
+                const DropdownMenuItem<int?>(value: null, child: Text('Sem dia definido')),
+                for (var dia = 1; dia <= 7; dia++)
+                  DropdownMenuItem<int?>(value: dia, child: Text(diasSemanaLabels[dia])),
+              ],
+              onChanged: (dia) => setState(() => _diaSemana = dia),
+            ),
+            const SizedBox(height: 14),
+            InkWell(
+              onTap: _selecionarVigencia,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Válido até',
+                  helperText: 'Opcional — deixe em branco para validade indefinida',
+                  suffixIcon: _vigenciaAte == null
+                      ? const Icon(Icons.calendar_today_outlined)
+                      : IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _vigenciaAte = null),
+                        ),
+                ),
+                child: Text(
+                  _vigenciaAte == null
+                      ? 'Sem data definida'
+                      : '${_vigenciaAte!.day.toString().padLeft(2, '0')}/'
+                            '${_vigenciaAte!.month.toString().padLeft(2, '0')}/'
+                            '${_vigenciaAte!.year}',
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -220,7 +289,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
               ],
             ),
             if (_exercicios.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Nenhum exercício adicionado ainda.',
@@ -258,7 +327,7 @@ class _TreinoFormScreenState extends State<TreinoFormScreen> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSave,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
@@ -300,19 +369,20 @@ class _ExercicioTreinoTile extends StatelessWidget {
       key: key,
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onEditar,
-        leading: const Icon(Icons.drag_handle, color: AppColors.textSecondary),
+        leading: Icon(Icons.drag_handle, color: AppColors.textSecondary),
         title: Text(exercicio?.nomeExibicao ?? 'Exercício não encontrado'),
         subtitle: resumo.isEmpty
             ? null
-            : Text(resumo, style: const TextStyle(color: AppColors.textSecondary)),
+            : Text(resumo, style: TextStyle(color: AppColors.textSecondary)),
         trailing: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textSecondary),
+          icon: Icon(Icons.close, color: AppColors.textSecondary),
           onPressed: onRemover,
         ),
       ),

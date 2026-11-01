@@ -13,12 +13,21 @@ class PermissionService {
   /// Fallback de compatibilidade para contas `personal` gravadas antes
   /// deste sistema existir (sem `permissoes` no Firestore): mantem
   /// exatamente o acesso que "personal" ja tinha hoje (gerenciar alunos +
-  /// biblioteca de exercicios + avaliacoes fisicas), sem exigir nenhuma
-  /// migracao manual no Firestore.
+  /// biblioteca de exercicios + avaliacoes fisicas + criar/editar
+  /// treinos), sem exigir nenhuma migracao manual no Firestore.
+  ///
+  /// `criarTreinos`/`editarTreinos` foram adicionados aqui depois de uma
+  /// auditoria apontar que faltavam — sem eles, um personal legado
+  /// (conta antiga, sem `permissoes` gravado) perdia silenciosamente a
+  /// capacidade de prescrever/editar treino, a função mais básica do
+  /// cargo, mesmo o comentário original dizendo que o fallback preservava
+  /// "o acesso que personal já tinha".
   static const Set<Permission> _personalLegadoFallback = {
     Permission.gerenciarAlunos,
     Permission.bibliotecaExercicios,
     Permission.avaliacoesFisicas,
+    Permission.criarTreinos,
+    Permission.editarTreinos,
   };
 
   /// Permissoes efetivas de [user], já resolvendo a regra de

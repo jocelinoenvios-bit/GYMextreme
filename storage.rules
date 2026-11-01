@@ -1,7 +1,10 @@
 rules_version = '2';
 
-// Regras do Firebase Storage — hoje so guarda a foto de perfil do aluno
-// (`alunos/{uid}/foto.jpg`, ver StorageService.enviarFotoAluno).
+// Regras do Firebase Storage — foto de perfil do aluno
+// (`alunos/{uid}/foto.jpg`, ver StorageService.enviarFotoAluno) e, desde
+// a Fase 2 da biblioteca de exercicios, os GIFs da ExerciseDB
+// (`exercicios/gifs/{id}.gif` e `exercicios/gifs_360/{id}.gif`, ver
+// GifCacheService/upload-gifs-storage.js).
 // Aplique em Firebase Console > Storage > Regras, ou via
 // `firebase deploy --only storage` depois de rodar `firebase init`.
 service firebase.storage {
@@ -23,6 +26,18 @@ service firebase.storage {
       allow write: if ehStaff() &&
         request.resource.size < 5 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
+    }
+
+    match /exercicios/{pasta}/{arquivo} {
+      // Qualquer usuario logado (aluno ou staff) pode ver os GIFs da
+      // biblioteca -- o aluno precisa deles durante o proprio treino,
+      // nao e conteudo restrito a staff como a foto de outro aluno.
+      allow read: if request.auth != null;
+
+      // Upload feito so pelo script/Admin SDK (upload-gifs-storage.js,
+      // que roda com credenciais de servidor, nao pelo app) -- nunca
+      // pelo cliente Flutter.
+      allow write: if false;
     }
   }
 }

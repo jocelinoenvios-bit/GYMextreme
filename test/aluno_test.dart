@@ -83,6 +83,66 @@ void main() {
     });
   });
 
+  group('Aluno — ciclo de inadimplência/inatividade', () {
+    test('dataInativacao/dataReativacao/whatsappOptIn fazem round-trip', () {
+      final inativacao = DateTime(2026, 3, 1);
+      final reativacao = DateTime(2026, 5, 20);
+      final aluno = Aluno(
+        uid: 'uid1',
+        ativo: false,
+        dataInativacao: inativacao,
+        dataReativacao: reativacao,
+        reativadoPorUid: 'staff1',
+        reativadoPorNome: 'Recepção Ana',
+        whatsappOptIn: true,
+      );
+
+      final dados = aluno.toFirestore();
+      final reconstruido = Aluno.fromFirestore('uid1', dados);
+
+      expect(reconstruido.ativo, isFalse);
+      expect(reconstruido.dataInativacao, inativacao);
+      expect(reconstruido.dataReativacao, reativacao);
+      expect(reconstruido.reativadoPorUid, 'staff1');
+      expect(reconstruido.reativadoPorNome, 'Recepção Ana');
+      expect(reconstruido.whatsappOptIn, isTrue);
+    });
+
+    test('cadastro sem nenhum desses campos não quebra (compatibilidade retroativa)', () {
+      final aluno = Aluno.fromFirestore('uid1', const {});
+
+      expect(aluno.ativo, isTrue);
+      expect(aluno.dataInativacao, isNull);
+      expect(aluno.dataReativacao, isNull);
+      expect(aluno.whatsappOptIn, isNull);
+    });
+
+    test('whatsappOptIn null (nunca perguntado) é diferente de false (recusou)', () {
+      final semPergunta = Aluno.fromFirestore('uid1', const {});
+      final recusou = Aluno.fromFirestore('uid2', const {'whatsappOptIn': false});
+
+      expect(semPergunta.whatsappOptIn, isNull);
+      expect(recusou.whatsappOptIn, isFalse);
+    });
+
+    test('copyWith preserva dataInativacao ao só reativar (reativação não apaga histórico)', () {
+      final original = Aluno(
+        uid: 'uid1',
+        ativo: false,
+        dataInativacao: DateTime(2026, 3, 1),
+      );
+
+      final reativado = original.copyWith(
+        ativo: true,
+        dataReativacao: DateTime(2026, 5, 20),
+      );
+
+      expect(reativado.ativo, isTrue);
+      expect(reativado.dataInativacao, DateTime(2026, 3, 1));
+      expect(reativado.dataReativacao, DateTime(2026, 5, 20));
+    });
+  });
+
   group('Pagamento', () {
     test('fromFirestore/toFirestore preservam vencimento anterior e novo', () {
       final anterior = DateTime(2026, 7, 10);

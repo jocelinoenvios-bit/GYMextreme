@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gymextreme_app/screens/area_aluno/widgets/execucao_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/exercise_model.dart';
 import 'package:gymextreme_app/models/treino.dart';
@@ -122,6 +123,51 @@ Future<void> _carregar(WidgetTester tester, {Treino? treino = _treinoFake}) asyn
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Bug real em aparelho ("vídeo cortado"): a Column do rodapé não tinha
+  // mainAxisSize.min, e o Scaffold deixa o bottomNavigationBar crescer até
+  // a tela inteira — o rodapé cobria o vídeo e tudo mais, com "Carga
+  // usada"/"Concluir série" grudados no topo. Os testes antigos só
+  // procuravam textos (que continuavam lá), por isso nunca pegaram.
+  group('geometria num celular de verdade (411x914)', () {
+    void tamanhoDeCelular(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('o rodapé fica embaixo, com a altura do próprio conteúdo', (tester) async {
+      tamanhoDeCelular(tester);
+      await _carregar(tester);
+
+      final altura = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final rodape = tester.getRect(find.byType(ExecucaoBottomBar));
+      expect(rodape.bottom, moreOrLessEquals(altura));
+      expect(rodape.height, lessThan(altura * 0.25));
+
+      // O palco do vídeo e as informações ficam com o resto da tela.
+      final conteudo = tester.getRect(find.byType(SingleChildScrollView));
+      expect(conteudo.height, greaterThan(altura * 0.5));
+      expect(conteudo.bottom, lessThanOrEqualTo(rodape.top));
+    });
+
+    testWidgets('com o teclado aberto, "Carga usada" fica acima do teclado', (tester) async {
+      tamanhoDeCelular(tester);
+      await _carregar(tester);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 2.625);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pump();
+
+      final altura = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final topoDoTeclado = altura - 300;
+      final campo = tester.getRect(find.widgetWithText(TextField, 'Carga usada (kg)'));
+      final botao = tester.getRect(find.text('CONCLUIR SÉRIE 1'));
+      expect(campo.bottom, lessThanOrEqualTo(topoDoTeclado));
+      expect(botao.bottom, lessThanOrEqualTo(topoDoTeclado));
+      expect(campo.top, greaterThan(altura * 0.3));
+    });
+  });
 
   testWidgets('carrega o treino real do Firestore e mostra o primeiro exercicio prescrito', (
     tester,

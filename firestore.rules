@@ -42,14 +42,32 @@ service cloud.firestore {
       allow create: if ehStaff() &&
         (request.resource.data.role == 'aluno' || temPermissao('gerenciarFuncionarios'));
 
-      // Editar/apagar o documento de outra pessoa (ex.: ajustar permissoes
-      // de um funcionario) exige "gerenciarFuncionarios". Exceção: o
-      // próprio usuário (qualquer role, inclusive aluno) pode atualizar
-      // SÓ o próprio `fcmTokens` — é o que registra o token de push do
-      // aparelho pra notificação de mensalidade
+      // Editar o documento de OUTRA pessoa (ex.: ajustar permissoes de um
+      // funcionario) exige "gerenciarFuncionarios". Blindagem contra
+      // auto-escalonamento: quem NAO e adm nunca pode usar esta mesma
+      // permissao pra editar o PROPRIO documento (request.auth.uid ==
+      // uid) — sem essa trava, um funcionario/personal com
+      // "gerenciarFuncionarios" poderia se auto-promover a role 'adm'
+      // (ou conceder a si mesmo qualquer outra permissao) escrevendo
+      // direto no Firestore, contornando a UI. Um ADM de verdade
+      // (ehAdm()) continua podendo editar o proprio documento por essa
+      // via — ja esta no privilegio maximo, nao ha escalonamento
+      // possivel. Tambem nunca muda o `role` de ninguem pra fora do que
+      // ja era (comparado a `resource.data.role`, o valor ANTES desta
+      // escrita) a nao ser que quem esta editando ja seja adm —
+      // `atualizarPermissoes` (unico fluxo de edicao hoje) nunca mexe em
+      // `role` mesmo, entao isso nao muda nenhum comportamento existente,
+      // so fecha a mesma brecha por outro angulo (promover um TERCEIRO a
+      // adm sem ser adm). Exceção separada: o próprio usuário (qualquer
+      // role, inclusive aluno) pode sempre atualizar SÓ o próprio
+      // `fcmTokens` — é o que registra o token de push do aparelho pra
+      // notificação de mensalidade
       // (`NotificacaoService.registrarTokenDoAparelho`), sem abrir a porta
       // pra se autopromover ou editar mais nada do próprio documento.
-      allow update: if temPermissao('gerenciarFuncionarios') ||
+      allow update: if
+        (temPermissao('gerenciarFuncionarios') &&
+          (ehAdm() || request.auth.uid != uid) &&
+          (request.resource.data.role == resource.data.role || ehAdm())) ||
         (request.auth != null && request.auth.uid == uid &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmTokens', 'atualizadoEm']));
       allow delete: if temPermissao('gerenciarFuncionarios');
@@ -241,14 +259,94 @@ service cloud.firestore {
     }
 
     match /alunos/{uid} {
-      // O proprio aluno pode ler a propria ficha; ADM/Personal leem e
-      // escrevem a ficha de qualquer aluno (cadastro, anamnese, termo).
+      // O proprio aluno pode ler a propria ficha; ADM/Personal/
+      // Funcionario leem e escrevem os dados cadastrais e o termo de
+      // qualquer aluno (ehStaff() generico continua valendo pra isso,
+      // igual antes). O campo `anamnese` fica embutido neste MESMO
+      // documento (nao e subcolecao, decisao de modelagem ja existente)
+      // — como o Firestore Rules nao restringe LEITURA por campo dentro
+      // de um documento (so por escrita, via diff), a leitura do doc
+      // inteiro continua exigindo so ehStaff(); mas ESCREVER no campo
+      // `anamnese` especificamente agora exige `avaliacoesFisicas`,
+      // igual `avaliacoes/` abaixo — fecha a mesma permissao que so
+      // escondia o botao "Salvar" na UI (`AnamneseTab`) sem proteger o
+      // banco. Se no futuro for necessario tambem restringir LEITURA da
+      // anamnese por permissao, isso exige mover `anamnese` pra uma
+      // subcolecao propria — decisao maior, fora do escopo desta correcao.
       allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
-      allow write: if ehStaff();
 
+      // Criar (cadastrar um aluno novo) continua exigindo so ehStaff() —
+      // um documento novo nunca chega com `anamnese` preenchida (ela so
+      // existe depois, gravada numa escrita separada por
+      // `salvarAnamnese`), e `resource` nao existe ainda num `create`
+      // (checar `resource.data.diff(...)` aqui quebraria o cadastro,
+      // porque `resource` e null antes do documento existir).
+      allow create: if ehStaff();
+
+      // Editar um aluno existente: dados cadastrais/termo/campos
+      // operacionais continuam exigindo so ehStaff() (ver
+      // `salvarDadosAluno`, `salvarTermoAceite`, `reativarAluno` etc.);
+      // mas escrever no campo `anamnese` especificamente exige TAMBEM
+      // `avaliacoesFisicas`.
+      allow update: if ehStaff() &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['anamnese']) ||
+          temPermissao('avaliacoesFisicas'));
+
+      // Nenhum fluxo do app apaga um aluno hoje — mantido igual ao
+      // comportamento anterior (fazia parte do `allow write: if
+      // ehStaff()` combinado), sem uso real conhecido.
+      allow delete: if ehStaff();
+
+      // Avaliacoes fisicas: antes qualquer staff lia/escrevia
+      // (`ehStaff()` generico) — a permissao `avaliacoesFisicas` existia
+      // no catalogo mas nunca era checada nem aqui nem na UI. Agora leitura
+      // e escrita exigem especificamente essa permissao (mesmo padrao ja
+      // usado em `contasReceber`: uid==uid OU a permissao granular, nunca
+      // "e staff" sozinho).
       match /avaliacoes/{avaliacaoId} {
-        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
-        allow write: if ehStaff();
+        allow read: if request.auth != null &&
+          (request.auth.uid == uid || temPermissao('avaliacoesFisicas'));
+        allow write: if temPermissao('avaliacoesFisicas');
+      }
+
+      // Avisos enviados por um membro da equipe pro aluno (tela
+      // "Mensagens" do personal/ADM) — mesmo padrao de `avaliacoes`
+      // acima: so quem tem a permissao `chat` le/escreve avisos de
+      // qualquer aluno; o proprio aluno sempre le os seus.
+      //
+      // A comunicacao e de mao unica: o aluno NAO escreve avisos. A
+      // unica escrita que ele pode fazer e marcar como lido e tirar da
+      // propria lista — por isso o update dele e limitado a esses dois
+      // campos, e nunca ao texto ou ao remetente.
+      match /mensagens/{mensagemId} {
+        allow read: if request.auth != null &&
+          (request.auth.uid == uid || temPermissao('chat'));
+        allow update: if request.auth != null &&
+          request.auth.uid == uid &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['lidaEm', 'arquivadaPeloAluno']);
+        allow write: if temPermissao('chat');
+
+        // Lembrete automatico de vencimento da mensalidade: quem cria e o
+        // app do PROPRIO aluno, ao abrir nos 3 dias antes do vencimento
+        // (AlunoService.garantirLembreteVencimento). So esse formato
+        // exato: id fixo por vencimento (um lembrete por vencimento, nunca
+        // duplicado — e create, nao sobrescreve), remetente "sistema",
+        // marcado como automatico e ainda nao lido.
+        allow create: if request.auth != null &&
+          request.auth.uid == uid &&
+          mensagemId.matches('lembrete-vencimento-[0-9]{4}-[0-9]{2}-[0-9]{2}') &&
+          request.resource.data.keys().hasOnly(['texto', 'remetenteUid',
+            'remetenteNome', 'alunoUid', 'alunoNome', 'criadoEm', 'lidaEm',
+            'arquivadaPeloAluno', 'automatica']) &&
+          request.resource.data.automatica == true &&
+          request.resource.data.remetenteUid == 'sistema' &&
+          request.resource.data.alunoUid == uid &&
+          request.resource.data.texto is string &&
+          request.resource.data.texto.size() <= 300 &&
+          request.resource.data.criadoEm == request.time &&
+          request.resource.data.lidaEm == null &&
+          request.resource.data.arquivadaPeloAluno == false;
       }
 
       // Historico de pagamentos de mensalidade — so quem tem a permissao
@@ -270,12 +368,37 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Auditoria das mensagens automaticas de WhatsApp do ciclo de
+      // inadimplencia/inatividade (Cloud Function
+      // `processarAutomacaoInadimplencia`, 15/30/45 dias) — mesmo padrao
+      // exato de `notificacoesMensalidade` acima: o proprio aluno le o
+      // proprio historico, staff le de qualquer aluno, e so a Cloud
+      // Function (Admin SDK) grava; o app cliente nunca escreve (nem o
+      // aluno, nem o staff, ninguem dispara uma mensagem na mao por
+      // aqui).
+      match /mensagensWhatsapp/{mensagemId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow write: if false;
+      }
+
       // Fichas de treino: o proprio aluno le a propria (pra ver o treino
       // do dia); staff le qualquer uma; escrever exige a permissao
       // especifica de treino (nao basta ser staff generico).
       match /treinos/{treinoId} {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
+      }
+
+      // Historico de presenca/frequencia (Realizado/Falta) de cada treino
+      // prescrito — SEPARADO da ficha prescrita acima (`treinos`): a
+      // ficha nunca depende deste registro pra aparecer (fica visivel
+      // mesmo sem nenhum historico), e o registro de presenca NUNCA e
+      // criado pelo proprio aluno (evita presenca/frequencia fraudada).
+      // So quem tem a mesma permissao que ja edita a ficha confirma
+      // presenca/falta; o aluno so le o proprio historico, nunca escreve.
+      match /historicoTreinos/{registroId} {
+        allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+        allow create, update, delete: if temPermissao('criarTreinos') || temPermissao('editarTreinos');
       }
 
       // Historico de matriculas do aluno — mesmo padrao de pagamentos: o
@@ -351,6 +474,15 @@ service cloud.firestore {
       allow read: if temPermissao('acessarContasReceber');
     }
 
+    // Mesma justificativa acima, para a aba "Enviadas" do personal/ADM
+    // (AlunoService.watchMensagensEnviadas), que cruza as mensagens de
+    // todos os alunos de uma vez pra responder "o que eu mandei, pra
+    // quem e quando". So leitura: apagar um aviso sempre passa pelo path
+    // completo do aluno (regra la em cima), nunca por uma query assim.
+    match /{path=**}/mensagens/{mensagemId} {
+      allow read: if temPermissao('chat');
+    }
+
     // Controle de acesso da catraca (identificacao, autorizacao e
     // acionamento desacoplados — ver functions/README.md). Estas colecoes
     // so sao criadas pela Cloud Function `solicitarAutorizacaoAcesso`, via
@@ -377,6 +509,60 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['consumida', 'processadoEm']);
         allow delete: if false;
       }
+    }
+
+    // Integracao com dispositivos de controle de acesso facial (ex.:
+    // iDFace Pro/Control iD) — pipeline separado do bloco acima
+    // (`academias`/`autorizacoesAcesso`/`credenciais`), que e um desenho
+    // antigo pra solenoide generico via servico local. Aqui o proprio
+    // dispositivo fala HTTP direto com a Cloud Function
+    // `controlIdNewUserIdentified` (nao passa pelo app cliente, nao usa
+    // Firebase Auth) — por isso todas estas colecoes so sao escritas
+    // via Admin SDK (que ignora estas regras); o app cliente so le, pra
+    // uma futura tela de administracao (dispositivos cadastrados,
+    // historico de acessos).
+    match /unidades/{unidadeId} {
+      allow read: if ehStaff();
+      allow write: if temPermissao('gerenciarFuncionarios');
+    }
+
+    match /dispositivosAcesso/{dispositivoId} {
+      allow read: if ehStaff();
+      allow write: if false;
+
+      // Mapeamento "user_id que o dispositivo enviou" -> aluno do Gym
+      // Xtreme, um dispositivo pode ter sua propria numeracao interna,
+      // por isso o mapeamento e por dispositivo, nao global. Escrito
+      // pelo `DeviceSyncService.vincularCredencial` (Admin SDK).
+      match /credenciais/{userIdDispositivo} {
+        allow read: if ehStaff();
+        allow write: if false;
+      }
+    }
+
+    // Politica de acesso offline (o que o dispositivo deveria fazer sem
+    // conseguir falar com o Gym Xtreme — ver
+    // functions/lib/access/offline-access-policy.js). So leitura pro
+    // app cliente (pra uma futura tela mostrar a politica atual);
+    // alterar exige a mesma permissao de `unidades` acima — pensado pra
+    // um dia virar uma configuracao trocavel pelo painel administrativo,
+    // sem precisar mexer em codigo.
+    match /configuracaoAcesso/{documento} {
+      allow read: if ehStaff();
+      allow write: if temPermissao('gerenciarFuncionarios');
+    }
+
+    // Log de toda tentativa de acesso (liberada ou negada) recebida via
+    // `controlIdNewUserIdentified` — nunca editado nem apagado depois de
+    // criado, mesma logica de imutabilidade ja usada em
+    // pagamentos/contasReceber/movimentacoes de caixa.
+    // Leitura exige a permissao especifica controleCatraca, nao so
+    // "e staff" — mesma correcao ja aplicada em avaliacoesFisicas
+    // (Fase 6): a permissao ja existia no catalogo, mas nunca era
+    // checada aqui, so escondida na UI. Ver FrequenciaTab.
+    match /eventosAcesso/{eventoId} {
+      allow read: if temPermissao('controleCatraca');
+      allow write: if false;
     }
   }
 }

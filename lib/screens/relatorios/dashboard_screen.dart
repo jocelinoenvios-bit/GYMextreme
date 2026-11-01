@@ -10,6 +10,7 @@ import '../../services/produto_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/dashboard_resumo.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/premium.dart';
 import 'evolucao_fisica_screen.dart';
 import 'relatorio_alunos_screen.dart';
 import 'relatorio_estoque_screen.dart';
@@ -123,7 +124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: SelectableText(
                     'Erro ao carregar o painel.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -285,9 +286,10 @@ class _CartaoResumo extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,11 +300,11 @@ class _CartaoResumo extends StatelessWidget {
             valor,
             style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 20),
           ),
-          Text(titulo, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+          Text(titulo, style: TextStyle(color: AppColors.textPrimary, fontSize: 12)),
           if (subtitulo != null)
             Text(
               subtitulo!,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
         ],
       ),
@@ -321,9 +323,10 @@ class _CaixaCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +334,7 @@ class _CaixaCard extends StatelessWidget {
           const Text('Caixa', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           if (caixa == null)
-            const Text(
+            Text(
               'Nenhum caixa aberto no momento.',
               style: TextStyle(color: AppColors.textSecondary),
             )
@@ -340,15 +343,15 @@ class _CaixaCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Aberto por ${caixa.abertoPorNome}',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Movimentações recentes',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
             if (resumo.movimentacoesRecentes.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 4),
                 child: Text(
                   'Nenhuma movimentação ainda.',
@@ -402,16 +405,17 @@ class _LinkRelatorio extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onTap,
         leading: Icon(icone, color: AppColors.gold),
         title: Text(titulo),
-        subtitle: Text(subtitulo, style: const TextStyle(color: AppColors.textSecondary)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        subtitle: Text(subtitulo, style: TextStyle(color: AppColors.textSecondary)),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
       ),
     );
   }

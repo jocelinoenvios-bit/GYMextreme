@@ -41,6 +41,10 @@ dependencies:
   firebase_messaging: ^16.4.3
   image_picker: ^1.2.2
   gif: ^2.3.0
+  url_launcher: ^6.3.1
+  video_player: ^2.10.1
+  path_provider: ^2.1.5
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -70,8 +74,13 @@ flutter:
     - assets/branding/logo_gym_xtreme.png
     - assets/exercicios/biblioteca_exercicios.json
     - assets/exercicios/traducoes_pt.json
-    - assets/exercicios/gifs/
-    - assets/exercicios/gifs_360/
+    - assets/exercicios/exercicios_vital_animations.json
+    - assets/exercicios/videos_vital_animations.json
+    - assets/exercicios/videos/
+    # assets/exercicios/gifs/ e gifs_360/ foram removidos do repositório
+    # (apareciam corrompidos em aparelho real) — a Biblioteca de
+    # Exercícios hoje só mostra os 50 exercícios com vídeo
+    # (videos_vital_animations.json). Ver ExerciseRepository.
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

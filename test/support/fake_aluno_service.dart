@@ -6,11 +6,15 @@ import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/avaliacao_fisica.dart';
 import 'package:gymextreme_app/models/conta_receber.dart';
 import 'package:gymextreme_app/models/endereco.dart';
+import 'package:gymextreme_app/models/historico_treino.dart';
 import 'package:gymextreme_app/models/matricula.dart';
+import 'package:gymextreme_app/models/mensagem.dart';
 import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/termo_aceite.dart';
 import 'package:gymextreme_app/models/treino.dart';
 import 'package:gymextreme_app/services/aluno_service.dart';
+import 'package:gymextreme_app/utils/lembrete_vencimento.dart';
+import 'package:gymextreme_app/utils/mensalidade_utils.dart';
 
 /// Dublê de teste do [AlunoService] — implementa a mesma interface pública
 /// sem tocar o Firestore de verdade (mesmo padrão já usado para
@@ -27,6 +31,8 @@ class FakeAlunoService implements AlunoService {
     this.fichasAlunos = const [],
     this.matriculas = const [],
     this.contasReceber = const [],
+    this.historicoTreinos = const [],
+    this.mensagens = const [],
   });
 
   Aluno? aluno;
@@ -42,6 +48,8 @@ class FakeAlunoService implements AlunoService {
   List<Aluno> fichasAlunos;
   List<Matricula> matriculas;
   List<ContaReceber> contasReceber;
+  List<HistoricoTreino> historicoTreinos;
+  List<Mensagem> mensagens;
 
   Aluno? ultimoAlunoSalvo;
   Anamnese? ultimaAnamneseSalva;
@@ -51,6 +59,14 @@ class FakeAlunoService implements AlunoService {
   String? ultimaContaExcluidaId;
   ContaReceber? ultimaContaAtualizada;
   ContaReceber? ultimoRecebimentoRegistrado;
+  HistoricoTreino? ultimoHistoricoRegistrado;
+  Mensagem? ultimaMensagemEnviada;
+  ({String staffUid, String staffNome, DateTime dataReativacao})? ultimaReativacao;
+
+  /// Preenchido só quando [registrarRecebimento] recebeu `matriculaId` +
+  /// `vencimentoOriginal` — simula o avanço de `Aluno.proximoVencimento`
+  /// que o serviço real faz nesse caso (ver `AlunoService.registrarRecebimento`).
+  DateTime? proximoVencimentoAvancadoPara;
 
   final _alunosController = StreamController<List<AppUser>>.broadcast();
 
@@ -70,7 +86,12 @@ class FakeAlunoService implements AlunoService {
   }
 
   @override
-  Stream<List<Aluno>> watchTodosAlunos() => Stream.value(fichasAlunos);
+  Stream<List<Aluno>> watchTodosAlunos() async* {
+    yield fichasAlunos;
+    yield* _fichasController.stream;
+  }
+
+  final _fichasController = StreamController<List<Aluno>>.broadcast();
 
   @override
   Stream<Aluno?> watchAluno(String uid) => Stream.value(aluno);
@@ -84,10 +105,45 @@ class FakeAlunoService implements AlunoService {
   @override
   Stream<List<AvaliacaoFisica>> watchAvaliacoes(String uid) => Stream.value(avaliacoes);
 
+  /// Espelha `AlunoService.salvarDadosAluno` real: só os campos
+  /// cadastrais do `aluno` passado são aplicados; os campos
+  /// operacionais/financeiros (`ativo`, `bloqueado`, `proximoVencimento`,
+  /// `dataInativacao`, `dataReativacao`, `reativadoPor*`,
+  /// `whatsappOptIn`, `unidadeId`) são preservados do estado atual — não
+  /// usa `copyWith` de propósito (ele trata `null` como "não mudou", o
+  /// que impediria limpar um campo cadastral já preenchido).
   @override
-  Future<void> salvarDadosAluno(Aluno aluno) async {
-    ultimoAlunoSalvo = aluno;
-    this.aluno = aluno;
+  Future<void> salvarDadosAluno(Aluno novo) async {
+    ultimoAlunoSalvo = novo;
+    final atual = aluno;
+    aluno = Aluno(
+      uid: novo.uid,
+      sexo: novo.sexo,
+      dataNascimento: novo.dataNascimento,
+      idadeInformada: novo.idadeInformada,
+      fotoUrl: novo.fotoUrl,
+      cpf: novo.cpf,
+      rg: novo.rg,
+      telefone: novo.telefone,
+      whatsapp: novo.whatsapp,
+      endereco: novo.endereco,
+      contatoEmergenciaNome: novo.contatoEmergenciaNome,
+      contatoEmergenciaTelefone: novo.contatoEmergenciaTelefone,
+      observacoes: novo.observacoes,
+      dataInicio: novo.dataInicio,
+      diaVencimento: novo.diaVencimento,
+      cadastradoPorUid: atual?.cadastradoPorUid ?? novo.cadastradoPorUid,
+      cadastradoPorNome: atual?.cadastradoPorNome ?? novo.cadastradoPorNome,
+      proximoVencimento: atual?.proximoVencimento,
+      ativo: atual?.ativo ?? true,
+      bloqueado: atual?.bloqueado ?? false,
+      unidadeId: atual?.unidadeId,
+      dataInativacao: atual?.dataInativacao,
+      dataReativacao: atual?.dataReativacao,
+      reativadoPorUid: atual?.reativadoPorUid,
+      reativadoPorNome: atual?.reativadoPorNome,
+      whatsappOptIn: atual?.whatsappOptIn,
+    );
   }
 
   @override
@@ -109,6 +165,119 @@ class FakeAlunoService implements AlunoService {
   }
 
   @override
+  Stream<List<Mensagem>> watchMensagens(String uid) => Stream.value(
+    mensagens.where((mensagem) => !mensagem.arquivadaPeloAluno).toList(),
+  );
+
+  @override
+  Stream<List<Mensagem>> watchMensagensEnviadas({int limite = 300}) =>
+      Stream.value(mensagens);
+
+  @override
+  Future<void> enviarMensagem(
+    String uid, {
+    required String texto,
+    required String remetenteUid,
+    required String remetenteNome,
+    required String alunoNome,
+  }) async {
+    final mensagem = Mensagem(
+      texto: texto,
+      remetenteUid: remetenteUid,
+      remetenteNome: remetenteNome,
+      alunoUid: uid,
+      alunoNome: alunoNome,
+      criadoEm: DateTime.now(),
+    );
+    ultimaMensagemEnviada = mensagem;
+    mensagens = [...mensagens, mensagem];
+  }
+
+  /// Último lote passado a [definirVencimentosEmLote].
+  Map<String, DateTime>? ultimoLoteVencimentos;
+
+  @override
+  Future<void> definirVencimentosEmLote(Map<String, DateTime> vencimentoPorUid) async {
+    ultimoLoteVencimentos = vencimentoPorUid;
+    fichasAlunos = [
+      for (final ficha in fichasAlunos)
+        vencimentoPorUid.containsKey(ficha.uid)
+            ? ficha.copyWith(proximoVencimento: vencimentoPorUid[ficha.uid])
+            : ficha,
+      for (final entrada in vencimentoPorUid.entries)
+        if (!fichasAlunos.any((ficha) => ficha.uid == entrada.key))
+          Aluno(uid: entrada.key, proximoVencimento: entrada.value),
+    ];
+    _fichasController.add(fichasAlunos);
+  }
+
+  /// Vencimentos pedidos a [garantirLembreteVencimento], na ordem.
+  List<DateTime> lembretesPedidos = [];
+
+  @override
+  Future<bool> garantirLembreteVencimento(
+    String uid, {
+    required DateTime vencimento,
+    required String alunoNome,
+  }) async {
+    lembretesPedidos = [...lembretesPedidos, vencimento];
+    final id = idLembreteVencimento(vencimento);
+    if (mensagens.any((mensagem) => mensagem.id == id)) return false;
+    mensagens = [
+      Mensagem(
+        id: id,
+        texto: textoLembreteVencimento(vencimento),
+        remetenteUid: remetenteLembreteAutomatico,
+        remetenteNome: 'GYM XTREME',
+        alunoUid: uid,
+        alunoNome: alunoNome,
+        criadoEm: DateTime.now(),
+        automatica: true,
+      ),
+      ...mensagens,
+    ];
+    return true;
+  }
+
+  /// Ids passados pra [marcarMensagensComoLidas], na ordem das chamadas.
+  List<String> idsMarcadosComoLidos = [];
+  List<String> idsArquivados = [];
+  List<String> idsApagados = [];
+
+  @override
+  Future<void> marcarMensagensComoLidas(String uid, Iterable<String> ids) async {
+    idsMarcadosComoLidos = [...idsMarcadosComoLidos, ...ids];
+    mensagens = [
+      for (final mensagem in mensagens)
+        if (ids.contains(mensagem.id))
+          Mensagem(
+            id: mensagem.id,
+            texto: mensagem.texto,
+            remetenteUid: mensagem.remetenteUid,
+            remetenteNome: mensagem.remetenteNome,
+            alunoUid: mensagem.alunoUid,
+            alunoNome: mensagem.alunoNome,
+            criadoEm: mensagem.criadoEm,
+            lidaEm: DateTime.now(),
+            arquivadaPeloAluno: mensagem.arquivadaPeloAluno,
+          )
+        else
+          mensagem,
+    ];
+  }
+
+  @override
+  Future<void> arquivarMensagem(String uid, String mensagemId) async {
+    idsArquivados = [...idsArquivados, mensagemId];
+  }
+
+  @override
+  Future<void> apagarMensagem(String uid, String mensagemId) async {
+    idsApagados = [...idsApagados, mensagemId];
+    mensagens = mensagens.where((m) => m.id != mensagemId).toList();
+  }
+
+  @override
   Stream<List<Pagamento>> watchPagamentos(String uid) => Stream.value(const []);
 
   @override
@@ -121,6 +290,28 @@ class FakeAlunoService implements AlunoService {
 
   @override
   Future<void> definirVencimentoInicial(String uid, DateTime vencimento) async {}
+
+  @override
+  Future<void> reativarAluno(
+    String uid, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final agora = DateTime.now();
+    ultimaReativacao = (
+      staffUid: staffUid,
+      staffNome: staffNome,
+      dataReativacao: agora,
+    );
+    if (aluno != null) {
+      aluno = aluno!.copyWith(
+        ativo: true,
+        dataReativacao: agora,
+        reativadoPorUid: staffUid,
+        reativadoPorNome: staffNome,
+      );
+    }
+  }
 
   @override
   Stream<List<Matricula>> watchMatriculas(String uid) =>
@@ -276,6 +467,8 @@ class FakeAlunoService implements AlunoService {
     String? observacao,
     required String staffUid,
     required String staffNome,
+    String? matriculaId,
+    DateTime? vencimentoOriginal,
   }) async {
     contasReceber = [
       for (final conta in contasReceber)
@@ -295,6 +488,9 @@ class FakeAlunoService implements AlunoService {
           conta,
     ];
     ultimoRecebimentoRegistrado = contasReceber.firstWhere((c) => c.id == contaId);
+    if (matriculaId != null && vencimentoOriginal != null) {
+      proximoVencimentoAvancadoPara = adicionarUmMes(vencimentoOriginal);
+    }
   }
 
   @override
@@ -336,9 +532,41 @@ class FakeAlunoService implements AlunoService {
         letra: treino.letra,
         grupoMuscular: treino.grupoMuscular,
         ordem: treino.ordem,
+        ativo: treino.ativo,
         exercicios: treino.exercicios,
+        diaSemana: treino.diaSemana,
+        objetivo: treino.objetivo,
+        vigenciaAte: treino.vigenciaAte,
       ),
     ];
+    return id;
+  }
+
+  @override
+  Stream<List<HistoricoTreino>> watchHistoricoTreinos(String uid) =>
+      Stream.value(historicoTreinos);
+
+  @override
+  Future<String> registrarHistoricoTreino(
+    String uid,
+    HistoricoTreino registro, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final id = registro.id ?? 'historico-${historicoTreinos.length + 1}';
+    final salvo = HistoricoTreino(
+      id: id,
+      treinoId: registro.treinoId,
+      data: registro.data,
+      diaSemana: registro.diaSemana,
+      status: registro.status,
+      observacoes: registro.observacoes,
+      registradoPorUid: staffUid,
+      registradoPorNome: staffNome,
+      registradoEm: DateTime.now(),
+    );
+    historicoTreinos = [...historicoTreinos, salvo];
+    ultimoHistoricoRegistrado = salvo;
     return id;
   }
 
@@ -362,6 +590,9 @@ class FakeAlunoService implements AlunoService {
         grupoMuscular: treino.grupoMuscular,
         ordem: treino.ordem,
         exercicios: treino.exercicios,
+        diaSemana: treino.diaSemana,
+        objetivo: treino.objetivo,
+        vigenciaAte: treino.vigenciaAte,
       ),
       staffUid: staffUid,
       staffNome: staffNome,
@@ -396,11 +627,11 @@ class FakeAlunoService implements AlunoService {
     String? contatoEmergenciaTelefone,
     String? observacoes,
     DateTime? dataInicio,
-    int? diaVencimento,
     required String cadastradoPorUid,
     required String cadastradoPorNome,
   }) async {
     const uid = 'aluno-novo';
+    final vencimento = primeiroVencimento(dataInicio ?? DateTime.now());
     aluno = Aluno(
       uid: uid,
       sexo: sexo,
@@ -415,7 +646,8 @@ class FakeAlunoService implements AlunoService {
       contatoEmergenciaTelefone: contatoEmergenciaTelefone,
       observacoes: observacoes,
       dataInicio: dataInicio,
-      diaVencimento: diaVencimento,
+      diaVencimento: vencimento.day,
+      proximoVencimento: vencimento,
       cadastradoPorUid: cadastradoPorUid,
       cadastradoPorNome: cadastradoPorNome,
     );

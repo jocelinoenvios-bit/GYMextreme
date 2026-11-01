@@ -44,5 +44,14 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Obrigatoria a partir do Android 11 (API 30) pra "launchUrl"
+             (url_launcher) conseguir abrir um link https — usado pelo botao
+             "Chamar no WhatsApp" (abre https://wa.me/... no WhatsApp, se
+             instalado, ou no navegador). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

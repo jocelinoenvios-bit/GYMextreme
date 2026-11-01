@@ -1,15 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/avaliacao_fisica.dart';
+import 'package:gymextreme_app/models/permission.dart';
+import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/alunos/tabs/avaliacoes_tab.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 
-Widget _wrap(FakeAlunoService alunoService) {
+const _comPermissao = AppUser(
+  uid: 'staff-com-permissao',
+  nome: 'Personal Com Permissão',
+  email: 'personal@teste.com',
+  role: UserRole.funcionario,
+  permissoes: {Permission.avaliacoesFisicas},
+);
+
+const _semPermissao = AppUser(
+  uid: 'staff-sem-permissao',
+  nome: 'Funcionário Sem Permissão',
+  email: 'funcionario@teste.com',
+  role: UserRole.funcionario,
+  permissoes: {Permission.acessarProdutos},
+);
+
+Widget _wrap(FakeAlunoService alunoService, {AppUser staffAtual = _comPermissao}) {
   return MaterialApp(
     theme: AppTheme.dark,
-    home: Scaffold(body: AvaliacoesTab(uid: 'aluno-1', alunoService: alunoService)),
+    home: Scaffold(
+      body: AvaliacoesTab(uid: 'aluno-1', alunoService: alunoService, staffAtual: staffAtual),
+    ),
   );
 }
 
@@ -49,5 +70,19 @@ void main() {
     // findRichText pra comparar o texto concatenado.
     expect(find.textContaining('Peso: 80', findRichText: true), findsOneWidget);
     expect(find.textContaining('Circunferências: 1 medidas', findRichText: true), findsOneWidget);
+  });
+
+  group('permissão avaliacoesFisicas', () {
+    testWidgets('staff com avaliacoesFisicas vê o botão "Nova avaliação"', (tester) async {
+      await _carregar(tester, _wrap(FakeAlunoService(), staffAtual: _comPermissao));
+
+      expect(find.text('Nova avaliação'), findsOneWidget);
+    });
+
+    testWidgets('staff SEM avaliacoesFisicas não vê o botão "Nova avaliação"', (tester) async {
+      await _carregar(tester, _wrap(FakeAlunoService(), staffAtual: _semPermissao));
+
+      expect(find.text('Nova avaliação'), findsNothing);
+    });
   });
 }

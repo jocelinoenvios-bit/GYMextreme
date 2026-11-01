@@ -6,6 +6,7 @@ import '../../services/aluno_service.dart';
 import '../../services/plano_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/escolher_aluno.dart';
 
 /// Cria uma matrícula nova. Também usada pro fluxo de "renovar" — nesse
 /// caso o chamador já resolveu o aluno/plano/valor atuais (a lista de
@@ -181,7 +182,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'A matrícula ativa atual (se houver) é encerrada '
                     'automaticamente ao confirmar.',
                     style: TextStyle(
@@ -197,7 +198,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                       if (snapshot.connectionState ==
                               ConnectionState.waiting &&
                           !snapshot.hasData) {
-                        return const Padding(
+                        return Padding(
                           padding: EdgeInsets.symmetric(vertical: 8),
                           child: LinearProgressIndicator(
                             color: AppColors.gold,
@@ -205,53 +206,16 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                         );
                       }
 
-                      // Deduplica por uid e usa o uid (String, com
-                      // igualdade de valor natural) como valor do
-                      // dropdown — comparar o AppUser inteiro quebrava
-                      // ("Either zero or 2 or more DropdownMenuItems...")
-                      // toda vez que o stream emitia uma nova instância do
-                      // mesmo aluno, já que AppUser não tem == própria e a
-                      // instância antiga selecionada parava de "bater" com
-                      // a nova lista.
-                      final alunosPorUid = <String, AppUser>{};
-                      for (final aluno in snapshot.data ?? const <AppUser>[]) {
-                        alunosPorUid[aluno.uid] = aluno;
-                      }
-                      final alunos = alunosPorUid.values.toList();
-                      // Se o aluno selecionado não existir mais na lista
-                      // atual (removido/renomeado uid, ou stream ainda não
-                      // trouxe os dados), cai pra null em vez de manter um
-                      // valor órfão — outro jeito de disparar o mesmo erro.
-                      final uidSelecionado =
-                          alunosPorUid.containsKey(_alunoSelecionado?.uid)
-                          ? _alunoSelecionado?.uid
-                          : null;
-
-                      return DropdownButtonFormField<String>(
-                        initialValue: uidSelecionado,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          labelText: 'Aluno',
-                          helperText: alunos.isEmpty
-                              ? 'Nenhum aluno cadastrado'
-                              : null,
-                        ),
-                        items: alunos
-                            .map(
-                              (aluno) => DropdownMenuItem(
-                                value: aluno.uid,
-                                child: Text(
-                                  aluno.nome,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: alunos.isEmpty
-                            ? null
-                            : (uid) => setState(
-                                () => _alunoSelecionado = alunosPorUid[uid],
-                              ),
+                      // Escolha com pesquisa (CampoAluno), e não dropdown:
+                      // com muita gente cadastrada a lista corrida fica
+                      // inutilizável. O campo trabalha pelo uid — se o
+                      // aluno escolhido sumir da lista (excluído com a tela
+                      // aberta), ele só volta a ficar vazio.
+                      return CampoAluno(
+                        alunos: snapshot.data ?? const <AppUser>[],
+                        uidSelecionado: _alunoSelecionado?.uid,
+                        onChanged: (aluno) =>
+                            setState(() => _alunoSelecionado = aluno),
                       );
                     },
                   ),
@@ -260,20 +224,36 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                 StreamBuilder<List<Plano>>(
                   stream: widget.planoService.watchPlanos(),
                   builder: (context, snapshot) {
-                    final planos = (snapshot.data ?? [])
-                        .where(
-                          (plano) =>
-                              plano.ativo || plano.id == _planoSelecionado?.id,
-                        )
-                        .toList();
-                    return DropdownButtonFormField<Plano>(
-                      initialValue: _planoSelecionado,
+                    // Mesmo motivo do dropdown de aluno acima: o valor é o
+                    // id (String), e não o Plano. Plano não tem == própria,
+                    // então quando a lista chegava de novo (o que acontece
+                    // a cada rebuild — escolher o aluno depois do plano já
+                    // bastava) o plano selecionado era outra instância e o
+                    // dropdown quebrava com "Either zero or 2 or more
+                    // DropdownMenuItems". Também é o que deixa a renovação
+                    // abrir com o plano pré-selecionado sem quebrar.
+                    final planosPorId = <String, Plano>{};
+                    for (final plano in snapshot.data ?? const <Plano>[]) {
+                      final id = plano.id;
+                      if (id == null) continue;
+                      if (plano.ativo || id == _planoSelecionado?.id) {
+                        planosPorId[id] = plano;
+                      }
+                    }
+                    final planos = planosPorId.values.toList();
+                    final idSelecionado =
+                        planosPorId.containsKey(_planoSelecionado?.id)
+                        ? _planoSelecionado?.id
+                        : null;
+
+                    return DropdownButtonFormField<String>(
+                      initialValue: idSelecionado,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Plano'),
                       items: planos
                           .map(
                             (plano) => DropdownMenuItem(
-                              value: plano,
+                              value: plano.id,
                               child: Text(
                                 plano.nome,
                                 overflow: TextOverflow.ellipsis,
@@ -281,7 +261,8 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                             ),
                           )
                           .toList(),
-                      onChanged: (plano) {
+                      onChanged: (id) {
+                        final plano = planosPorId[id];
                         if (plano != null) _selecionarPlano(plano);
                       },
                     );
@@ -292,7 +273,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Início'),
                   subtitle: Text(_formatarData(_dataInicio)),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.calendar_today_outlined,
                     color: AppColors.gold,
                   ),
@@ -302,7 +283,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Vencimento'),
                   subtitle: Text(_formatarData(_dataVencimento)),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.calendar_today_outlined,
                     color: AppColors.gold,
                   ),
@@ -344,7 +325,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : _handleSave,
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(

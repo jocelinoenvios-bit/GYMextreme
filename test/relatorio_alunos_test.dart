@@ -53,6 +53,23 @@ void main() {
       expect(resumo.ativos, 1);
       expect(resumo.bloqueados, 0);
     });
+
+    test('aluno inativo conta à parte, nunca como ativo/bloqueado/sem registro', () {
+      final resumo = calcularResumoAlunos(
+        alunos: [_aluno('a1'), _aluno('a2')],
+        fichasAlunos: [
+          // Inativo, mas com vencimento "em dia" por coincidência — ainda
+          // assim deve contar só como inativo.
+          Aluno(uid: 'a1', ativo: false, proximoVencimento: DateTime(2026, 12, 1)),
+          Aluno(uid: 'a2', proximoVencimento: DateTime(2026, 12, 1)),
+        ],
+        hoje: _hoje,
+      );
+
+      expect(resumo.inativos, 1);
+      expect(resumo.ativos, 1);
+      expect(resumo.total, 2);
+    });
   });
 
   group('calcularStatusMensalidadeAluno', () {

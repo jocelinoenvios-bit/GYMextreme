@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/app_user.dart';
+import '../../../models/historico_treino.dart';
 import '../../../models/permission.dart';
 import '../../../models/treino.dart';
 import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/premium.dart';
 import '../../area_aluno/treino_execucao_screen.dart';
 import '../treino_form_screen.dart';
 import '../copiar_treino_dialog.dart';
@@ -52,6 +54,18 @@ class TreinosTab extends StatelessWidget {
     );
   }
 
+  void _abrirRegistrarPresenca(BuildContext context, Treino treino) {
+    showDialog(
+      context: context,
+      builder: (_) => _RegistrarPresencaDialog(
+        uid: uid,
+        alunoService: alunoService,
+        staffAtual: staffAtual,
+        treino: treino,
+      ),
+    );
+  }
+
   void _abrirMenuNovo(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -61,7 +75,7 @@ class TreinosTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.add, color: AppColors.gold),
+              leading: Icon(Icons.add, color: AppColors.gold),
               title: const Text('Criar treino novo'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -69,7 +83,7 @@ class TreinosTab extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.copy_all_outlined, color: AppColors.gold),
+              leading: Icon(Icons.copy_all_outlined, color: AppColors.gold),
               title: const Text('Copiar treino de outro aluno'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -100,7 +114,7 @@ class TreinosTab extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Text(
                 'Erro ao carregar os treinos.',
                 style: TextStyle(color: AppColors.error),
@@ -118,7 +132,7 @@ class TreinosTab extends StatelessWidget {
                       ? 'Nenhum treino cadastrado ainda. Toque em "+" para criar o primeiro.'
                       : 'Nenhum treino cadastrado ainda.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
             );
@@ -130,6 +144,9 @@ class TreinosTab extends StatelessWidget {
             itemBuilder: (context, index) => _TreinoCard(
               treino: treinos[index],
               podeEditar: _podeEditar,
+              onRegistrarPresenca: _podeEditar && treinos[index].id != null
+                  ? () => _abrirRegistrarPresenca(context, treinos[index])
+                  : null,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => TreinoFormScreen(
@@ -171,6 +188,7 @@ class _TreinoCard extends StatelessWidget {
     required this.onExecutar,
     required this.onDuplicar,
     required this.onExcluir,
+    this.onRegistrarPresenca,
   });
 
   final Treino treino;
@@ -180,14 +198,20 @@ class _TreinoCard extends StatelessWidget {
   final VoidCallback onDuplicar;
   final VoidCallback onExcluir;
 
+  /// Nulo quando o staff não tem permissão de editar treinos, ou quando
+  /// o treino ainda não foi salvo (sem id) — sem isso não há como
+  /// vincular um `HistoricoTreino.treinoId`.
+  final VoidCallback? onRegistrarPresenca;
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onTap,
@@ -196,7 +220,7 @@ class _TreinoCard extends StatelessWidget {
           backgroundColor: AppColors.gold,
           child: Text(
             treino.letra,
-            style: const TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(treino.nome),
@@ -206,33 +230,178 @@ class _TreinoCard extends StatelessWidget {
               treino.grupoMuscular!,
             '${treino.exercicios.length} exercício(s)',
           ].join(' • '),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
               tooltip: 'Executar treino',
-              icon: const Icon(Icons.play_circle_outline, color: AppColors.gold),
+              icon: Icon(Icons.play_circle_outline, color: AppColors.gold),
               onPressed: onExecutar,
             ),
             if (podeEditar)
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
                 onSelected: (acao) {
+                  if (acao == 'presenca') onRegistrarPresenca?.call();
                   if (acao == 'duplicar') onDuplicar();
                   if (acao == 'excluir') onExcluir();
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'duplicar', child: Text('Duplicar')),
-                  PopupMenuItem(value: 'excluir', child: Text('Excluir')),
+                itemBuilder: (context) => [
+                  if (onRegistrarPresenca != null)
+                    const PopupMenuItem(
+                      value: 'presenca',
+                      child: Text('Registrar presença/falta'),
+                    ),
+                  const PopupMenuItem(value: 'duplicar', child: Text('Duplicar')),
+                  const PopupMenuItem(value: 'excluir', child: Text('Excluir')),
                 ],
               )
             else
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(Icons.chevron_right, color: AppColors.textSecondary),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Diálogo pra staff registrar presença/falta num dia específico — nunca
+/// disparado pelo próprio aluno (ver `firestore.rules`, que bloqueia
+/// escrita em `historicoTreinos` pra quem não tem `criarTreinos`/
+/// `editarTreinos`). A ficha prescrita (`Treino`) não é afetada por
+/// este registro; ele só alimenta o histórico de frequência.
+class _RegistrarPresencaDialog extends StatefulWidget {
+  const _RegistrarPresencaDialog({
+    required this.uid,
+    required this.alunoService,
+    required this.staffAtual,
+    required this.treino,
+  });
+
+  final String uid;
+  final AlunoService alunoService;
+  final AppUser staffAtual;
+  final Treino treino;
+
+  @override
+  State<_RegistrarPresencaDialog> createState() => _RegistrarPresencaDialogState();
+}
+
+class _RegistrarPresencaDialogState extends State<_RegistrarPresencaDialog> {
+  late DateTime _data = DateTime.now();
+  StatusHistoricoTreino _status = StatusHistoricoTreino.realizado;
+  final _observacoesController = TextEditingController();
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _observacoesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selecionarData() async {
+    final agora = DateTime.now();
+    final data = await showDatePicker(
+      context: context,
+      initialDate: _data,
+      firstDate: DateTime(agora.year - 1),
+      lastDate: agora,
+    );
+    if (data != null) setState(() => _data = data);
+  }
+
+  Future<void> _confirmar() async {
+    setState(() => _isSaving = true);
+    try {
+      await widget.alunoService.registrarHistoricoTreino(
+        widget.uid,
+        HistoricoTreino(
+          treinoId: widget.treino.id!,
+          data: DateTime(_data.year, _data.month, _data.day),
+          diaSemana: _data.weekday,
+          status: _status,
+          observacoes: _observacoesController.text.trim().isEmpty
+              ? null
+              : _observacoesController.text.trim(),
+        ),
+        staffUid: widget.staffAtual.uid,
+        staffNome: widget.staffAtual.nome,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao registrar: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: Text('Presença — Treino ${widget.treino.letra}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: _selecionarData,
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Data',
+                suffixIcon: Icon(Icons.calendar_today_outlined),
+              ),
+              child: Text(
+                '${_data.day.toString().padLeft(2, '0')}/'
+                '${_data.month.toString().padLeft(2, '0')}/${_data.year}'
+                ' (${diasSemanaLabels[_data.weekday]})',
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SegmentedButton<StatusHistoricoTreino>(
+            segments: const [
+              ButtonSegment(
+                value: StatusHistoricoTreino.realizado,
+                label: Text('Realizado'),
+              ),
+              ButtonSegment(value: StatusHistoricoTreino.falta, label: Text('Falta')),
+            ],
+            selected: {_status},
+            onSelectionChanged: (selecao) => setState(() => _status = selecao.first),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _observacoesController,
+            maxLines: 2,
+            decoration: const InputDecoration(labelText: 'Observações (opcional)'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _confirmar,
+          child: _isSaving
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
+                )
+              : const Text('SALVAR'),
+        ),
+      ],
     );
   }
 }

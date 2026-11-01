@@ -1,14 +1,22 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "functions": {
+    "source": "functions"
   },
   "hosting": {
     "public": "build/web",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
+      {
+        "source": "/api/integrations/controlid/events/new-user-identified",
+        "function": "controlIdNewUserIdentified"
+      },
       {
         "source": "**",
         "destination": "/index.html"

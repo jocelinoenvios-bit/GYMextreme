@@ -126,7 +126,7 @@ class _FuncionarioFormScreenState extends State<FuncionarioFormScreen> {
                 ),
                 Text(
                   widget.funcionario!.email,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 20),
               ] else ...[
@@ -193,7 +193,7 @@ class _FuncionarioFormScreenState extends State<FuncionarioFormScreen> {
               ElevatedButton(
                 onPressed: _isSaving ? null : _handleSave,
                 child: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),

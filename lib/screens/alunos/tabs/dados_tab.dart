@@ -11,6 +11,7 @@ import '../../../services/storage_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/idade.dart';
 import '../../../utils/validadores.dart';
+import '../../../widgets/premium.dart';
 import 'mensalidade_section.dart';
 
 class DadosTab extends StatefulWidget {
@@ -40,7 +41,6 @@ class _DadosTabState extends State<DadosTab> {
 
   final _formKey = GlobalKey<FormState>();
   final _idadeController = TextEditingController();
-  final _diaVencimentoController = TextEditingController();
   final _cpfController = TextEditingController();
   final _rgController = TextEditingController();
   final _telefoneController = TextEditingController();
@@ -57,6 +57,9 @@ class _DadosTabState extends State<DadosTab> {
   final _observacoesController = TextEditingController();
 
   DateTime? _dataInicio;
+  // Não é mais editável na tela (o vencimento é calculado sozinho), só
+  // preservado ao salvar os outros dados.
+  int? _diaVencimento;
   DateTime? _dataNascimento;
   Sexo? _sexo;
   String? _fotoUrl;
@@ -68,7 +71,6 @@ class _DadosTabState extends State<DadosTab> {
   @override
   void dispose() {
     _idadeController.dispose();
-    _diaVencimentoController.dispose();
     _cpfController.dispose();
     _rgController.dispose();
     _telefoneController.dispose();
@@ -90,7 +92,7 @@ class _DadosTabState extends State<DadosTab> {
     if (_isLoaded) return;
     _isLoaded = true;
     _idadeController.text = aluno?.idadeInformada?.toString() ?? '';
-    _diaVencimentoController.text = aluno?.diaVencimento?.toString() ?? '';
+    _diaVencimento = aluno?.diaVencimento;
     _cpfController.text = aluno?.cpf ?? '';
     _rgController.text = aluno?.rg ?? '';
     _telefoneController.text = aluno?.telefone ?? '';
@@ -155,7 +157,7 @@ class _DadosTabState extends State<DadosTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.gold),
+              leading: Icon(Icons.photo_camera_outlined, color: AppColors.gold),
               title: const Text('Tirar foto'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -163,7 +165,7 @@ class _DadosTabState extends State<DadosTab> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.gold),
+              leading: Icon(Icons.photo_library_outlined, color: AppColors.gold),
               title: const Text('Escolher da galeria'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -218,7 +220,7 @@ class _DadosTabState extends State<DadosTab> {
               _textOrNull(_contatoEmergenciaTelefoneController.text),
           observacoes: _textOrNull(_observacoesController.text),
           dataInicio: _dataInicio,
-          diaVencimento: int.tryParse(_diaVencimentoController.text),
+          diaVencimento: _diaVencimento,
         ),
       );
       if (mounted) {
@@ -233,7 +235,7 @@ class _DadosTabState extends State<DadosTab> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao salvar. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -271,7 +273,7 @@ class _DadosTabState extends State<DadosTab> {
                         : (_fotoUrl != null ? NetworkImage(_fotoUrl!) : null)
                               as ImageProvider?,
                     child: (_fotoNovaBytes == null && _fotoUrl == null)
-                        ? const Icon(Icons.person_outline, size: 44, color: AppColors.gold)
+                        ? Icon(Icons.person_outline, size: 44, color: AppColors.gold)
                         : null,
                   ),
                   Positioned(
@@ -282,12 +284,12 @@ class _DadosTabState extends State<DadosTab> {
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                         ),
                         child: _isUploadingFoto
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
@@ -295,7 +297,7 @@ class _DadosTabState extends State<DadosTab> {
                                   color: AppColors.black,
                                 ),
                               )
-                            : const Icon(Icons.camera_alt, size: 18, color: AppColors.black),
+                            : Icon(Icons.camera_alt, size: 18, color: AppColors.black),
                       ),
                     ),
                   ),
@@ -471,17 +473,6 @@ class _DadosTabState extends State<DadosTab> {
             ),
             const SizedBox(height: 20),
             const _SecaoTitulo('Academia'),
-            TextFormField(
-              controller: _diaVencimentoController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [digitsOnlyFormatter],
-              decoration: const InputDecoration(
-                labelText: 'Dia de vencimento',
-                helperText: 'Dia do mês em que a mensalidade vence (1-31), não uma data',
-              ),
-              validator: validarDiaVencimento,
-            ),
-            const SizedBox(height: 14),
             InkWell(
               onTap: () => _pickData(
                 atual: _dataInicio,
@@ -502,8 +493,13 @@ class _DadosTabState extends State<DadosTab> {
             MensalidadeSection(
               alunoUid: widget.aluno.uid,
               proximoVencimento: snapshot.data?.proximoVencimento,
+              dataInicio: snapshot.data?.dataInicio,
               alunoService: widget.alunoService,
               staffAtual: widget.staffAtual,
+              whatsapp: snapshot.data?.whatsapp,
+              ativo: snapshot.data?.ativo ?? true,
+              dataInativacao: snapshot.data?.dataInativacao,
+              dataReativacao: snapshot.data?.dataReativacao,
             ),
             const SizedBox(height: 14),
             TextField(
@@ -515,7 +511,7 @@ class _DadosTabState extends State<DadosTab> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSave,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
@@ -541,7 +537,7 @@ class _SecaoTitulo extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         texto,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.gold,
           fontWeight: FontWeight.bold,
           fontSize: 14,
@@ -563,16 +559,17 @@ class _ReadOnlyField extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+          Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
           const SizedBox(height: 2),
-          Text(value, style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+          Text(value, style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
         ],
       ),
     );

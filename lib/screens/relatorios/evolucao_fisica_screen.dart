@@ -5,6 +5,8 @@ import '../../models/app_user.dart';
 import '../../models/avaliacao_fisica.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/escolher_aluno.dart';
+import '../../widgets/premium.dart';
 import '../../widgets/simple_line_chart.dart';
 
 /// Evolução física — escolhe um aluno e mostra o histórico já existente
@@ -60,7 +62,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
               child: Text(
                 'Erro ao carregar.\n\n${snapshot.error}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
+                style: TextStyle(color: AppColors.error),
               ),
             );
           }
@@ -70,21 +72,14 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              DropdownButtonFormField<String?>(
-                initialValue: _alunoSelecionadoUid,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  hintText: 'Selecione um aluno',
-                ),
-                items: alunos
-                    .map((a) => DropdownMenuItem(value: a.uid, child: Text(a.nome)))
-                    .toList(),
-                onChanged: _selecionarAluno,
+              CampoAluno(
+                alunos: alunos,
+                uidSelecionado: _alunoSelecionadoUid,
+                onChanged: (aluno) => _selecionarAluno(aluno?.uid),
               ),
               const SizedBox(height: 16),
               if (_avaliacoesFuture == null)
-                const Text(
+                Text(
                   'Selecione um aluno para ver a evolução física.',
                   style: TextStyle(color: AppColors.textSecondary),
                 )
@@ -101,7 +96,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
                     if (avSnap.hasError) {
                       return Text(
                         'Erro ao carregar avaliações.\n\n${avSnap.error}',
-                        style: const TextStyle(color: AppColors.error),
+                        style: TextStyle(color: AppColors.error),
                       );
                     }
 
@@ -110,7 +105,7 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
                     // primeiro), então inverte só pra exibição.
                     final avaliacoes = (avSnap.data ?? []).reversed.toList();
                     if (avaliacoes.isEmpty) {
-                      return const Text(
+                      return Text(
                         'Nenhuma avaliação física registrada para este aluno.',
                         style: TextStyle(color: AppColors.textSecondary),
                       );
@@ -173,9 +168,10 @@ class _CartaoAvaliacao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +195,7 @@ class _CartaoAvaliacao extends StatelessWidget {
                   .map(
                     (f) => Text(
                       '${f.label}: ${avaliacao.circunferenciasCm[f.key]!.toStringAsFixed(1)}cm',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                   )
                   .toList(),
@@ -209,7 +205,7 @@ class _CartaoAvaliacao extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               avaliacao.observacoes!,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
           ],
         ],

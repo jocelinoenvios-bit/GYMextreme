@@ -101,5 +101,36 @@ void main() {
     expect(registrado.valorPago, 129.9);
     expect(registrado.formaPagamento, 'PIX');
     expect(registrado.recebidoPorNome, 'Recepção Ana');
+    // Cobrança avulsa (sem matrícula vinculada) nunca mexe no vencimento.
+    expect(service.proximoVencimentoAvancadoPara, isNull);
   });
+
+  testWidgets(
+    'cobrança vinculada a uma matrícula também avança o vencimento do aluno',
+    (tester) async {
+      final conta = ContaReceber(
+        id: 'c1',
+        alunoId: 'aluno1',
+        matriculaId: 'matricula-1',
+        descricao: 'Mensalidade agosto',
+        valorOriginal: 129.9,
+        vencimento: DateTime(2026, 9, 1),
+      );
+      final service = FakeAlunoService(contasReceber: [conta]);
+
+      await tester.pumpWidget(_wrap(service, conta));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Forma de pagamento'),
+        'PIX',
+      );
+
+      await _tocar(tester, find.text('CONFIRMAR RECEBIMENTO'));
+      await tester.pump();
+
+      expect(service.ultimoRecebimentoRegistrado?.status, StatusContaReceber.pago);
+      expect(service.proximoVencimentoAvancadoPara, DateTime(2026, 10, 1));
+    },
+  );
 }

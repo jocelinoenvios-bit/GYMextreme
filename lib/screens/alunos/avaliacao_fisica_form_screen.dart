@@ -78,7 +78,7 @@ class _AvaliacaoFisicaFormScreenState extends State<AvaliacaoFisicaFormScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Erro ao salvar a avaliação. Tente novamente.'),
             backgroundColor: AppColors.error,
           ),
@@ -164,7 +164,7 @@ class _AvaliacaoFisicaFormScreenState extends State<AvaliacaoFisicaFormScreen> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSave,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.black),
@@ -189,7 +189,7 @@ class _SecaoTitulo extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         texto,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.gold,
           fontWeight: FontWeight.bold,
           fontSize: 13,
@@ -224,7 +224,7 @@ class _ImcBadge extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             'IMC ${imc.toStringAsFixed(1)} · ${classificacao.rotulo}',
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
           ),
         ],
       ),

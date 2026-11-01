@@ -7,6 +7,7 @@ import '../../services/permission_service.dart';
 import '../../services/plano_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/premium.dart';
 import 'plano_form_screen.dart';
 
 /// Lista administrativa de planos de mensalidade da academia — cadastrar,
@@ -81,7 +82,7 @@ class PlanosListScreen extends StatelessWidget {
                   child: SelectableText(
                     'Erro ao carregar os planos.\n\n${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error),
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -98,7 +99,7 @@ class PlanosListScreen extends StatelessWidget {
                       ? 'Nenhum plano cadastrado ainda. Toque em "+" para criar o primeiro.'
                       : 'Nenhum plano cadastrado ainda.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
             );
@@ -144,9 +145,10 @@ class _PlanoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onTap,
@@ -161,7 +163,7 @@ class _PlanoCard extends StatelessWidget {
                   color: AppColors.textSecondary.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   'Inativo',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                 ),
@@ -171,15 +173,15 @@ class _PlanoCard extends StatelessWidget {
         subtitle: Text(
           '${formatarReais(plano.valor)} · ${plano.duracaoDias} dias'
           '${plano.descricao != null ? ' · ${plano.descricao}' : ''}',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         trailing: podeExcluir
             ? IconButton(
                 tooltip: 'Excluir plano',
-                icon: const Icon(Icons.delete_outline, color: AppColors.textSecondary),
+                icon: Icon(Icons.delete_outline, color: AppColors.textSecondary),
                 onPressed: onExcluir,
               )
-            : (onTap != null ? const Icon(Icons.chevron_right, color: AppColors.textSecondary) : null),
+            : (onTap != null ? Icon(Icons.chevron_right, color: AppColors.textSecondary) : null),
       ),
     );
   }

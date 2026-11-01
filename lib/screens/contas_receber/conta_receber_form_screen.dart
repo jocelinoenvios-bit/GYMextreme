@@ -198,23 +198,38 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                 StreamBuilder<List<Matricula>>(
                   stream: widget.alunoService.watchMatriculas(widget.alunoPreSelecionado.uid),
                   builder: (context, snapshot) {
-                    final matriculas = snapshot.data ?? [];
-                    if (matriculas.isEmpty) return const SizedBox.shrink();
-                    final selecionada = _matriculaSelecionada ?? _acharMatricula(matriculas);
+                    // O valor do dropdown é o id (String), e não a
+                    // Matricula: ela não tem == própria, e a lista chega de
+                    // novo a cada rebuild (escolher a data de vencimento já
+                    // bastava) com instâncias novas — a matrícula escolhida
+                    // deixava de "bater" e o dropdown quebrava com "Either
+                    // zero or 2 or more DropdownMenuItems". Mesmo defeito e
+                    // mesma correção do formulário de matrícula.
+                    final matriculasPorId = <String, Matricula>{
+                      for (final matricula in snapshot.data ?? const <Matricula>[])
+                        if (matricula.id != null) matricula.id!: matricula,
+                    };
+                    if (matriculasPorId.isEmpty) return const SizedBox.shrink();
+                    final selecionada =
+                        _matriculaSelecionada ??
+                        _acharMatricula(matriculasPorId.values.toList());
+                    final idSelecionado = matriculasPorId.containsKey(selecionada?.id)
+                        ? selecionada?.id
+                        : null;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        DropdownButtonFormField<Matricula?>(
-                          initialValue: selecionada,
+                        DropdownButtonFormField<String?>(
+                          initialValue: idSelecionado,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Gerar a partir de uma matrícula (opcional)',
                           ),
                           items: [
                             const DropdownMenuItem(value: null, child: Text('Nenhuma')),
-                            ...matriculas.map(
+                            ...matriculasPorId.values.map(
                               (matricula) => DropdownMenuItem(
-                                value: matricula,
+                                value: matricula.id,
                                 child: Text(
                                   '${_formatarData(matricula.dataVencimento)} · '
                                   '${formatarReais(matricula.valorContratado)}',
@@ -223,7 +238,11 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                               ),
                             ),
                           ],
-                          onChanged: _podeEditar ? _selecionarMatricula : null,
+                          onChanged: _podeEditar
+                              ? (id) => _selecionarMatricula(
+                                  id == null ? null : matriculasPorId[id],
+                                )
+                              : null,
                         ),
                         const SizedBox(height: 14),
                       ],
@@ -282,7 +301,7 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Vencimento'),
                   subtitle: Text(_formatarData(_vencimento)),
-                  trailing: const Icon(Icons.calendar_today_outlined, color: AppColors.gold),
+                  trailing: Icon(Icons.calendar_today_outlined, color: AppColors.gold),
                   onTap: _podeEditar ? _escolherVencimento : null,
                 ),
                 const SizedBox(height: 14),
@@ -304,7 +323,7 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                   ElevatedButton(
                     onPressed: _isSaving ? null : _handleSave,
                     child: _isSaving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
@@ -315,7 +334,7 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                         : Text(widget._ehEdicao ? 'SALVAR ALTERAÇÕES' : 'CRIAR COBRANÇA'),
                   )
                 else
-                  const Text(
+                  Text(
                     'Cobranças pagas ou canceladas não podem mais ser editadas.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.textSecondary),

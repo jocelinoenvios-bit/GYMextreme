@@ -5,6 +5,7 @@ import 'package:gymextreme_app/models/avaliacao_fisica.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/relatorios/evolucao_fisica_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
+import 'package:gymextreme_app/widgets/escolher_aluno.dart';
 
 import 'support/fake_aluno_service.dart';
 
@@ -38,7 +39,7 @@ void main() {
     await tester.pumpWidget(_wrap(service));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<String?>));
+    await tester.tap(find.byType(CampoAluno));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bia Ferreira').last);
     await tester.pumpAndSettle();
@@ -76,7 +77,7 @@ void main() {
     await tester.pumpWidget(_wrap(service));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<String?>));
+    await tester.tap(find.byType(CampoAluno));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bia Ferreira').last);
     await tester.pumpAndSettle();

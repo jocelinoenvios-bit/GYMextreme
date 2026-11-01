@@ -4,6 +4,7 @@ import '../../models/matricula.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/relatorio_matriculas.dart';
+import '../../widgets/premium.dart';
 
 /// Relatório de matrículas — ativas, encerradas, vencendo em breve e
 /// novas matrículas por período de criação. Carrega uma vez a partir de
@@ -68,7 +69,7 @@ class _RelatorioMatriculasScreenState extends State<RelatorioMatriculasScreen> {
               child: Text(
                 'Erro ao carregar.\n\n${snapshot.error}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
+                style: TextStyle(color: AppColors.error),
               ),
             );
           }
@@ -170,16 +171,17 @@ class _CartaoNumero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(valor, style: TextStyle(color: cor, fontWeight: FontWeight.bold, fontSize: 22)),
-          Text(titulo, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(titulo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         ],
       ),
     );

@@ -37,9 +37,9 @@ void main() {
       expect(exercicio!.taxonomiaBruta.keys.toSet(), camposEsperados);
     });
 
-    test('resolve o caminho do gif pela nomenclatura oficial (id, sem renomeação)', () async {
+    test('não resolve mais gif360Url pra nenhum exercício (GIF desligado de propósito)', () async {
       final exercicio = await repo.buscarPorId('0001');
-      expect(exercicio!.gif180Url, contains('0001'));
+      expect(exercicio!.gif360Url, isNull);
     });
 
     test('resolve relacionamentos com tipos e score', () async {

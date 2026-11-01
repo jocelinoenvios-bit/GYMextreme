@@ -20,6 +20,7 @@ const Map<String, String> equipamentosLabels = {
   'hammer': 'Martelo',
   'kettlebell': 'Kettlebell',
   'leverage machine': 'Máquina articulada',
+  'machine': 'Máquina',
   'medicine ball': 'Medicine ball',
   'olympic barbell': 'Barra olímpica',
   'resistance band': 'Faixa elástica',

@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gif/gif.dart';
 import 'package:gymextreme_app/models/exercise_model.dart';
 import 'package:gymextreme_app/screens/exercicios/exercicio_detail_screen.dart';
 import 'package:gymextreme_app/screens/exercicios/exercicios_list_screen.dart';
 import 'package:gymextreme_app/services/exercise_repository.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
+import 'support/fake_gif_bytes.dart';
+import 'support/fake_gif_cache_service.dart';
+
 Widget _wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
 class _FakeExerciseRepository implements ExerciseRepository {
   const _FakeExerciseRepository();
 
+  // videoUrl presente nos dois: a Biblioteca só lista exercícios com
+  // vídeo hoje (ExerciciosListScreen filtra por temVideoComplementar),
+  // então o fake precisa refletir isso ou a lista fica vazia.
   static const _catalogo = <ExerciseModel>[
     ExerciseModel(
       id: '0001',
@@ -21,7 +28,8 @@ class _FakeExerciseRepository implements ExerciseRepository {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'sit up',
-      gif180Url: 'assets/fake/0001.gif',
+      gif360Url: 'exercicios/gifs/0001.gif',
+      videoUrl: 'exercicios/videos/0001.mp4',
     ),
     ExerciseModel(
       id: '0577',
@@ -32,7 +40,8 @@ class _FakeExerciseRepository implements ExerciseRepository {
       dificuldade: 'beginner',
       categoria: 'strength',
       movementFamily: 'chest press',
-      gif180Url: 'assets/fake/0577.gif',
+      gif360Url: 'exercicios/gifs/0577.gif',
+      videoUrl: 'exercicios/videos/0577.mp4',
     ),
   ];
 
@@ -48,6 +57,10 @@ class _FakeExerciseRepository implements ExerciseRepository {
   Future<List<ExerciseModel>> buscarTodos() async => _catalogo;
 }
 
+FakeGifCacheService _fakeCache() => FakeGifCacheService()
+  ..doCache['exercicios/gifs/0001.gif'] = MemoryImage(gifDeTesteValido)
+  ..doCache['exercicios/gifs/0577.gif'] = MemoryImage(gifDeTesteValido);
+
 Future<void> _carregar(WidgetTester tester, Widget tela) async {
   await tester.pumpWidget(_wrap(tela));
   for (var i = 0; i < 10; i++) {
@@ -59,15 +72,25 @@ Future<void> _carregar(WidgetTester tester, Widget tela) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('lista os exercicios da Biblioteca Oficial', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+  testWidgets('lista as categorias (grupos musculares) como cards', (tester) async {
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
-    expect(find.text('3/4 sit-up'), findsOneWidget);
-    expect(find.text('lever chest press'), findsOneWidget);
+    // Catálogo de teste tem só "waist" (Abdômen) e "chest" (Peito) — a
+    // tela principal mostra as categorias, não os exercícios direto.
+    expect(find.text('Abdômen'), findsOneWidget);
+    expect(find.text('Peito'), findsOneWidget);
+    expect(find.text('3/4 sit-up'), findsNothing);
+    expect(find.text('lever chest press'), findsNothing);
   });
 
   testWidgets('busca por nome filtra a lista', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
     await tester.enterText(find.byType(TextField), 'lever');
     await tester.pump();
@@ -76,25 +99,54 @@ void main() {
     expect(find.text('3/4 sit-up'), findsNothing);
   });
 
-  testWidgets('filtro por grupo muscular restringe a lista', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+  testWidgets('tocar numa categoria abre só os exercícios dela', (tester) async {
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
-    // 'Peito' aparece duas vezes (o chip de filtro e o subtítulo do
-    // item "lever chest press") — mira especificamente no ChoiceChip.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Peito'));
-    await tester.pump();
+    await tester.tap(find.text('Peito'));
+    await tester.pumpAndSettle();
 
     expect(find.text('lever chest press'), findsOneWidget);
     expect(find.text('3/4 sit-up'), findsNothing);
   });
 
-  testWidgets('tocar num exercicio sem onSelecionar abre o detalhe', (tester) async {
-    await _carregar(tester, const ExerciciosListScreen(repository: _FakeExerciseRepository()));
+  testWidgets('buscar por nome na tela principal cruza todas as categorias', (tester) async {
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
 
-    await tester.tap(find.text('3/4 sit-up'));
+    await tester.enterText(find.byType(TextField), 'lever');
+    await tester.pump();
+
+    expect(find.text('lever chest press'), findsOneWidget);
+    expect(find.text('3/4 sit-up'), findsNothing);
+    // A busca substitui a grade de categorias — nenhuma aparece mais.
+    expect(find.text('Abdômen'), findsNothing);
+    expect(find.text('Peito'), findsNothing);
+  });
+
+  testWidgets('tocar num exercicio sem onSelecionar abre o detalhe', (tester) async {
+    await _carregar(
+      tester,
+      ExerciciosListScreen(repository: const _FakeExerciseRepository(), gifCacheService: _fakeCache()),
+    );
+
+    await tester.tap(find.text('Abdômen'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('3/4 sit-up'));
+    // Sem pumpAndSettle: o GIF do detalhe roda em loop infinito
+    // (autostart automático), então nunca "assenta" — mesmo motivo de
+    // exercicio_media_stage_test.dart usar só pump(). Duas bombeadas
+    // bastam pra concluir a transição de rota (300ms padrão).
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
     expect(find.byType(ExercicioDetailScreen), findsOneWidget);
+    expect(find.byType(Gif), findsOneWidget);
   });
 
   testWidgets(
@@ -150,6 +202,8 @@ void main() {
         if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
       }
 
+      await tester.tap(find.text('Peito'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('lever chest press'));
       await tester.pumpAndSettle();
 

@@ -251,7 +251,7 @@ class _ProdutoFormScreenState extends State<ProdutoFormScreen> {
                 ),
                 if (widget._ehEdicao) ...[
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'O estoque atual só muda por entrada, saída ou ajuste — '
                     'veja a tela de detalhes do produto.',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
@@ -267,7 +267,7 @@ class _ProdutoFormScreenState extends State<ProdutoFormScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : _handleSave,
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(

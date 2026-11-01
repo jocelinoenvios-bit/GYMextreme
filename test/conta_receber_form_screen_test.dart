@@ -31,6 +31,26 @@ Future<void> _tocar(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
 }
 
+/// Como o Firestore de verdade: cada leitura devolve objetos Matricula
+/// NOVOS. O FakeAlunoService comum devolve sempre as mesmas instâncias, e
+/// com ele o bug do dropdown de matrícula nunca aparecia.
+class _AlunoServiceComInstanciasNovas extends FakeAlunoService {
+  _AlunoServiceComInstanciasNovas({required super.matriculas});
+
+  @override
+  Stream<List<Matricula>> watchMatriculas(String uid) => Stream.value([
+        for (final m in matriculas.where((m) => m.alunoId == uid))
+          Matricula(
+            id: m.id,
+            alunoId: m.alunoId,
+            planoId: m.planoId,
+            dataInicio: m.dataInicio,
+            dataVencimento: m.dataVencimento,
+            valorContratado: m.valorContratado,
+          ),
+      ]);
+}
+
 Widget _wrap(FakeAlunoService service, {ContaReceber? conta}) {
   return MaterialApp(
     theme: AppTheme.dark,
@@ -100,7 +120,7 @@ void main() {
 
     await tester.tap(
       find.widgetWithText(
-        DropdownButtonFormField<Matricula?>,
+        DropdownButtonFormField<String?>,
         'Gerar a partir de uma matrícula (opcional)',
       ),
     );
@@ -116,6 +136,45 @@ void main() {
     final conta = service.contasReceber.single;
     expect(conta.matriculaId, 'm1');
     expect(conta.valorOriginal, 349);
+  });
+
+  testWidgets('matricula escolhida sobrevive a um redesenho da tela (bug real)', (tester) async {
+    // Mesmo defeito visto no formulario de matricula: a lista chega de
+    // novo a cada redesenho com instancias novas, e a matricula escolhida
+    // deixava de "bater" com elas — o dropdown quebrava na tela vermelha.
+    final service = _AlunoServiceComInstanciasNovas(
+      matriculas: [
+        Matricula(
+          id: 'm1',
+          alunoId: _carlos.uid,
+          planoId: 'plano1',
+          dataInicio: DateTime(2026, 8, 1),
+          dataVencimento: DateTime(2026, 9, 1),
+          valorContratado: 349,
+        ),
+      ],
+    );
+    await tester.pumpWidget(_wrap(service));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithText(
+        DropdownButtonFormField<String?>,
+        'Gerar a partir de uma matrícula (opcional)',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('R\$ 349,00').last);
+    await tester.pumpAndSettle();
+
+    // Redesenha a tela (como escolher a data de vencimento faria).
+    await tester.pumpWidget(_wrap(service));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    await _tocar(tester, find.text('CRIAR COBRANÇA'));
+    await tester.pump();
+    expect(service.contasReceber.single.matriculaId, 'm1');
   });
 
   testWidgets('modo edicao pre-preenche os campos e salva alteracoes', (tester) async {

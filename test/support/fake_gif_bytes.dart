@@ -1,0 +1,16 @@
+import 'dart:typed_data';
+
+/// GIF89a de 1x1 pixel válido de verdade (não um buffer arbitrário) —
+/// o widget `Gif` decodifica os bytes de verdade pra extrair os quadros
+/// (`instantiateImageCodecWithSize`), então um `MemoryImage` fake
+/// precisa de dados de GIF reais, por menor que seja a imagem.
+final Uint8List gifDeTesteValido = Uint8List.fromList(const [
+  0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+  0x01, 0x00, 0x01, 0x00, // largura=1, altura=1
+  0x80, 0x00, 0x00, // flags, background, aspect ratio
+  0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, // paleta de cores (2 cores)
+  0x21, 0xF9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, // graphic control extension
+  0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, // image descriptor
+  0x02, 0x02, 0x44, 0x01, 0x00, // dados da imagem (LZW mínimo)
+  0x3B, // trailer
+]);

@@ -10,18 +10,23 @@ import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
 import '../models/conta_receber.dart';
 import '../models/endereco.dart';
+import '../models/historico_treino.dart';
 import '../models/matricula.dart';
+import '../models/mensagem.dart';
 import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
 import '../models/user_role.dart';
+import '../utils/lembrete_vencimento.dart';
+import '../utils/mensalidade_utils.dart';
 
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
 /// `alunos`), anamnese e termo de responsabilidade (campos dentro do
 /// mesmo documento), historico de avaliacoes fisicas, fichas de treino,
-/// matriculas e contas a receber (subcolecoes `alunos/{uid}/avaliacoes`,
-/// `alunos/{uid}/treinos`, `alunos/{uid}/matriculas` e
-/// `alunos/{uid}/contasReceber`).
+/// matriculas, contas a receber e mensagens (subcolecoes
+/// `alunos/{uid}/avaliacoes`, `alunos/{uid}/treinos`,
+/// `alunos/{uid}/matriculas`, `alunos/{uid}/contasReceber` e
+/// `alunos/{uid}/mensagens`).
 class AlunoService {
   AlunoService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -40,6 +45,14 @@ class AlunoService {
   CollectionReference<Map<String, dynamic>> _treinos(String uid) =>
       _alunos.doc(uid).collection('treinos');
 
+  /// Registros de presença/frequência (treino realizado/falta) —
+  /// SEMPRE separada de `treinos` (a ficha prescrita): a ficha nunca
+  /// depende de existir registro aqui. Ver `HistoricoTreino` e a regra
+  /// em `firestore.rules` (só staff com `criarTreinos`/`editarTreinos`
+  /// grava; o aluno só lê o próprio).
+  CollectionReference<Map<String, dynamic>> _historicoTreinos(String uid) =>
+      _alunos.doc(uid).collection('historicoTreinos');
+
   CollectionReference<Map<String, dynamic>> _pagamentos(String uid) =>
       _alunos.doc(uid).collection('pagamentos');
 
@@ -48,6 +61,12 @@ class AlunoService {
 
   CollectionReference<Map<String, dynamic>> _contasReceber(String uid) =>
       _alunos.doc(uid).collection('contasReceber');
+
+  /// Mensagens enviadas por um membro da equipe pro aluno (ver
+  /// `Permission.chat`) — só envio manual por enquanto, sem avisos
+  /// automáticos ainda.
+  CollectionReference<Map<String, dynamic>> _mensagens(String uid) =>
+      _alunos.doc(uid).collection('mensagens');
 
   /// Lista de alunos (perfil basico), ordenada por nome.
   ///
@@ -122,10 +141,61 @@ class AlunoService {
         );
   }
 
+  /// Salva os dados de CADASTRO do aluno (nome de contato, documento,
+  /// endereço, foto etc.) — nunca toca nos campos operacionais/
+  /// financeiros: `ativo`, `bloqueado`, `proximoVencimento`,
+  /// `unidadeId`, `dataInativacao`, `dataReativacao`,
+  /// `reativadoPorUid`/`reativadoPorNome`, `whatsappOptIn`. Esses só
+  /// mudam através das operações específicas já autorizadas pra isso
+  /// (`marcarPagamentoRecebido`, `registrarRecebimento`,
+  /// `reativarAluno`, a automação diária de inadimplência via Admin
+  /// SDK) — nunca como efeito colateral de editar um dado cadastral.
+  ///
+  /// Antes esta função usava `aluno.toFirestore()` (grava TODOS os
+  /// campos do objeto) — como a tela que chama isto (`DadosTab`) só
+  /// preenche os campos cadastrais ao reconstruir o `Aluno`, os campos
+  /// operacionais caíam nos valores padrão do construtor (`ativo:
+  /// true`, `bloqueado: false`, os demais `null`) e o `merge: true`
+  /// ainda assim os sobrescrevia — apagando silenciosamente o
+  /// vencimento da mensalidade e reativando/desbloqueando o aluno a
+  /// cada edição de cadastro. Corrigido serializando só os campos
+  /// cadastrais via [dadosCadastraisParaFirestore] — não importa o que
+  /// o `Aluno` passado tenha nos campos operacionais, essa função nunca
+  /// os inclui no mapa gravado.
   Future<void> salvarDadosAluno(Aluno aluno) {
     return _alunos
         .doc(aluno.uid)
-        .set(aluno.toFirestore(), SetOptions(merge: true));
+        .set(dadosCadastraisParaFirestore(aluno), SetOptions(merge: true));
+  }
+
+  /// Monta o mapa gravado por [salvarDadosAluno] — extraído como função
+  /// estática (pura, sem Firestore) pra poder testar diretamente que os
+  /// campos operacionais/financeiros NUNCA aparecem nas chaves do mapa,
+  /// não importa o que o [Aluno] passado contenha neles (ver
+  /// test/aluno_service_test.dart).
+  static Map<String, dynamic> dadosCadastraisParaFirestore(Aluno aluno) {
+    return {
+      'sexo': aluno.sexo?.name,
+      'dataNascimento': aluno.dataNascimento != null
+          ? Timestamp.fromDate(aluno.dataNascimento!)
+          : null,
+      'idade': aluno.idadeInformada,
+      'fotoUrl': aluno.fotoUrl,
+      'cpf': aluno.cpf,
+      'rg': aluno.rg,
+      'telefone': aluno.telefone,
+      'whatsapp': aluno.whatsapp,
+      'endereco': aluno.endereco.toFirestore(),
+      'contatoEmergenciaNome': aluno.contatoEmergenciaNome,
+      'contatoEmergenciaTelefone': aluno.contatoEmergenciaTelefone,
+      'observacoes': aluno.observacoes,
+      'dataInicio': aluno.dataInicio != null
+          ? Timestamp.fromDate(aluno.dataInicio!)
+          : null,
+      'diaVencimento': aluno.diaVencimento,
+      if (aluno.cadastradoPorUid != null) 'cadastradoPorUid': aluno.cadastradoPorUid,
+      if (aluno.cadastradoPorNome != null) 'cadastradoPorNome': aluno.cadastradoPorNome,
+    };
   }
 
   Future<void> salvarAnamnese(String uid, Anamnese anamnese) {
@@ -142,6 +212,118 @@ class AlunoService {
 
   Future<void> adicionarAvaliacao(String uid, AvaliacaoFisica avaliacao) {
     return _avaliacoes(uid).add(avaliacao.toFirestore());
+  }
+
+  /// Mensagens que o aluno vê, mais recente primeiro — sem as que ele
+  /// mesmo tirou da lista (que continuam existindo pro staff, ver
+  /// [arquivarMensagem]).
+  Stream<List<Mensagem>> watchMensagens(String uid) {
+    return _mensagens(uid)
+        .orderBy('criadoEm', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Mensagem.fromFirestore(doc.id, doc.data()))
+              .where((mensagem) => !mensagem.arquivadaPeloAluno)
+              .toList(),
+        );
+  }
+
+  /// Tudo que a equipe já enviou, de todos os alunos, mais recente
+  /// primeiro.
+  ///
+  /// Varre as subcoleções `mensagens` de todos os alunos de uma vez
+  /// (collection group) em vez de consultar aluno por aluno. Exige um
+  /// índice de escopo "grupo de coleções" no campo `criadoEm` — ver
+  /// `firestore.indexes.json`. O [limite] existe porque essa lista só
+  /// cresce: ninguém rola três anos de avisos.
+  Stream<List<Mensagem>> watchMensagensEnviadas({int limite = 300}) {
+    return _firestore
+        .collectionGroup('mensagens')
+        .orderBy('criadoEm', descending: true)
+        .limit(limite)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Mensagem.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
+  }
+
+  /// Envia um aviso pro aluno [uid] — exige a permissão `chat` (ver
+  /// `firestore.rules`), reforçada aqui só pela UI (o botão "Enviar
+  /// mensagem" já fica escondido sem a permissão).
+  Future<void> enviarMensagem(
+    String uid, {
+    required String texto,
+    required String remetenteUid,
+    required String remetenteNome,
+    required String alunoNome,
+  }) {
+    return _mensagens(uid).add(
+      Mensagem(
+        texto: texto,
+        remetenteUid: remetenteUid,
+        remetenteNome: remetenteNome,
+        alunoUid: uid,
+        alunoNome: alunoNome,
+      ).toFirestore(),
+    );
+  }
+
+  /// Garante que o lembrete de vencimento ([idLembreteVencimento]) esteja
+  /// na caixa do aluno — chamado pelo app do próprio aluno ao abrir, dentro
+  /// da janela de 3 dias antes do vencimento ([deveLembrarVencimento]).
+  ///
+  /// Um documento por vencimento, com id fixo: se já existe (o aluno abriu
+  /// o app ontem, ou tirou o aviso da lista), não faz nada. Devolve se
+  /// criou agora.
+  Future<bool> garantirLembreteVencimento(
+    String uid, {
+    required DateTime vencimento,
+    required String alunoNome,
+  }) async {
+    final ref = _mensagens(uid).doc(idLembreteVencimento(vencimento));
+    final existente = await ref.get();
+    if (existente.exists) return false;
+    await ref.set(
+      Mensagem(
+        texto: textoLembreteVencimento(vencimento),
+        remetenteUid: remetenteLembreteAutomatico,
+        remetenteNome: 'GYM XTREME',
+        alunoUid: uid,
+        alunoNome: alunoNome,
+        automatica: true,
+      ).toFirestore(),
+    );
+    return true;
+  }
+
+  /// Marca como lidas as mensagens que o aluno acabou de ver. Recebe a
+  /// lista pronta (em vez de consultar de novo) porque quem chama já tem
+  /// o snapshot aberto na tela.
+  Future<void> marcarMensagensComoLidas(String uid, Iterable<String> ids) {
+    if (ids.isEmpty) return Future.value();
+    final lote = _firestore.batch();
+    for (final id in ids) {
+      lote.update(_mensagens(uid).doc(id), {
+        'lidaEm': FieldValue.serverTimestamp(),
+      });
+    }
+    return lote.commit();
+  }
+
+  /// O aluno tira o aviso da lista dele. Não apaga: o staff continua
+  /// vendo nas enviadas que o aviso foi dado.
+  Future<void> arquivarMensagem(String uid, String mensagemId) {
+    return _mensagens(uid).doc(mensagemId).update({'arquivadaPeloAluno': true});
+  }
+
+  /// O staff apaga de vez — some dos dois lados. É o caminho pra quem
+  /// mandou errado (editar não existe de propósito: o aluno pode já ter
+  /// lido o texto antigo).
+  Future<void> apagarMensagem(String uid, String mensagemId) {
+    return _mensagens(uid).doc(mensagemId).delete();
   }
 
   /// Historico de pagamentos registrados pela recepcao, mais recente
@@ -168,7 +350,7 @@ class AlunoService {
     required String staffNome,
   }) async {
     final base = vencimentoAtual ?? DateTime.now();
-    final novoVencimento = _adicionarUmMes(base);
+    final novoVencimento = adicionarUmMes(base);
 
     await _alunos.doc(uid).set({
       'proximoVencimento': Timestamp.fromDate(novoVencimento),
@@ -193,14 +375,60 @@ class AlunoService {
     }, SetOptions(merge: true));
   }
 
-  /// Mesmo dia do mes, um mes a frente — com fallback pro ultimo dia do
-  /// mes de destino quando ele for mais curto (ex.: 31/01 -> 28 ou 29/02).
-  DateTime _adicionarUmMes(DateTime data) {
-    final novoMes = data.month == 12 ? 1 : data.month + 1;
-    final novoAno = data.month == 12 ? data.year + 1 : data.year;
-    final ultimoDiaDoNovoMes = DateTime(novoAno, novoMes + 1, 0).day;
-    final dia = data.day > ultimoDiaDoNovoMes ? ultimoDiaDoNovoMes : data.day;
-    return DateTime(novoAno, novoMes, dia);
+  /// Reativa um aluno que ficou `Aluno.ativo == false` pela automação de
+  /// inadimplência (30 dias de atraso, ver `functions/lib/inadimplencia.js`)
+  /// — ou por qualquer outro motivo de inativação manual. Encerra o ciclo
+  /// de inadimplência anterior e começa um novo: `proximoVencimento` é
+  /// recalculado a partir de HOJE (1 mês à frente), nunca a partir do
+  /// vencimento antigo — os meses em que o aluno ficou afastado nunca são
+  /// cobrados retroativamente. `dataInativacao` é preservada como
+  /// histórico (não apagada); só `dataReativacao` é atualizada.
+  Future<void> reativarAluno(
+    String uid, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final agora = DateTime.now();
+    await _alunos.doc(uid).set({
+      'ativo': true,
+      'dataReativacao': Timestamp.fromDate(agora),
+      'proximoVencimento': Timestamp.fromDate(adicionarUmMes(agora)),
+      'reativadoPorUid': staffUid,
+      'reativadoPorNome': staffNome,
+    }, SetOptions(merge: true));
+  }
+
+  /// Define o vencimento de vários alunos de uma vez — usado pra preencher
+  /// os alunos antigos, cadastrados antes do vencimento automático (ver
+  /// `vencimentoParaAlunoAntigo`). Não conta como pagamento recebido.
+  Future<void> definirVencimentosEmLote(Map<String, DateTime> vencimentoPorUid) async {
+    final itens = vencimentoPorUid.entries.toList();
+    // Lote do Firestore aceita no máximo 500 escritas.
+    for (var i = 0; i < itens.length; i += 400) {
+      final lote = _firestore.batch();
+      for (final item in itens.skip(i).take(400)) {
+        lote.set(_alunos.doc(item.key), {
+          'proximoVencimento': Timestamp.fromDate(item.value),
+          'diaVencimento': item.value.day,
+        }, SetOptions(merge: true));
+      }
+      await lote.commit();
+    }
+  }
+
+  /// Avança `Aluno.proximoVencimento` em 1 mês a partir de [vencimentoOriginal]
+  /// (o vencimento da cobrança que acabou de ser paga) — usado por
+  /// [registrarRecebimento] só quando a cobrança recebida está vinculada a
+  /// uma matrícula (mensalidade), pra que confirmar o pagamento pela tela
+  /// "Contas a Receber" também libere o acesso do aluno — antes disso só a
+  /// seção "Mensalidade" da aba Dados fazia esse avanço, deixando as duas
+  /// telas dessincronizadas. `CaixaService.registrarRecebimentoContaReceber`
+  /// faz o mesmo avanço (mesma função [adicionarUmMes]), só que dentro da
+  /// própria transação do caixa em vez de chamar este método privado.
+  Future<void> _avancarProximoVencimento(String uid, DateTime vencimentoOriginal) {
+    return _alunos.doc(uid).set({
+      'proximoVencimento': Timestamp.fromDate(adicionarUmMes(vencimentoOriginal)),
+    }, SetOptions(merge: true));
   }
 
   /// Histórico de matrículas de UM aluno, mais recente primeiro. Usada
@@ -412,6 +640,13 @@ class AlunoService {
   /// lançou continua em `criadoPor*`, quem recebeu fica em
   /// `recebidoPor*`). Desconto/juros podem ser ajustados aqui mesmo (ex.:
   /// desconto concedido só na hora de pagar).
+  ///
+  /// Se [matriculaId] e [vencimentoOriginal] forem informados (a cobrança
+  /// paga está vinculada a uma matrícula — ver `ContaReceberFormScreen`),
+  /// também avança `Aluno.proximoVencimento`, liberando o acesso do aluno
+  /// no mesmo passo. Cobranças avulsas (produto, sessão extra etc., sem
+  /// matrícula vinculada) nunca mexem no vencimento — só a mensalidade
+  /// controla o acesso.
   Future<void> registrarRecebimento(
     String alunoUid,
     String contaId, {
@@ -423,8 +658,10 @@ class AlunoService {
     String? observacao,
     required String staffUid,
     required String staffNome,
-  }) {
-    return _contasReceber(alunoUid).doc(contaId).set({
+    String? matriculaId,
+    DateTime? vencimentoOriginal,
+  }) async {
+    await _contasReceber(alunoUid).doc(contaId).set({
       'status': StatusContaReceber.pago.name,
       'valorPago': valorPago,
       'desconto': desconto,
@@ -436,6 +673,10 @@ class AlunoService {
       'recebidoPorNome': staffNome,
       'atualizadoEm': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    if (matriculaId != null && vencimentoOriginal != null) {
+      await _avancarProximoVencimento(alunoUid, vencimentoOriginal);
+    }
   }
 
   /// "Exclui" uma cobrança sem apagar o documento — marca `cancelado`,
@@ -510,6 +751,9 @@ class AlunoService {
       grupoMuscular: treino.grupoMuscular,
       ordem: treino.ordem,
       exercicios: treino.exercicios,
+      diaSemana: treino.diaSemana,
+      objetivo: treino.objetivo,
+      vigenciaAte: treino.vigenciaAte,
     );
     return salvarTreino(
       alunoUid,
@@ -549,6 +793,36 @@ class AlunoService {
     );
   }
 
+  /// Histórico de presença/frequência do aluno, mais recente primeiro —
+  /// nunca inclui a ficha prescrita em si (ver `watchTreinos`), só os
+  /// registros de realizado/falta que o staff confirmou.
+  Stream<List<HistoricoTreino>> watchHistoricoTreinos(String uid) {
+    return _historicoTreinos(uid)
+        .orderBy('data', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => HistoricoTreino.fromFirestore(doc.id, doc.data()))
+              .toList(),
+        );
+  }
+
+  /// Registra presença/falta de um treino numa data — só quem tem
+  /// `criarTreinos`/`editarTreinos` pode chamar isso (reforçado em
+  /// `firestore.rules`); o aluno nunca grava o próprio histórico.
+  Future<String> registrarHistoricoTreino(
+    String uid,
+    HistoricoTreino registro, {
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    final dados = registro.toFirestore();
+    dados['registradoPorUid'] = staffUid;
+    dados['registradoPorNome'] = staffNome;
+    final ref = await _historicoTreinos(uid).add(dados);
+    return ref.id;
+  }
+
   /// Cria a conta de login (Firebase Auth) e os documentos de cadastro
   /// de um novo aluno. Usa um app Firebase secundario e temporario para
   /// que a criacao da conta do aluno nao derrube a sessao do ADM/Personal
@@ -570,7 +844,6 @@ class AlunoService {
     String? contatoEmergenciaTelefone,
     String? observacoes,
     DateTime? dataInicio,
-    int? diaVencimento,
     required String cadastradoPorUid,
     required String cadastradoPorNome,
   }) async {
@@ -596,6 +869,10 @@ class AlunoService {
       } finally {
         await secondaryAuth.signOut();
       }
+
+      // Vencimento automático: 1 mês depois do dia do cadastro (ver
+      // [primeiroVencimento]).
+      final vencimento = primeiroVencimento(dataInicio ?? DateTime.now());
 
       final batch = _firestore.batch();
       batch.set(
@@ -623,7 +900,8 @@ class AlunoService {
           contatoEmergenciaTelefone: contatoEmergenciaTelefone,
           observacoes: observacoes,
           dataInicio: dataInicio,
-          diaVencimento: diaVencimento,
+          diaVencimento: vencimento.day,
+          proximoVencimento: vencimento,
           cadastradoPorUid: cadastradoPorUid,
           cadastradoPorNome: cadastradoPorNome,
         ).toFirestore(),

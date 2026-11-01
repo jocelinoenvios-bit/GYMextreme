@@ -11,6 +11,7 @@ import '../../models/user_role.dart';
 import '../../services/aluno_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/mensalidade_utils.dart';
 import '../../utils/validadores.dart';
 import 'avaliacao_fisica_form_screen.dart';
 import 'tabs/anamnese_tab.dart';
@@ -111,7 +112,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Nome, contato, documento e endereço do aluno.',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
@@ -141,7 +142,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
                   ),
                 ],
               )
-            : const Padding(
+            : Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Dados salvos.',
@@ -155,7 +156,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'As 13 perguntas da ficha de anamnese do aluno.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -168,6 +169,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
                     child: AnamneseTab(
                       uid: _uid!,
                       alunoService: widget.alunoService,
+                      staffAtual: widget.staffAtual,
                     ),
                   ),
                 ),
@@ -188,7 +190,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'As 15 regras do regulamento, com aceite digital do aluno.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
@@ -220,7 +222,7 @@ class _NovoAlunoWizardScreenState extends State<NovoAlunoWizardScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Peso, altura, IMC e circunferências — pode ser preenchida '
               'agora ou depois, na ficha do aluno.',
               style: TextStyle(color: AppColors.textSecondary),
@@ -265,7 +267,7 @@ class _IndicadorDePasso extends StatelessWidget {
       children: [
         Text(
           'Passo ${passoAtual + 1} de ${titulos.length}: ${titulos[passoAtual]}',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.gold,
             fontWeight: FontWeight.bold,
           ),
@@ -368,13 +370,13 @@ class _PassoConcluido extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.check_circle_outline,
                 color: AppColors.gold,
                 size: 64,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Aluno cadastrado com sucesso.',
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
                 textAlign: TextAlign.center,
@@ -444,8 +446,6 @@ class _PassoDadosState extends State<_PassoDados> {
   final _contatoEmergenciaNomeController = TextEditingController();
   final _contatoEmergenciaTelefoneController = TextEditingController();
   final _observacoesController = TextEditingController();
-  final _diaVencimentoController = TextEditingController();
-
   Sexo? _sexo;
   DateTime? _dataNascimento;
   final DateTime _dataInicio = DateTime.now();
@@ -472,7 +472,6 @@ class _PassoDadosState extends State<_PassoDados> {
     _contatoEmergenciaNomeController.dispose();
     _contatoEmergenciaTelefoneController.dispose();
     _observacoesController.dispose();
-    _diaVencimentoController.dispose();
     super.dispose();
   }
 
@@ -535,7 +534,6 @@ class _PassoDadosState extends State<_PassoDados> {
         ),
         observacoes: _textOrNull(_observacoesController.text),
         dataInicio: _dataInicio,
-        diaVencimento: int.tryParse(_diaVencimentoController.text),
         cadastradoPorUid: widget.staffAtual.uid,
         cadastradoPorNome: widget.staffAtual.nome,
       );
@@ -564,7 +562,7 @@ class _PassoDadosState extends State<_PassoDados> {
             ),
             observacoes: _textOrNull(_observacoesController.text),
             dataInicio: _dataInicio,
-            diaVencimento: int.tryParse(_diaVencimentoController.text),
+            diaVencimento: primeiroVencimento(_dataInicio).day,
             cadastradoPorUid: widget.staffAtual.uid,
             cadastradoPorNome: widget.staffAtual.nome,
           ),
@@ -605,7 +603,7 @@ class _PassoDadosState extends State<_PassoDados> {
   @override
   Widget build(BuildContext context) {
     if (_concluido) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
         child: Text('Dados salvos.', style: TextStyle(color: AppColors.gold)),
       );
@@ -632,7 +630,7 @@ class _PassoDadosState extends State<_PassoDados> {
                         ? MemoryImage(_fotoBytes!)
                         : null,
                     child: _fotoBytes == null
-                        ? const Icon(
+                        ? Icon(
                             Icons.person_outline,
                             size: 40,
                             color: AppColors.gold,
@@ -647,11 +645,11 @@ class _PassoDadosState extends State<_PassoDados> {
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.camera_alt,
                           size: 16,
                           color: AppColors.black,
@@ -871,17 +869,7 @@ class _PassoDadosState extends State<_PassoDados> {
               validator: validarTelefone,
             ),
             const SizedBox(height: 20),
-            TextFormField(
-              controller: _diaVencimentoController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [digitsOnlyFormatter],
-              decoration: const InputDecoration(
-                labelText: 'Dia de vencimento',
-                helperText:
-                    'Dia do mês em que a mensalidade vence (1-31), não uma data',
-              ),
-              validator: validarDiaVencimento,
-            ),
+            _AvisoVencimentoAutomatico(vencimento: primeiroVencimento(_dataInicio)),
             const SizedBox(height: 14),
             TextFormField(
               controller: _observacoesController,
@@ -892,7 +880,7 @@ class _PassoDadosState extends State<_PassoDados> {
             ElevatedButton(
               onPressed: _isSaving ? null : _handleCriar,
               child: _isSaving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
@@ -904,6 +892,57 @@ class _PassoDadosState extends State<_PassoDados> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Só informa — o vencimento não se digita mais: é sempre 1 mês depois do
+/// cadastro (ver `primeiroVencimento`).
+class _AvisoVencimentoAutomatico extends StatelessWidget {
+  const _AvisoVencimentoAutomatico({required this.vencimento});
+
+  final DateTime vencimento;
+
+  @override
+  Widget build(BuildContext context) {
+    final data =
+        '${vencimento.day.toString().padLeft(2, '0')}/'
+        '${vencimento.month.toString().padLeft(2, '0')}/${vencimento.year}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.event_available_outlined, color: AppColors.gold),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Primeiro vencimento: $data',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Calculado automaticamente: 1 mês após o cadastro.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

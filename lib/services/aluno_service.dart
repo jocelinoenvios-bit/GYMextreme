@@ -17,6 +17,7 @@ import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
 import '../models/user_role.dart';
+import 'renovacao_matricula.dart';
 import '../utils/lembrete_vencimento.dart';
 import '../utils/mensalidade_utils.dart';
 
@@ -343,7 +344,12 @@ class AlunoService {
   /// transferencia — fora do app nesta primeira versao, sem gateway) e
   /// avanca `proximoVencimento` em 1 mes a partir do vencimento atual
   /// (ou de hoje, se ainda nao havia nenhum configurado).
-  Future<void> marcarPagamentoRecebido(
+  ///
+  /// Também renova a matrícula ativa até o novo vencimento (ver
+  /// [renovarMatriculaPorPagamento]). Devolve `false` se o aluno não tem
+  /// matrícula ativa — o pagamento é registrado do mesmo jeito, mas a
+  /// catraca não vai liberar, e a tela avisa a recepção.
+  Future<bool> marcarPagamentoRecebido(
     String uid, {
     required DateTime? vencimentoAtual,
     required String staffUid,
@@ -355,6 +361,7 @@ class AlunoService {
     await _alunos.doc(uid).set({
       'proximoVencimento': Timestamp.fromDate(novoVencimento),
     }, SetOptions(merge: true));
+    final temMatricula = await renovarMatriculaPorPagamento(_firestore, uid, novoVencimento);
 
     await _pagamentos(uid).add(
       Pagamento(
@@ -365,6 +372,7 @@ class AlunoService {
         registradoPorNome: staffNome,
       ).toFirestore(),
     );
+    return temMatricula;
   }
 
   /// Define o primeiro vencimento de um aluno que ainda nao tem nenhum
@@ -425,10 +433,14 @@ class AlunoService {
   /// telas dessincronizadas. `CaixaService.registrarRecebimentoContaReceber`
   /// faz o mesmo avanço (mesma função [adicionarUmMes]), só que dentro da
   /// própria transação do caixa em vez de chamar este método privado.
-  Future<void> _avancarProximoVencimento(String uid, DateTime vencimentoOriginal) {
-    return _alunos.doc(uid).set({
-      'proximoVencimento': Timestamp.fromDate(adicionarUmMes(vencimentoOriginal)),
+  Future<void> _avancarProximoVencimento(String uid, DateTime vencimentoOriginal) async {
+    final novoVencimento = adicionarUmMes(vencimentoOriginal);
+    await _alunos.doc(uid).set({
+      'proximoVencimento': Timestamp.fromDate(novoVencimento),
     }, SetOptions(merge: true));
+    // Pagou a mensalidade: a matrícula acompanha (ver
+    // renovarMatriculaPorPagamento).
+    await renovarMatriculaPorPagamento(_firestore, uid, novoVencimento);
   }
 
   /// Histórico de matrículas de UM aluno, mais recente primeiro. Usada

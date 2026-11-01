@@ -5,6 +5,7 @@ import '../models/caixa_movimentacao.dart';
 import '../models/conta_pagar.dart';
 import '../models/conta_receber.dart';
 import '../utils/mensalidade_utils.dart';
+import 'renovacao_matricula.dart';
 
 /// Controle de caixa da academia (coleção `caixas`, nível de academia —
 /// não pertence a nenhum aluno, mesmo padrão de `PlanoService`). Cada
@@ -188,13 +189,14 @@ class CaixaService {
     String? observacao,
     required String staffUid,
     required String staffNome,
-  }) {
+  }) async {
     final alunoRef = _firestore.collection('alunos').doc(alunoUid);
     final contaRef = alunoRef.collection('contasReceber').doc(contaReceberId);
     final caixaRef = _caixas.doc(caixaId);
     final movRef = _movimentacoes(caixaId).doc();
+    DateTime? vencimentoAvancado;
 
-    return _firestore.runTransaction<String>((transaction) async {
+    final id = await _firestore.runTransaction<String>((transaction) async {
       // Leituras antes de qualquer escrita (regra do Firestore).
       final contaSnap = await transaction.get(contaRef);
       final caixaSnap = await transaction.get(caixaRef);
@@ -250,13 +252,23 @@ class CaixaService {
       final vencimentoData = contaSnap.data()?['vencimento'];
       final vencimentoOriginal = vencimentoData is Timestamp ? vencimentoData.toDate() : null;
       if (matriculaId != null && vencimentoOriginal != null) {
+        vencimentoAvancado = adicionarUmMes(vencimentoOriginal);
         transaction.set(alunoRef, {
-          'proximoVencimento': Timestamp.fromDate(adicionarUmMes(vencimentoOriginal)),
+          'proximoVencimento': Timestamp.fromDate(vencimentoAvancado!),
         }, SetOptions(merge: true));
       }
 
       return movRef.id;
     });
+
+    // Pagou a mensalidade: a matrícula acompanha. Fora da transação
+    // porque precisa de uma consulta (quais matrículas estão ativas), e
+    // transação do Firestore só lê documento por documento.
+    final novoVencimento = vencimentoAvancado;
+    if (novoVencimento != null) {
+      await renovarMatriculaPorPagamento(_firestore, alunoUid, novoVencimento);
+    }
+    return id;
   }
 
   /// Registra o pagamento de uma `ContaPagar` E a movimentação de caixa

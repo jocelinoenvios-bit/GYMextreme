@@ -408,6 +408,18 @@ service cloud.firestore {
       match /matriculas/{matriculaId} {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('matriculas');
+
+        // Pagar a mensalidade renova a matricula (renovarMatriculaPorPagamento
+        // no app): quem da baixa na mensalidade, mesmo sem a permissao de
+        // matriculas, pode SO estender a validade de uma matricula ativa —
+        // nunca encurtar, reativar, trocar plano ou valor.
+        allow update: if
+          (temPermissao('receberMensalidades') || temPermissao('receberContasReceber')) &&
+          resource.data.status == 'ativa' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'dataVencimento', 'renovadaPorPagamentoEm', 'atualizadoEm'
+          ]) &&
+          request.resource.data.dataVencimento > resource.data.dataVencimento;
       }
 
       // Contas a receber: diferente de pagamentos/matriculas/treinos acima,
@@ -536,7 +548,20 @@ service cloud.firestore {
       // pelo `DeviceSyncService.vincularCredencial` (Admin SDK).
       match /credenciais/{userIdDispositivo} {
         allow read: if ehStaff();
-        allow write: if false;
+
+        // Vincular/desvincular pelo app (ficha do aluno -> Frequencia ->
+        // Catraca), so com a permissao de controle da catraca. Criar nunca
+        // sobrescreve (trocar o dono de um codigo exige desvincular antes)
+        // e so com estes campos; o codigo e so numeros, como no aparelho.
+        allow create: if temPermissao('controleCatraca') &&
+          userIdDispositivo.matches('[0-9]{1,12}') &&
+          request.resource.data.keys().hasOnly([
+            'alunoUid', 'vinculadoEm', 'vinculadoPorUid', 'vinculadoPorNome'
+          ]) &&
+          request.resource.data.alunoUid is string &&
+          request.resource.data.alunoUid.size() > 0 &&
+          request.resource.data.vinculadoPorUid == request.auth.uid;
+        allow delete: if temPermissao('controleCatraca');
       }
     }
 

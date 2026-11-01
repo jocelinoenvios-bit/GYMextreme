@@ -135,4 +135,43 @@ void main() {
       expect(alunoService.ultimaReativacao!.staffUid, 'adm-1');
     });
   });
+
+  group('pagamento renova a matrícula (modelo A)', () {
+    Widget emDia(FakeAlunoService service) => MaterialApp(
+      theme: AppTheme.dark,
+      home: Scaffold(
+        body: MensalidadeSection(
+          alunoUid: 'aluno-1',
+          proximoVencimento: DateTime.now().add(const Duration(days: 3)),
+          alunoService: service,
+          staffAtual: _adm,
+        ),
+      ),
+    );
+
+    testWidgets('com matrícula ativa: confirma que a matrícula foi renovada', (tester) async {
+      final service = FakeAlunoService();
+      await tester.pumpWidget(emDia(service));
+      await tester.tap(find.text('MARCAR PAGAMENTO RECEBIDO'));
+      await tester.pumpAndSettle();
+
+      expect(service.pagamentosMarcados, 1);
+      expect(find.text('Pagamento registrado. Matrícula renovada.'), findsOneWidget);
+      expect(find.text('Aluno sem matrícula ativa'), findsNothing);
+    });
+
+    testWidgets('sem matrícula ativa: avisa que a catraca não vai liberar', (tester) async {
+      final service = FakeAlunoService()..temMatriculaAtivaAoReceber = false;
+      await tester.pumpWidget(emDia(service));
+      await tester.tap(find.text('MARCAR PAGAMENTO RECEBIDO'));
+      await tester.pumpAndSettle();
+
+      expect(service.pagamentosMarcados, 1);
+      expect(find.text('Aluno sem matrícula ativa'), findsOneWidget);
+      expect(find.textContaining('A catraca não vai liberar'), findsOneWidget);
+      await tester.tap(find.text('ENTENDI'));
+      await tester.pumpAndSettle();
+      expect(find.text('Aluno sem matrícula ativa'), findsNothing);
+    });
+  });
 }

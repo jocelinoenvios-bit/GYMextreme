@@ -10,6 +10,7 @@ import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/premium.dart';
+import 'catraca_vinculo_card.dart';
 
 /// Cor de "positivo" (autorizado/realizado) — mesmo verde já usado em
 /// `MensalidadeSection` pro status "Em dia" (não existe token dedicado
@@ -69,7 +70,18 @@ class FrequenciaTab extends StatelessWidget {
             child: TabBarView(
               children: [
                 _podeVerAcessoFisico
-                    ? _AcessoFisicoSection(uid: uid, acessoService: acessoService)
+                    ? Column(
+                        children: [
+                          CatracaVinculoCard(
+                            alunoUid: uid,
+                            acessoService: acessoService,
+                            staffAtual: staffAtual,
+                          ),
+                          Expanded(
+                            child: _AcessoFisicoSection(uid: uid, acessoService: acessoService),
+                          ),
+                        ],
+                      )
                     : const _MensagemCentralizada(
                         'Você não tem permissão para ver o acesso físico deste aluno.',
                       ),

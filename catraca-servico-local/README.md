@@ -1,3 +1,7 @@
+> ⚠️ **OBSOLETO — não use.** Desenho antigo (solenoide acionada por este
+> computador, sem leitor facial). A catraca agora usa o iDFace Pro com o
+> **porteiro local**: ver [`functions/PORTEIRO-LOCAL.md`](../functions/PORTEIRO-LOCAL.md).
+
 # Serviço local da catraca — GYM XTREME
 
 Roda no computador da academia. É o **único** componente do sistema que fala

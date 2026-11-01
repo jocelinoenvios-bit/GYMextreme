@@ -25,3 +25,7 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+
+# Porteiro local da catraca: chave do Firebase e configuração do computador da academia
+chave-firebase*.json
+porteiro.env

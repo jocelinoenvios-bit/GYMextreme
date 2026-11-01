@@ -82,14 +82,41 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
   }
 
   Future<void> _marcarPagamentoRecebido() async {
+    var temMatricula = true;
     await _executar(
-      () => widget.alunoService.marcarPagamentoRecebido(
-        widget.alunoUid,
-        vencimentoAtual: widget.proximoVencimento,
-        staffUid: widget.staffAtual.uid,
-        staffNome: widget.staffAtual.nome,
-      ),
+      () async {
+        temMatricula = await widget.alunoService.marcarPagamentoRecebido(
+          widget.alunoUid,
+          vencimentoAtual: widget.proximoVencimento,
+          staffUid: widget.staffAtual.uid,
+          staffNome: widget.staffAtual.nome,
+        );
+      },
+      sucesso: () => temMatricula
+          ? 'Pagamento registrado. Matrícula renovada.'
+          : null,
     );
+    if (!temMatricula && mounted) {
+      // O pagamento foi registrado, mas sem matrícula ativa a catraca
+      // nega a entrada — a recepção precisa saber na hora.
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Aluno sem matrícula ativa'),
+          content: const Text(
+            'O pagamento foi registrado, mas este aluno não tem matrícula ativa. '
+            'A catraca não vai liberar a entrada até ser feita uma matrícula '
+            '(tela Matrículas → Nova matrícula).',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('ENTENDI'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _reativarAluno() async {
@@ -122,14 +149,20 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
     }
   }
 
-  Future<void> _executar(Future<void> Function() acao) async {
+  /// [sucesso] troca a mensagem padrão de sucesso; devolvendo `null`, não
+  /// mostra nenhuma (quem chamou vai avisar de outro jeito).
+  Future<void> _executar(
+    Future<void> Function() acao, {
+    String? Function()? sucesso,
+  }) async {
     setState(() => _isSaving = true);
     try {
       await acao();
-      if (mounted) {
+      final mensagem = sucesso == null ? 'Mensalidade atualizada.' : sucesso();
+      if (mounted && mensagem != null) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Mensalidade atualizada.')));
+        ).showSnackBar(SnackBar(content: Text(mensagem)));
       }
     } catch (_) {
       if (mounted) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/app_user.dart';
+import 'package:gymextreme_app/models/matricula.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/alunos/tabs/mensalidade_section.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
@@ -136,42 +137,99 @@ void main() {
     });
   });
 
-  group('pagamento renova a matrícula (modelo A)', () {
-    Widget emDia(FakeAlunoService service) => MaterialApp(
+  group('Receber mensalidade', () {
+    final vencimento = DateTime.now().add(const Duration(days: 3));
+    final venceDia = DateTime(vencimento.year, vencimento.month, vencimento.day);
+
+    Widget tela(FakeAlunoService service) => MaterialApp(
       theme: AppTheme.dark,
       home: Scaffold(
         body: MensalidadeSection(
           alunoUid: 'aluno-1',
-          proximoVencimento: DateTime.now().add(const Duration(days: 3)),
+          alunoNome: 'Ana',
+          proximoVencimento: venceDia,
           alunoService: service,
           staffAtual: _adm,
         ),
       ),
     );
 
-    testWidgets('com matrícula ativa: confirma que a matrícula foi renovada', (tester) async {
-      final service = FakeAlunoService();
-      await tester.pumpWidget(emDia(service));
-      await tester.tap(find.text('MARCAR PAGAMENTO RECEBIDO'));
+    Matricula matricula80() => Matricula(
+      id: 'm1',
+      alunoId: 'aluno-1',
+      planoId: '',
+      dataInicio: DateTime(2026, 1, 1),
+      dataVencimento: venceDia,
+      valorContratado: 80,
+    );
+
+    Future<void> abrir(WidgetTester tester) async {
+      await tester.tap(find.text('RECEBER MENSALIDADE'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('valor já vem da matrícula; exige a forma; recebe e confirma', (tester) async {
+      final service = FakeAlunoService(matriculas: [matricula80()]);
+      await tester.pumpWidget(tela(service));
+      await abrir(tester);
+
+      expect(find.text('Receber mensalidade'), findsOneWidget);
+      expect(find.text('80,00'), findsOneWidget);
+
+      await tester.tap(find.text('CONFIRMAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escolha a forma de pagamento.'), findsOneWidget);
+      expect(service.ultimoRecebimentoMensalidade, isNull);
+
+      await tester.tap(find.text('Pix'));
+      await tester.pump();
+      await tester.tap(find.text('CONFIRMAR'));
       await tester.pumpAndSettle();
 
-      expect(service.pagamentosMarcados, 1);
-      expect(find.text('Pagamento registrado. Matrícula renovada.'), findsOneWidget);
-      expect(find.text('Aluno sem matrícula ativa'), findsNothing);
+      final recebido = service.ultimoRecebimentoMensalidade!;
+      expect(recebido.valor, 80);
+      expect(recebido.formaPagamento, 'Pix');
+      expect(recebido.vencimentoAtual, venceDia);
+      expect(find.textContaining('Mensalidade recebida: R\$ 80,00 (Pix)'), findsOneWidget);
+      expect(find.textContaining('Nenhum caixa aberto'), findsNothing);
     });
 
-    testWidgets('sem matrícula ativa: avisa que a catraca não vai liberar', (tester) async {
-      final service = FakeAlunoService()..temMatriculaAtivaAoReceber = false;
-      await tester.pumpWidget(emDia(service));
-      await tester.tap(find.text('MARCAR PAGAMENTO RECEBIDO'));
+    testWidgets('sem caixa aberto: avisa que ficou fora do caixa', (tester) async {
+      final service = FakeAlunoService(matriculas: [matricula80()])..caixaAbertoAoReceber = false;
+      await tester.pumpWidget(tela(service));
+      await abrir(tester);
+      await tester.tap(find.text('Dinheiro'));
+      await tester.pump();
+      await tester.tap(find.text('CONFIRMAR'));
       await tester.pumpAndSettle();
 
-      expect(service.pagamentosMarcados, 1);
+      expect(find.textContaining('Nenhum caixa aberto'), findsOneWidget);
+    });
+
+    testWidgets('sem matrícula: valor em branco e, depois, aviso da catraca', (tester) async {
+      final service = FakeAlunoService()..temMatriculaAtivaAoReceber = false;
+      await tester.pumpWidget(tela(service));
+      await abrir(tester);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'Valor recebido (R\$)'), '75');
+      await tester.tap(find.text('Cartão'));
+      await tester.pump();
+      await tester.tap(find.text('CONFIRMAR'));
+      await tester.pumpAndSettle();
+
+      expect(service.ultimoRecebimentoMensalidade!.valor, 75);
       expect(find.text('Aluno sem matrícula ativa'), findsOneWidget);
       expect(find.textContaining('A catraca não vai liberar'), findsOneWidget);
-      await tester.tap(find.text('ENTENDI'));
+    });
+
+    testWidgets('cancelar não recebe nada', (tester) async {
+      final service = FakeAlunoService(matriculas: [matricula80()]);
+      await tester.pumpWidget(tela(service));
+      await abrir(tester);
+      await tester.tap(find.text('CANCELAR'));
       await tester.pumpAndSettle();
-      expect(find.text('Aluno sem matrícula ativa'), findsNothing);
+
+      expect(service.ultimoRecebimentoMensalidade, isNull);
     });
   });
 }

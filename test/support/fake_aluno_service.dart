@@ -280,6 +280,36 @@ class FakeAlunoService implements AlunoService {
   @override
   Stream<List<Pagamento>> watchPagamentos(String uid) => Stream.value(const []);
 
+  /// Último recebimento feito por [receberMensalidade].
+  ({String uid, double valor, String formaPagamento, DateTime? vencimentoAtual})? ultimoRecebimentoMensalidade;
+
+  /// Se [receberMensalidade] deve dizer que lançou no caixa.
+  bool caixaAbertoAoReceber = true;
+
+  @override
+  Future<RecebimentoMensalidade> receberMensalidade(
+    String uid, {
+    required DateTime? vencimentoAtual,
+    required double valor,
+    required String formaPagamento,
+    required String staffUid,
+    required String staffNome,
+    String? alunoNome,
+  }) async {
+    ultimoRecebimentoMensalidade = (
+      uid: uid,
+      valor: valor,
+      formaPagamento: formaPagamento,
+      vencimentoAtual: vencimentoAtual,
+    );
+    final hoje = DateTime.now();
+    return RecebimentoMensalidade(
+      novoVencimento: adicionarUmMes(vencimentoAtual ?? DateTime(hoje.year, hoje.month, hoje.day)),
+      temMatricula: temMatriculaAtivaAoReceber,
+      lancadoNoCaixa: caixaAbertoAoReceber,
+    );
+  }
+
   /// O que [marcarPagamentoRecebido] responde: se o aluno tem matrícula
   /// ativa (renovada junto com o pagamento).
   bool temMatriculaAtivaAoReceber = true;

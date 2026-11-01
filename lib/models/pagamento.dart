@@ -13,6 +13,9 @@ class Pagamento {
     required this.novoVencimento,
     this.registradoPorUid,
     this.registradoPorNome,
+    this.valor,
+    this.formaPagamento,
+    this.contaReceberId,
   });
 
   final String? id;
@@ -21,6 +24,14 @@ class Pagamento {
   final DateTime novoVencimento;
   final String? registradoPorUid;
   final String? registradoPorNome;
+
+  /// Preenchidos pelo "Receber mensalidade" (registros antigos, do botão
+  /// "Marcar pagamento recebido", não têm valor nem forma).
+  final double? valor;
+  final String? formaPagamento;
+
+  /// A cobrança paga gerada junto (Contas a receber).
+  final String? contaReceberId;
 
   factory Pagamento.fromFirestore(String id, Map<String, dynamic> data) {
     final registradoEm = data['registradoEm'];
@@ -33,6 +44,9 @@ class Pagamento {
       novoVencimento: novoVencimento is Timestamp ? novoVencimento.toDate() : DateTime.now(),
       registradoPorUid: data['registradoPorUid'] as String?,
       registradoPorNome: data['registradoPorNome'] as String?,
+      valor: (data['valor'] as num?)?.toDouble(),
+      formaPagamento: data['formaPagamento'] as String?,
+      contaReceberId: data['contaReceberId'] as String?,
     );
   }
 
@@ -45,6 +59,9 @@ class Pagamento {
       'novoVencimento': Timestamp.fromDate(novoVencimento),
       'registradoPorUid': registradoPorUid,
       'registradoPorNome': registradoPorNome,
+      if (valor != null) 'valor': valor,
+      if (formaPagamento != null) 'formaPagamento': formaPagamento,
+      if (contaReceberId != null) 'contaReceberId': contaReceberId,
     };
   }
 }

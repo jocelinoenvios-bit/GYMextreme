@@ -8,6 +8,7 @@ import '../models/aluno.dart';
 import '../models/anamnese.dart';
 import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
+import '../models/caixa_movimentacao.dart';
 import '../models/conta_receber.dart';
 import '../models/endereco.dart';
 import '../models/historico_treino.dart';
@@ -373,6 +374,130 @@ class AlunoService {
       ).toFirestore(),
     );
     return temMatricula;
+  }
+
+  /// "Receber mensalidade": num passo só, com tudo registrado.
+  ///
+  /// - cria a cobrança já paga em Contas a receber (é o que o relatório
+  ///   financeiro soma), ligada à matrícula ativa;
+  /// - se houver caixa aberto, lança a entrada no caixa;
+  /// - avança o vencimento 1 mês a partir do vencimento atual (pagar
+  ///   atrasado não muda o dia de vencimento do aluno);
+  /// - renova a matrícula ativa até o novo vencimento (modelo A);
+  /// - guarda o histórico em `pagamentos`, agora com valor e forma.
+  ///
+  /// Tudo numa transação: ou grava tudo, ou nada. O caixa e as matrículas
+  /// são localizados antes (transação só lê documento por documento) e
+  /// relidos dentro dela.
+  Future<RecebimentoMensalidade> receberMensalidade(
+    String uid, {
+    required DateTime? vencimentoAtual,
+    required double valor,
+    required String formaPagamento,
+    required String staffUid,
+    required String staffNome,
+    String? alunoNome,
+  }) async {
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final vencimentoPago = vencimentoAtual ?? hoje;
+    final novoVencimento = adicionarUmMes(vencimentoPago);
+
+    final caixaSnap = await _firestore
+        .collection('caixas')
+        .where('status', isEqualTo: 'aberto')
+        .limit(1)
+        .get();
+    final caixaRef = caixaSnap.docs.isEmpty ? null : caixaSnap.docs.first.reference;
+    final ativasSnap = await _matriculas(uid).where('status', isEqualTo: 'ativa').get();
+
+    final contaRef = _contasReceber(uid).doc();
+    final pagamentoRef = _pagamentos(uid).doc();
+    final movRef = caixaRef?.collection('movimentacoes').doc();
+    final dataTexto =
+        '${vencimentoPago.day.toString().padLeft(2, '0')}/${vencimentoPago.month.toString().padLeft(2, '0')}';
+
+    return _firestore.runTransaction<RecebimentoMensalidade>((transaction) async {
+      // Leituras antes de qualquer escrita (regra do Firestore).
+      final caixa = caixaRef == null ? null : await transaction.get(caixaRef);
+      final matriculas = [for (final doc in ativasSnap.docs) await transaction.get(doc.reference)];
+
+      final caixaAberto = caixa != null && caixa.exists && caixa.data()?['status'] == 'aberto';
+      final ativas = matriculas
+          .where((doc) => doc.exists && doc.data()?['status'] == 'ativa')
+          .toList();
+
+      transaction.set(
+        contaRef,
+        ContaReceber(
+          alunoId: uid,
+          matriculaId: ativas.isEmpty ? null : ativas.first.id,
+          descricao: 'Mensalidade (vencimento $dataTexto)',
+          valorOriginal: valor,
+          valorPago: valor,
+          vencimento: vencimentoPago,
+          dataPagamento: agora,
+          status: StatusContaReceber.pago,
+          formaPagamento: formaPagamento,
+          criadoPorUid: staffUid,
+          criadoPorNome: staffNome,
+          recebidoPorUid: staffUid,
+          recebidoPorNome: staffNome,
+          movimentacaoCaixaId: caixaAberto ? movRef!.id : null,
+        ).toFirestore(),
+      );
+
+      if (caixaAberto) {
+        transaction.set(
+          movRef!,
+          CaixaMovimentacao(
+            tipo: TipoMovimentacaoCaixa.recebimento,
+            valor: valor,
+            formaPagamento: formaPagamento,
+            descricao: alunoNome == null ? 'Mensalidade' : 'Mensalidade — $alunoNome',
+            contaReceberAlunoId: uid,
+            contaReceberId: contaRef.id,
+            staffUid: staffUid,
+            staffNome: staffNome,
+          ).toFirestore(),
+        );
+      }
+
+      transaction.set(_alunos.doc(uid), {
+        'proximoVencimento': Timestamp.fromDate(novoVencimento),
+      }, SetOptions(merge: true));
+
+      for (final matricula in ativas) {
+        final atual = matricula.data()?['dataVencimento'];
+        final vence = atual is Timestamp ? atual.toDate() : null;
+        if (vence != null && !vence.isBefore(novoVencimento)) continue;
+        transaction.update(matricula.reference, {
+          'dataVencimento': Timestamp.fromDate(novoVencimento),
+          'renovadaPorPagamentoEm': FieldValue.serverTimestamp(),
+          'atualizadoEm': FieldValue.serverTimestamp(),
+        });
+      }
+
+      transaction.set(
+        pagamentoRef,
+        Pagamento(
+          registradoEm: agora,
+          vencimentoAnterior: vencimentoAtual,
+          novoVencimento: novoVencimento,
+          registradoPorUid: staffUid,
+          registradoPorNome: staffNome,
+          valor: valor,
+          formaPagamento: formaPagamento,
+          contaReceberId: contaRef.id,
+        ).toFirestore(),
+      );
+
+      return RecebimentoMensalidade(
+        novoVencimento: novoVencimento,
+        temMatricula: ativas.isNotEmpty,
+        lancadoNoCaixa: caixaAberto,
+      );
+    });
   }
 
   /// Define o primeiro vencimento de um aluno que ainda nao tem nenhum
@@ -949,4 +1074,19 @@ class AlunoServiceException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// O que aconteceu num [AlunoService.receberMensalidade] — a tela usa pra
+/// avisar a recepção (sem matrícula a catraca não libera; sem caixa
+/// aberto o valor não entra no caixa).
+class RecebimentoMensalidade {
+  const RecebimentoMensalidade({
+    required this.novoVencimento,
+    required this.temMatricula,
+    required this.lancadoNoCaixa,
+  });
+
+  final DateTime novoVencimento;
+  final bool temMatricula;
+  final bool lancadoNoCaixa;
 }

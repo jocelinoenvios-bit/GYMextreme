@@ -10,7 +10,10 @@
  * credencial nenhuma.
  */
 
-const TOLERANCIA_MENSALIDADE_DIAS = 7;
+// Zero (pedido do cliente): vence no dia e, no dia seguinte, ja bloqueia.
+// Tem que ficar igual a `toleranciaMensalidadeDias` no app
+// (lib/constants/mensalidade.dart).
+const TOLERANCIA_MENSALIDADE_DIAS = 0;
 
 function semHorario(data) {
   return new Date(data.getFullYear(), data.getMonth(), data.getDate());

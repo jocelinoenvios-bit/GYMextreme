@@ -4,15 +4,21 @@ import 'mensalidade.dart';
 /// RESPONSABILIDADE citado na propria regra 07. Versionado porque, se o
 /// texto mudar no futuro, aceites antigos devem continuar validos para a
 /// versao que a pessoa realmente leu.
-const String regulamentoVersaoAtual = '2026-08-03';
+/// 2026-11-01: tolerância da mensalidade passou de 7 para 0 dias (regra 03).
+const String regulamentoVersaoAtual = '2026-11-01';
 
 List<String> get regulamentoRegras => [
   'A mensalidade é pessoal e intransferível.',
   'Não haverá devolução de mensalidade.',
-  'Após o vencimento, daremos uma tolerância de '
-      '$toleranciaMensalidadeDias dias para a renovação da mensalidade. '
-      'Depois desse prazo, o acesso ao aplicativo e à academia fica '
-      'suspenso até a regularização do pagamento.',
+  if (toleranciaMensalidadeDias == 0)
+    'A mensalidade deve ser renovada até a data do vencimento. A partir do '
+        'dia seguinte ao vencimento, o acesso ao aplicativo e à academia fica '
+        'suspenso até a regularização do pagamento.'
+  else
+    'Após o vencimento, daremos uma tolerância de '
+        '$toleranciaMensalidadeDias dias para a renovação da mensalidade. '
+        'Depois desse prazo, o acesso ao aplicativo e à academia fica '
+        'suspenso até a regularização do pagamento.',
   'Caso o aluno não renove sua mensalidade, terá que comunicar a direção '
       'da academia.',
   'Caso o aluno queira mudar seu vencimento, terá que pagar a diferença '

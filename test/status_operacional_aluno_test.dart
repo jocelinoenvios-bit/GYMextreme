@@ -16,9 +16,11 @@ void main() {
       expect(calcularStatusOperacional(aluno, hoje: hoje), StatusOperacionalAluno.ativo);
     });
 
-    test('dentro dos dias de tolerância (7) → ainda não é inadimplente', () {
-      final aluno = Aluno(uid: 'a1', proximoVencimento: hoje.subtract(const Duration(days: 6)));
-      expect(calcularStatusOperacional(aluno, hoje: hoje), StatusOperacionalAluno.ativo);
+    test('no dia do vencimento ainda é ativo; 1 dia depois já é inadimplente (tolerância zero)', () {
+      final noDia = Aluno(uid: 'a1', proximoVencimento: hoje);
+      expect(calcularStatusOperacional(noDia, hoje: hoje), StatusOperacionalAluno.ativo);
+      final umDiaDepois = Aluno(uid: 'a1', proximoVencimento: hoje.subtract(const Duration(days: 1)));
+      expect(calcularStatusOperacional(umDiaDepois, hoje: hoje), StatusOperacionalAluno.inadimplente);
     });
 
     test('TESTE: 15 dias de atraso → inadimplente (mensagem de retorno é disparada aqui)', () {

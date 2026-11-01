@@ -506,6 +506,7 @@ class _DadosTabState extends State<DadosTab> {
             const _SecaoTitulo('Mensalidade'),
             MensalidadeSection(
               alunoUid: widget.aluno.uid,
+              alunoNome: widget.aluno.nome,
               proximoVencimento: snapshot.data?.proximoVencimento,
               dataInicio: snapshot.data?.dataInicio,
               alunoService: widget.alunoService,

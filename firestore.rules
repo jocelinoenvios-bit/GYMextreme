@@ -101,7 +101,10 @@ service cloud.firestore {
       // permissao geral de acesso ao modulo OU (pra quem so consulta
       // relatorios/historico, sem mexer no dia a dia) a permissao de
       // relatorio — nunca "qualquer staff" generico, conforme pedido.
-      allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa');
+      // receberMensalidades: o "Receber mensalidade" precisa saber se ha
+      // caixa aberto pra lancar a entrada nele.
+      allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa') ||
+        temPermissao('receberMensalidades');
 
       // Abrir um caixa novo sempre nasce com status "aberto" —
       // `CaixaService.abrirCaixa` e quem garante (via transacao, com
@@ -146,6 +149,8 @@ service cloud.firestore {
           (request.resource.data.tipo == 'retirada' && temPermissao('realizarRetiradas')) ||
           (request.resource.data.tipo == 'suprimento' && temPermissao('realizarSuprimentos')) ||
           (request.resource.data.tipo == 'recebimento' && temPermissao('receberContasReceber')) ||
+          (request.resource.data.tipo == 'recebimento' && temPermissao('receberMensalidades') &&
+            request.resource.data.staffUid == request.auth.uid) ||
           (request.resource.data.tipo == 'pagamentoContaPagar' && temPermissao('pagarContasPagar')) ||
           (request.resource.data.tipo == 'ajuste' && ehAdm());
 
@@ -433,8 +438,17 @@ service cloud.firestore {
         // Toda cobrança nasce pendente — nunca criada já como paga (isso é
         // sempre responsabilidade de `registrarRecebimento`, nunca da
         // criação direta).
-        allow create: if temPermissao('cadastrarContasReceber') &&
-          request.resource.data.status == 'pendente';
+        allow create: if (temPermissao('cadastrarContasReceber') &&
+          request.resource.data.status == 'pendente') ||
+          // "Receber mensalidade" (AlunoService.receberMensalidade): a
+          // cobranca ja nasce paga, registrada por quem recebeu, sem
+          // desconto escondido (pago == valor da cobranca).
+          (temPermissao('receberMensalidades') &&
+            request.resource.data.status == 'pago' &&
+            request.resource.data.alunoId == uid &&
+            request.resource.data.criadoPorUid == request.auth.uid &&
+            request.resource.data.recebidoPorUid == request.auth.uid &&
+            request.resource.data.valorPago == request.resource.data.valorOriginal);
 
         // Cada permissão granular só pode alterar os campos da própria
         // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`

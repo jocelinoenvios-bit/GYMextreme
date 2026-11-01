@@ -5,6 +5,7 @@ import '../../models/plano.dart';
 import '../../services/aluno_service.dart';
 import '../../services/plano_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/mensalidade_utils.dart';
 import '../../utils/moeda.dart';
 import '../../widgets/escolher_aluno.dart';
 import '../../widgets/campo_forma_pagamento.dart';
@@ -78,18 +79,22 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
     super.dispose();
   }
 
+  /// Com plano, o vencimento segue a duração dele; sem plano (é
+  /// opcional), 1 mês depois do início — mesma regra da mensalidade.
   DateTime _calcularVencimento(DateTime inicio, Plano? plano) {
-    if (plano == null) return inicio;
+    if (plano == null) return adicionarUmMes(inicio);
     return inicio.add(Duration(days: plano.duracaoDias));
   }
 
-  void _selecionarPlano(Plano plano) {
+  void _selecionarPlano(Plano? plano) {
     setState(() {
       _planoSelecionado = plano;
       _dataVencimento = _calcularVencimento(_dataInicio, plano);
-      _valorController.text = formatarReais(
-        plano.valor,
-      ).replaceFirst('R\$ ', '');
+      if (plano != null) {
+        _valorController.text = formatarReais(
+          plano.valor,
+        ).replaceFirst('R\$ ', '');
+      }
     });
   }
 
@@ -124,10 +129,6 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
       _showError('Selecione o aluno.');
       return;
     }
-    if (_planoSelecionado == null) {
-      _showError('Selecione o plano.');
-      return;
-    }
     if (_dataVencimento.isBefore(_dataInicio)) {
       _showError('O vencimento não pode ser antes do início.');
       return;
@@ -137,7 +138,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
     try {
       await widget.alunoService.criarMatricula(
         _alunoSelecionado!.uid,
-        planoId: _planoSelecionado!.id!,
+        planoId: _planoSelecionado?.id,
         dataInicio: _dataInicio,
         dataVencimento: _dataVencimento,
         valorContratado: parseValorReais(_valorController.text)!,
@@ -247,25 +248,33 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                         ? _planoSelecionado?.id
                         : null;
 
-                    return DropdownButtonFormField<String>(
+                    // O plano é opcional: "Sem plano" é uma opção de
+                    // verdade (valor null), e a matrícula sai só com
+                    // valor e período informados à mão.
+                    return DropdownButtonFormField<String?>(
                       initialValue: idSelecionado,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Plano'),
-                      items: planos
-                          .map(
-                            (plano) => DropdownMenuItem(
-                              value: plano.id,
-                              child: Text(
-                                plano.nome,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                      decoration: InputDecoration(
+                        labelText: 'Plano (opcional)',
+                        helperText: planos.isEmpty
+                            ? 'Nenhum plano ativo. Cadastre ou reative um em Planos.'
+                            : null,
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Sem plano'),
+                        ),
+                        for (final plano in planos)
+                          DropdownMenuItem<String?>(
+                            value: plano.id,
+                            child: Text(
+                              plano.nome,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          )
-                          .toList(),
-                      onChanged: (id) {
-                        final plano = planosPorId[id];
-                        if (plano != null) _selecionarPlano(plano);
-                      },
+                          ),
+                      ],
+                      onChanged: (id) => _selecionarPlano(planosPorId[id]),
                     );
                   },
                 ),

@@ -6,6 +6,7 @@ import 'package:gymextreme_app/models/plano.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/matriculas/matricula_form_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
+import 'package:gymextreme_app/utils/mensalidade_utils.dart';
 import 'package:gymextreme_app/widgets/escolher_aluno.dart';
 
 import 'support/fake_aluno_service.dart';
@@ -73,7 +74,7 @@ void main() {
     await tester.tap(find.text('Carlos Souza').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Plano'));
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String?>, 'Plano (opcional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mensal').last);
     await tester.pumpAndSettle();
@@ -91,6 +92,59 @@ void main() {
     expect(matricula.dataVencimento.difference(matricula.dataInicio).inDays, 30);
   });
 
+  testWidgets('plano é opcional: salva sem plano, com o valor digitado e 1 mês de vigência', (tester) async {
+    final alunoService = FakeAlunoService(alunos: const [_carlos]);
+    // Nenhum plano ativo — foi o caso real: os dois planos estavam inativos.
+    final planoService = FakePlanoService(planos: const []);
+
+    await tester.pumpWidget(_wrap(alunoService, planoService));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nenhum plano ativo. Cadastre ou reative um em Planos.'), findsOneWidget);
+
+    await tester.tap(find.byType(CampoAluno));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carlos Souza').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Valor contratado (R\$)'), '80,00');
+    await _tocar(tester, find.text('CRIAR MATRÍCULA'));
+    await tester.pump();
+
+    expect(find.text('Selecione o plano.'), findsNothing);
+    final matricula = alunoService.matriculas.single;
+    expect(matricula.temPlano, isFalse);
+    expect(matricula.valorContratado, 80);
+    expect(matricula.dataVencimento, adicionarUmMes(matricula.dataInicio));
+  });
+
+  testWidgets('escolher "Sem plano" depois de um plano volta a matrícula pra sem plano', (tester) async {
+    final alunoService = FakeAlunoService(alunos: const [_carlos]);
+    final planoService = FakePlanoService(planos: const [_planoMensal]);
+
+    await tester.pumpWidget(_wrap(alunoService, planoService));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CampoAluno));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carlos Souza').last);
+    await tester.pumpAndSettle();
+
+    final plano = find.widgetWithText(DropdownButtonFormField<String?>, 'Plano (opcional)');
+    await tester.tap(plano);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mensal').last);
+    await tester.pumpAndSettle();
+    await tester.tap(plano);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sem plano').last);
+    await tester.pumpAndSettle();
+
+    await _tocar(tester, find.text('CRIAR MATRÍCULA'));
+    await tester.pump();
+
+    expect(alunoService.matriculas.single.temPlano, isFalse);
+  });
+
   testWidgets('escolher o aluno depois do plano nao quebra o dropdown de plano (bug real)', (
     tester,
   ) async {
@@ -102,7 +156,7 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, _PlanoServiceComInstanciasNovas()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Plano'));
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String?>, 'Plano (opcional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mensal').last);
     await tester.pumpAndSettle();

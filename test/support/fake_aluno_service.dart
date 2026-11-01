@@ -331,7 +331,7 @@ class FakeAlunoService implements AlunoService {
   @override
   Future<String> criarMatricula(
     String alunoUid, {
-    required String planoId,
+    String? planoId,
     required DateTime dataInicio,
     required DateTime dataVencimento,
     required double valorContratado,
@@ -348,7 +348,7 @@ class FakeAlunoService implements AlunoService {
       Matricula(
         id: id,
         alunoId: alunoUid,
-        planoId: planoId,
+        planoId: planoId ?? '',
         dataInicio: dataInicio,
         dataVencimento: dataVencimento,
         valorContratado: valorContratado,

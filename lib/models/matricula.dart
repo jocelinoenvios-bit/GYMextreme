@@ -50,7 +50,12 @@ class Matricula {
 
   final String? id;
   final String alunoId;
+
+  /// Vazio = matrícula sem plano (o plano é opcional; valor e período são
+  /// informados direto na matrícula).
   final String planoId;
+
+  bool get temPlano => planoId.isNotEmpty;
   final DateTime dataInicio;
   final DateTime dataVencimento;
   final StatusMatricula status;
@@ -83,7 +88,7 @@ class Matricula {
   Map<String, dynamic> toFirestore() {
     return {
       'alunoId': alunoId,
-      'planoId': planoId,
+      'planoId': planoId.isEmpty ? null : planoId,
       'dataInicio': Timestamp.fromDate(dataInicio),
       'dataVencimento': Timestamp.fromDate(dataVencimento),
       'status': status.name,

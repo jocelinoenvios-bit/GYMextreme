@@ -485,7 +485,7 @@ class AlunoService {
   /// e virou `vencida`), ela fica intacta no histórico, sem ser tocada.
   Future<String> criarMatricula(
     String alunoUid, {
-    required String planoId,
+    String? planoId,
     required DateTime dataInicio,
     required DateTime dataVencimento,
     required double valorContratado,
@@ -519,7 +519,7 @@ class AlunoService {
         novaRef,
         Matricula(
           alunoId: alunoUid,
-          planoId: planoId,
+          planoId: planoId ?? '',
           dataInicio: dataInicio,
           dataVencimento: dataVencimento,
           valorContratado: valorContratado,

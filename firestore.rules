@@ -91,7 +91,7 @@ service cloud.firestore {
       // pontual, mas nao mexer em nenhum outro campo.
       allow update: if temPermissao('alterarPlanos') ||
         (temPermissao('excluirPlanos') &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm']));
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'excluido', 'atualizadoEm']));
       allow delete: if false;
     }
 

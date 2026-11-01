@@ -89,7 +89,8 @@ class PlanosListScreen extends StatelessWidget {
             );
           }
 
-          final planos = snapshot.data ?? [];
+          // Excluídos somem daqui; inativos continuam (dá pra reativar).
+          final planos = (snapshot.data ?? []).where((plano) => !plano.excluido).toList();
           if (planos.isEmpty) {
             return Center(
               child: Padding(

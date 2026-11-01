@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:gymextreme_app/models/plano.dart';
 import 'package:gymextreme_app/services/plano_service.dart';
 
@@ -10,8 +12,14 @@ class FakePlanoService implements PlanoService {
   Plano? ultimoPlanoSalvo;
   String? ultimoPlanoExcluidoId;
 
+  final _atualizacoes = StreamController<List<Plano>>.broadcast();
+
+  /// Como o Firestore: emite a lista atual e de novo a cada mudança.
   @override
-  Stream<List<Plano>> watchPlanos() => Stream.value(planos);
+  Stream<List<Plano>> watchPlanos() async* {
+    yield planos;
+    yield* _atualizacoes.stream;
+  }
 
   @override
   Future<Plano?> buscarPlano(String id) async {
@@ -42,7 +50,18 @@ class FakePlanoService implements PlanoService {
     ultimoPlanoExcluidoId = id;
     planos = [
       for (final plano in planos)
-        if (plano.id == id) plano.copyWith(ativo: false) else plano,
+        if (plano.id == id)
+          Plano(
+            id: plano.id,
+            nome: plano.nome,
+            valor: plano.valor,
+            duracaoDias: plano.duracaoDias,
+            ativo: false,
+            excluido: true,
+          )
+        else
+          plano,
     ];
+    _atualizacoes.add(planos);
   }
 }

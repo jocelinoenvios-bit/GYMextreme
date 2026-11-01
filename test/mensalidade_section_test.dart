@@ -190,7 +190,7 @@ void main() {
       expect(recebido.valor, 80);
       expect(recebido.formaPagamento, 'Pix');
       expect(recebido.vencimentoAtual, venceDia);
-      expect(find.textContaining('Mensalidade recebida: R\$ 80,00 (Pix)'), findsOneWidget);
+      expect(find.textContaining('Mensalidade recebida de Ana: R\$ 80,00 (Pix)'), findsOneWidget);
       expect(find.textContaining('Nenhum caixa aberto'), findsNothing);
     });
 

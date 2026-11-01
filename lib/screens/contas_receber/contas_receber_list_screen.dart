@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
 import '../../widgets/escolher_aluno.dart';
 import '../../utils/status_conta_receber.dart';
+import '../alunos/receber_mensalidade_fluxo.dart';
 import 'conta_receber_form_screen.dart';
 import 'registrar_recebimento_screen.dart';
 
@@ -47,12 +48,31 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
       PermissionService.has(widget.staffAtual, Permission.excluirContasReceber);
   bool get _podeReceber =>
       PermissionService.has(widget.staffAtual, Permission.receberContasReceber);
+  bool get _podeReceberMensalidade =>
+      PermissionService.has(widget.staffAtual, Permission.receberMensalidades);
 
   AppUser? _acharAluno(List<AppUser> alunos, String uid) {
     for (final aluno in alunos) {
       if (aluno.uid == uid) return aluno;
     }
     return null;
+  }
+
+  /// Escolhe o aluno (com pesquisa) e segue o mesmo "Receber mensalidade"
+  /// da ficha do aluno — a cobrança paga aparece nesta lista na hora.
+  Future<void> _receberMensalidade(BuildContext context, List<AppUser> alunos) async {
+    final aluno = await escolherAluno(context, alunos: alunos, titulo: 'Receber mensalidade de');
+    if (aluno == null || !context.mounted) return;
+    final ficha = await widget.alunoService.watchAluno(aluno.uid).first;
+    if (!context.mounted) return;
+    await receberMensalidadeFluxo(
+      context,
+      alunoService: widget.alunoService,
+      alunoUid: aluno.uid,
+      alunoNome: aluno.nome,
+      proximoVencimento: ficha?.proximoVencimento,
+      staff: widget.staffAtual,
+    );
   }
 
   Future<void> _abrirNovaCobranca(BuildContext context, List<AppUser> alunos) async {
@@ -187,6 +207,18 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
                     onStatusChanged: (status) => setState(() => _filtroStatus = status),
                     onAlunoChanged: (uid) => setState(() => _filtroAlunoUid = uid),
                   ),
+                  if (_podeReceberMensalidade)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: alunos.isEmpty ? null : () => _receberMensalidade(context, alunos),
+                          icon: const Icon(Icons.payments_outlined),
+                          label: const Text('RECEBER MENSALIDADE'),
+                        ),
+                      ),
+                    ),
                   if (_podeCadastrar)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

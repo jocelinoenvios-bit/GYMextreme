@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../models/exercise_model.dart';
@@ -49,7 +51,20 @@ class ExecucaoBottomBar extends StatelessWidget {
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.surfaceHigh)),
       ),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+      // Embaixo: a barra de navegação do Android ou, com o teclado aberto
+      // (pra digitar a carga), a altura do teclado — o Scaffold não sobe
+      // o bottomNavigationBar sozinho, e sem isso o campo "Carga usada"
+      // ficava escondido atrás do teclado enquanto se digita.
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        12 +
+            math.max(
+              MediaQuery.paddingOf(context).bottom,
+              MediaQuery.viewInsetsOf(context).bottom,
+            ),
+      ),
       child: emDescanso ? _buildDescanso(context) : _buildPronto(context),
     );
   }
@@ -58,6 +73,11 @@ class ExecucaoBottomBar extends StatelessWidget {
     final total = prescricao.descansoSegundos;
     final progresso = total == 0 ? 0.0 : 1 - (segundosRestantes / total).clamp(0, 1);
     return Column(
+      // min: a barra tem que ter a altura do próprio conteúdo. O
+      // Scaffold deixa o bottomNavigationBar crescer até a tela inteira
+      // (é o widget que decide a própria altura) — com o padrão `max`, a
+      // Column ocupava a altura toda e cobria o vídeo e o resto da tela.
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
@@ -111,6 +131,11 @@ class ExecucaoBottomBar extends StatelessWidget {
 
   Widget _buildPronto(BuildContext context) {
     return Column(
+      // min: a barra tem que ter a altura do próprio conteúdo. O
+      // Scaffold deixa o bottomNavigationBar crescer até a tela inteira
+      // (é o widget que decide a própria altura) — com o padrão `max`, a
+      // Column ocupava a altura toda e cobria o vídeo e o resto da tela.
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(

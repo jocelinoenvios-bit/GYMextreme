@@ -72,10 +72,6 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
   late final TextEditingController _cargaController;
   final _scrollController = ScrollController();
 
-  /// Capturado uma única vez, no primeiro `build()` — ver comentário em
-  /// `build()` sobre por que esta tela trava a própria geometria.
-  MediaQueryData? _mediaQueryTravada;
-
   @override
   void initState() {
     super.initState();
@@ -214,40 +210,7 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
     final exercicios = _exercicios;
     final erro = _erro;
 
-    // Trava a geometria da tela (tamanho e insets) a partir da primeira
-    // medição válida — capturada aqui, ainda antes do vídeo da Vital
-    // Animations começar a inicializar (a inicialização é assíncrona, só
-    // começa depois que este primeiro build termina). Em alguns
-    // aparelhos (Android recente, edge-to-edge obrigatório), criar a
-    // Surface nativa do video_player faz o Android reportar uma mudança
-    // de inset espúria pro Flutter — sem travar aqui, a tela inteira
-    // encolhia pro canto superior (rodapé fixo colado embaixo do app bar,
-    // resto da tela preto), mesmo com resizeToAvoidBottomInset já
-    // desligado (aquele flag só evita a tela reagir ao teclado de
-    // verdade — não protege contra esse "inset fantasma" vindo do
-    // próprio player de vídeo). Nunca acontecia com GIF, que é desenhado
-    // 100% pelo Flutter, sem nenhuma peça nativa do Android envolvida.
-    // Mesmo padrão já usado em NovoAlunoWizardScreen pra um problema de
-    // medição de layout parecido.
-    _mediaQueryTravada ??= MediaQuery.of(context);
-
-    return MediaQuery(
-      data: _mediaQueryTravada!,
-      child: Scaffold(
-      // false: esta é a única tela do app com um TextField dentro de uma
-      // barra fixa no rodapé (bottomNavigationBar) — o padrão
-      // resizeToAvoidBottomInset=true encolhe o corpo pra "abrir espaço"
-      // pro teclado, mas em alguns aparelhos/versões do Android (edge-to-
-      // edge obrigatório a partir do Android 15) o Flutter recebe um
-      // inset de teclado incorreto/inflado mesmo sem teclado nenhum
-      // aberto, espremendo a tela inteira pra cima e deixando uma área
-      // enorme preta no lugar do "teclado" inexistente — suspeita levantada
-      // ao investigar um relato de tela em branco/quebrada num aparelho
-      // físico real na execução do treino (nunca visto em CI/emulador).
-      // O campo "Carga usada" não precisa desse comportamento — ele fica
-      // sempre visível, ancorado, então desligar o resize automático é
-      // seguro aqui.
-      resizeToAvoidBottomInset: false,
+    return Scaffold(
       appBar: AppBar(
         title: Text(
           (erro != null || exercicios == null || _treinoConcluido)
@@ -324,7 +287,6 @@ class _TreinoExecucaoScreenState extends State<TreinoExecucaoScreen> {
               onConcluirSerie: _concluirSerie,
               onPularDescanso: _pularDescanso,
             ),
-      ),
     );
   }
 }

@@ -98,12 +98,6 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
   /// sucesso — distingue "ainda carregando" de "tentou e não tem".
   bool _gifIndisponivelAgora = false;
 
-  /// DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa do
-  /// bug de tela preta em vídeo real relatado em aparelho físico) —
-  /// guarda o motivo exato de o vídeo não ter sido usado, pra mostrar
-  /// na tela em vez de cair silenciosamente pro fallback.
-  String? _diagnosticoVideo;
-
   @override
   void initState() {
     super.initState();
@@ -167,16 +161,11 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
         await controller.dispose();
         return;
       }
-      // DIAGNÓSTICO TEMPORÁRIO — video_player às vezes reporta
-      // isInitialized=true com um tamanho degenerado (0 ou NaN) em
-      // certos aparelhos/codecs, o que faria o FittedBox/SizedBox
-      // colapsar de um jeito difícil de distinguir de "tela preta".
+      // video_player às vezes reporta isInitialized=true com um tamanho
+      // degenerado (0) em certos aparelhos/codecs — nesse caso trata
+      // como vídeo indisponível e segue pro GIF.
       final tamanho = controller.value.size;
       if (tamanho.width <= 0 || tamanho.height <= 0) {
-        setState(
-          () => _diagnosticoVideo =
-              'Vídeo inicializou mas com tamanho inválido: ${tamanho.width}x${tamanho.height}',
-        );
         await controller.dispose();
         return;
       }
@@ -184,13 +173,9 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
       await controller.setVolume(0);
       setState(() => _video = controller);
       if (widget.controller.tocando) controller.play();
-    } catch (erro, stack) {
+    } catch (_) {
       // Vídeo indisponível/corrompido/formato não suportado — cai pro
-      // GIF automaticamente, sem propagar o erro pra tela (fora do modo
-      // de diagnóstico temporário).
-      if (mounted) {
-        setState(() => _diagnosticoVideo = '$erro\n$stack');
-      }
+      // GIF automaticamente, sem propagar o erro pra tela.
       // NUNCA aguardar aqui: quando initialize() falha antes de resolver
       // o Completer interno do video_player, dispose() fica esperando
       // esse mesmo Completer pra sempre — travaria o fallback pro GIF
@@ -318,46 +303,8 @@ class _ExercicioMidiaState extends State<ExercicioMidia> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    // DIAGNÓSTICO TEMPORÁRIO — selo sempre visível (por cima de
-    // qualquer coisa que _buildConteudo() renderizar, inclusive vídeo)
-    // mostrando o estado interno real: se o vídeo inicializou, com que
-    // tamanho, ou o erro exato de por que não. Remover assim que a
-    // causa da tela preta em aparelho físico for identificada.
-    final video = _video;
-    final diagnostico = video != null && video.value.isInitialized
-        ? 'vídeo OK ${video.value.size.width.toStringAsFixed(0)}x'
-              '${video.value.size.height.toStringAsFixed(0)}'
-        : (_diagnosticoVideo ?? 'vídeo: aguardando/sem tentativa ainda');
-
-    // SizedBox.expand: garante que o Stack ocupe todo o espaço
-    // disponível mesmo quando o pai dá constraints "loose" sem filhos
-    // não-posicionados pra basear o tamanho (ex.: dentro do
-    // InteractiveViewer/Center da tela de execução) — sem isso, um
-    // Stack só com filhos Positioned colapsaria pra tamanho zero nesse
-    // contexto específico.
-    return SizedBox.expand(
-      child: Stack(
-        children: [
-          Positioned.fill(child: _buildConteudo(context)),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.75),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Text(
-                  diagnostico,
-                  style: const TextStyle(color: Colors.limeAccent, fontSize: 9),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // SizedBox.expand: a mídia ocupa todo o espaço que o pai der (o palco
+    // da execução, a tela cheia, o card da biblioteca).
+    return SizedBox.expand(child: _buildConteudo(context));
   }
 }

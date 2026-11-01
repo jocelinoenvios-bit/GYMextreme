@@ -57,6 +57,9 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
+  # Só pros testes: simulam a galeria do celular (foto do aluno).
+  image_picker_platform_interface: ^2.11.1
+  plugin_platform_interface: ^2.1.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

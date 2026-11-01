@@ -193,6 +193,15 @@ class FakeAlunoService implements AlunoService {
     mensagens = [...mensagens, mensagem];
   }
 
+  /// Última foto gravada por [salvarFotoUrl].
+  String? ultimaFotoUrlSalva;
+
+  @override
+  Future<void> salvarFotoUrl(String uid, String fotoUrl) async {
+    ultimaFotoUrlSalva = fotoUrl;
+    aluno = (aluno ?? Aluno(uid: uid)).copyWith(fotoUrl: fotoUrl);
+  }
+
   /// Último lote passado a [definirVencimentosEmLote].
   Map<String, DateTime>? ultimoLoteVencimentos;
 
@@ -280,13 +289,51 @@ class FakeAlunoService implements AlunoService {
   @override
   Stream<List<Pagamento>> watchPagamentos(String uid) => Stream.value(const []);
 
+  /// Último recebimento feito por [receberMensalidade].
+  ({String uid, double valor, String formaPagamento, DateTime? vencimentoAtual})? ultimoRecebimentoMensalidade;
+
+  /// Se [receberMensalidade] deve dizer que lançou no caixa.
+  bool caixaAbertoAoReceber = true;
+
   @override
-  Future<void> marcarPagamentoRecebido(
+  Future<RecebimentoMensalidade> receberMensalidade(
+    String uid, {
+    required DateTime? vencimentoAtual,
+    required double valor,
+    required String formaPagamento,
+    required String staffUid,
+    required String staffNome,
+    String? alunoNome,
+  }) async {
+    ultimoRecebimentoMensalidade = (
+      uid: uid,
+      valor: valor,
+      formaPagamento: formaPagamento,
+      vencimentoAtual: vencimentoAtual,
+    );
+    final hoje = DateTime.now();
+    return RecebimentoMensalidade(
+      novoVencimento: adicionarUmMes(vencimentoAtual ?? DateTime(hoje.year, hoje.month, hoje.day)),
+      temMatricula: temMatriculaAtivaAoReceber,
+      lancadoNoCaixa: caixaAbertoAoReceber,
+    );
+  }
+
+  /// O que [marcarPagamentoRecebido] responde: se o aluno tem matrícula
+  /// ativa (renovada junto com o pagamento).
+  bool temMatriculaAtivaAoReceber = true;
+  int pagamentosMarcados = 0;
+
+  @override
+  Future<bool> marcarPagamentoRecebido(
     String uid, {
     required DateTime? vencimentoAtual,
     required String staffUid,
     required String staffNome,
-  }) async {}
+  }) async {
+    pagamentosMarcados++;
+    return temMatriculaAtivaAoReceber;
+  }
 
   @override
   Future<void> definirVencimentoInicial(String uid, DateTime vencimento) async {}
@@ -323,7 +370,7 @@ class FakeAlunoService implements AlunoService {
   @override
   Future<String> criarMatricula(
     String alunoUid, {
-    required String planoId,
+    String? planoId,
     required DateTime dataInicio,
     required DateTime dataVencimento,
     required double valorContratado,
@@ -340,7 +387,7 @@ class FakeAlunoService implements AlunoService {
       Matricula(
         id: id,
         alunoId: alunoUid,
-        planoId: planoId,
+        planoId: planoId ?? '',
         dataInicio: dataInicio,
         dataVencimento: dataVencimento,
         valorContratado: valorContratado,

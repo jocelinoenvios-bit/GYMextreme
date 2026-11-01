@@ -115,4 +115,27 @@ void main() {
       expect(service.ultimoPlanoExcluidoId, 'p1');
     },
   );
+
+  testWidgets('excluir tira o plano da lista; inativo continua, pra poder reativar', (tester) async {
+    final service = FakePlanoService(
+      planos: const [
+        Plano(id: 'p1', nome: 'Irmão', valor: 0.01, duracaoDias: 365, ativo: false),
+        Plano(id: 'p2', nome: 'Janara', valor: 80, duracaoDias: 30),
+      ],
+    );
+
+    await tester.pumpWidget(_wrap(service, _adm));
+    await tester.pumpAndSettle();
+    expect(find.text('Irmão'), findsOneWidget);
+    expect(find.text('Inativo'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.delete_outline).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('EXCLUIR'));
+    await tester.pumpAndSettle();
+
+    expect(service.ultimoPlanoExcluidoId, 'p1');
+    expect(find.text('Irmão'), findsNothing);
+    expect(find.text('Janara'), findsOneWidget);
+  });
 }

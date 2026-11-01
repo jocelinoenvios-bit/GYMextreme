@@ -91,7 +91,7 @@ service cloud.firestore {
       // pontual, mas nao mexer em nenhum outro campo.
       allow update: if temPermissao('alterarPlanos') ||
         (temPermissao('excluirPlanos') &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'atualizadoEm']));
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'excluido', 'atualizadoEm']));
       allow delete: if false;
     }
 
@@ -101,7 +101,10 @@ service cloud.firestore {
       // permissao geral de acesso ao modulo OU (pra quem so consulta
       // relatorios/historico, sem mexer no dia a dia) a permissao de
       // relatorio — nunca "qualquer staff" generico, conforme pedido.
-      allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa');
+      // receberMensalidades: o "Receber mensalidade" precisa saber se ha
+      // caixa aberto pra lancar a entrada nele.
+      allow read: if temPermissao('acessarControleCaixa') || temPermissao('consultarRelatorioCaixa') ||
+        temPermissao('receberMensalidades');
 
       // Abrir um caixa novo sempre nasce com status "aberto" —
       // `CaixaService.abrirCaixa` e quem garante (via transacao, com
@@ -146,6 +149,8 @@ service cloud.firestore {
           (request.resource.data.tipo == 'retirada' && temPermissao('realizarRetiradas')) ||
           (request.resource.data.tipo == 'suprimento' && temPermissao('realizarSuprimentos')) ||
           (request.resource.data.tipo == 'recebimento' && temPermissao('receberContasReceber')) ||
+          (request.resource.data.tipo == 'recebimento' && temPermissao('receberMensalidades') &&
+            request.resource.data.staffUid == request.auth.uid) ||
           (request.resource.data.tipo == 'pagamentoContaPagar' && temPermissao('pagarContasPagar')) ||
           (request.resource.data.tipo == 'ajuste' && ehAdm());
 
@@ -292,6 +297,14 @@ service cloud.firestore {
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['anamnese']) ||
           temPermissao('avaliacoesFisicas'));
 
+      // O proprio aluno so pode trocar a foto de perfil (AlunoService.
+      // salvarFotoUrl): nenhum outro campo do cadastro, e o endereco tem
+      // que ser o da foto DELE em fotosAlunos.
+      allow update: if request.auth != null && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fotoUrl']) &&
+        request.resource.data.fotoUrl is string &&
+        request.resource.data.fotoUrl.matches('firestore://fotosAlunos/' + uid + '[?]v=[0-9]+');
+
       // Nenhum fluxo do app apaga um aluno hoje — mantido igual ao
       // comportamento anterior (fazia parte do `allow write: if
       // ehStaff()` combinado), sem uso real conhecido.
@@ -408,6 +421,18 @@ service cloud.firestore {
       match /matriculas/{matriculaId} {
         allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
         allow write: if temPermissao('matriculas');
+
+        // Pagar a mensalidade renova a matricula (renovarMatriculaPorPagamento
+        // no app): quem da baixa na mensalidade, mesmo sem a permissao de
+        // matriculas, pode SO estender a validade de uma matricula ativa —
+        // nunca encurtar, reativar, trocar plano ou valor.
+        allow update: if
+          (temPermissao('receberMensalidades') || temPermissao('receberContasReceber')) &&
+          resource.data.status == 'ativa' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'dataVencimento', 'renovadaPorPagamentoEm', 'atualizadoEm'
+          ]) &&
+          request.resource.data.dataVencimento > resource.data.dataVencimento;
       }
 
       // Contas a receber: diferente de pagamentos/matriculas/treinos acima,
@@ -421,8 +446,17 @@ service cloud.firestore {
         // Toda cobrança nasce pendente — nunca criada já como paga (isso é
         // sempre responsabilidade de `registrarRecebimento`, nunca da
         // criação direta).
-        allow create: if temPermissao('cadastrarContasReceber') &&
-          request.resource.data.status == 'pendente';
+        allow create: if (temPermissao('cadastrarContasReceber') &&
+          request.resource.data.status == 'pendente') ||
+          // "Receber mensalidade" (AlunoService.receberMensalidade): a
+          // cobranca ja nasce paga, registrada por quem recebeu, sem
+          // desconto escondido (pago == valor da cobranca).
+          (temPermissao('receberMensalidades') &&
+            request.resource.data.status == 'pago' &&
+            request.resource.data.alunoId == uid &&
+            request.resource.data.criadoPorUid == request.auth.uid &&
+            request.resource.data.recebidoPorUid == request.auth.uid &&
+            request.resource.data.valorPago == request.resource.data.valorOriginal);
 
         // Cada permissão granular só pode alterar os campos da própria
         // ação — mesma técnica de `diff().affectedKeys().hasOnly([...])`
@@ -526,6 +560,22 @@ service cloud.firestore {
       allow write: if temPermissao('gerenciarFuncionarios');
     }
 
+    // Foto de perfil do aluno, guardada no proprio Firestore (o projeto
+    // nao tem Firebase Storage — exige plano pago). Um documento por
+    // aluno, so com a imagem ja reduzida pelo app (StorageService). Mesma
+    // permissao da foto antiga no Storage: o aluno ve a propria, staff ve
+    // e troca a de qualquer aluno.
+    match /fotosAlunos/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+      // O proprio aluno tambem troca a propria foto (Configuracoes ->
+      // Trocar foto de perfil), com as mesmas restricoes.
+      allow create, update: if (ehStaff() || (request.auth != null && request.auth.uid == uid)) &&
+        request.resource.data.keys().hasOnly(['imagem', 'tamanhoBytes', 'atualizadoEm']) &&
+        request.resource.data.imagem is bytes &&
+        request.resource.data.imagem.size() <= 700 * 1024;
+      allow delete: if ehStaff();
+    }
+
     match /dispositivosAcesso/{dispositivoId} {
       allow read: if ehStaff();
       allow write: if false;
@@ -536,7 +586,20 @@ service cloud.firestore {
       // pelo `DeviceSyncService.vincularCredencial` (Admin SDK).
       match /credenciais/{userIdDispositivo} {
         allow read: if ehStaff();
-        allow write: if false;
+
+        // Vincular/desvincular pelo app (ficha do aluno -> Frequencia ->
+        // Catraca), so com a permissao de controle da catraca. Criar nunca
+        // sobrescreve (trocar o dono de um codigo exige desvincular antes)
+        // e so com estes campos; o codigo e so numeros, como no aparelho.
+        allow create: if temPermissao('controleCatraca') &&
+          userIdDispositivo.matches('[0-9]{1,12}') &&
+          request.resource.data.keys().hasOnly([
+            'alunoUid', 'vinculadoEm', 'vinculadoPorUid', 'vinculadoPorNome'
+          ]) &&
+          request.resource.data.alunoUid is string &&
+          request.resource.data.alunoUid.size() > 0 &&
+          request.resource.data.vinculadoPorUid == request.auth.uid;
+        allow delete: if temPermissao('controleCatraca');
       }
     }
 

@@ -26,6 +26,11 @@ const _carlos = AppUser(
 // O formulário tem mais campos do que cabem no viewport padrão de teste —
 // sem rolar até o botão primeiro, tap() acerta um ponto fora da tela.
 Future<void> _tocar(WidgetTester tester, Finder finder) async {
+  // Depois de enterText() o campo continua com foco, e o que ele desenha
+  // por cima pode "roubar" o toque seguinte (mesmo cuidado de
+  // novo_aluno_wizard_screen_test.dart). Tira o foco antes de tocar.
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pump();
   await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
   await tester.pump();
   await tester.tap(finder);

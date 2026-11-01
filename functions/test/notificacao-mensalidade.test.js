@@ -33,7 +33,9 @@ test('registro com token disponivel nao marca erro (envio real fica por conta do
 });
 
 test('registro carrega os dias calculados pelo status (tolerancia)', () => {
-  const status = calcularStatusAcesso(vencimento, new Date(2026, 7, 14));
+  // Tolerancia de 7 dias passada explicitamente: a regra atual e zero, mas
+  // o registro tem que continuar carregando os dias quando houver.
+  const status = calcularStatusAcesso(vencimento, new Date(2026, 7, 14), 7);
   const registro = construirRegistroNotificacao(status, 'Restam 4 dias de tolerância.', 1);
 
   assert.equal(registro.status, 'tolerancia');

@@ -47,6 +47,9 @@ class PlanoService {
   Future<void> excluirPlano(String id) {
     return _planos.doc(id).set({
       'ativo': false,
+      // Some da tela de Planos (antes ficava lá como "Inativo", e parecia
+      // que o excluir não tinha funcionado).
+      'excluido': true,
       'atualizadoEm': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

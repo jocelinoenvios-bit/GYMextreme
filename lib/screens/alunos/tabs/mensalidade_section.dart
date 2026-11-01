@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/app_user.dart';
+import '../../../models/matricula.dart';
 import '../../../models/permission.dart';
 import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/campo_forma_pagamento.dart';
 import '../../../utils/mensalidade_utils.dart';
+import '../../../utils/moeda.dart';
 import '../../../utils/status_acesso.dart';
 import '../../../utils/whatsapp.dart';
 
@@ -17,6 +20,7 @@ class MensalidadeSection extends StatefulWidget {
   const MensalidadeSection({
     super.key,
     required this.alunoUid,
+    this.alunoNome,
     required this.proximoVencimento,
     this.dataInicio,
     required this.alunoService,
@@ -28,6 +32,9 @@ class MensalidadeSection extends StatefulWidget {
   });
 
   final String alunoUid;
+
+  /// Vai na descrição do lançamento no caixa ("Mensalidade — Nome").
+  final String? alunoNome;
   final DateTime? proximoVencimento;
 
   /// Base da sugestão de vencimento pra aluno antigo, cadastrado antes do
@@ -81,15 +88,68 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
     await _executar(() => widget.alunoService.definirVencimentoInicial(widget.alunoUid, picked));
   }
 
-  Future<void> _marcarPagamentoRecebido() async {
-    await _executar(
-      () => widget.alunoService.marcarPagamentoRecebido(
-        widget.alunoUid,
+  /// "Receber mensalidade": pergunta valor e forma, e o serviço registra
+  /// tudo de uma vez (cobrança paga, caixa, vencimento, matrícula) — ver
+  /// [AlunoService.receberMensalidade].
+  Future<void> _receberMensalidade() async {
+    final matriculas = await widget.alunoService.watchMatriculas(widget.alunoUid).first;
+    final ativa = matriculas.where((m) => m.status == StatusMatricula.ativa).firstOrNull;
+    if (!mounted) return;
+
+    final dados = await showDialog<(double, String)>(
+      context: context,
+      builder: (_) => _DialogoReceberMensalidade(
+        valorSugerido: ativa?.valorContratado,
         vencimentoAtual: widget.proximoVencimento,
-        staffUid: widget.staffAtual.uid,
-        staffNome: widget.staffAtual.nome,
       ),
     );
+    if (dados == null || !mounted) return;
+    final (valor, forma) = dados;
+
+    RecebimentoMensalidade? resultado;
+    await _executar(
+      () async {
+        resultado = await widget.alunoService.receberMensalidade(
+          widget.alunoUid,
+          vencimentoAtual: widget.proximoVencimento,
+          valor: valor,
+          formaPagamento: forma,
+          staffUid: widget.staffAtual.uid,
+          staffNome: widget.staffAtual.nome,
+          alunoNome: widget.alunoNome,
+        );
+      },
+      sucesso: () {
+        final r = resultado!;
+        final base = 'Mensalidade recebida: ${formatarReais(valor)} ($forma). '
+            'Próximo vencimento: ${_formatarData(r.novoVencimento)}.';
+        return r.lancadoNoCaixa
+            ? base
+            : '$base Nenhum caixa aberto: ficou em Contas a receber, fora do caixa.';
+      },
+    );
+
+    if (resultado != null && !resultado!.temMatricula && mounted) {
+      // Recebido, mas sem matrícula ativa a catraca nega a entrada — a
+      // recepção precisa saber na hora.
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Aluno sem matrícula ativa'),
+          content: const Text(
+            'A mensalidade foi recebida, mas este aluno não tem matrícula ativa. '
+            'A catraca não vai liberar a entrada até ser feita uma matrícula '
+            '(tela Matrículas → Nova matrícula).',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('ENTENDI'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _reativarAluno() async {
@@ -122,14 +182,20 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
     }
   }
 
-  Future<void> _executar(Future<void> Function() acao) async {
+  /// [sucesso] troca a mensagem padrão de sucesso; devolvendo `null`, não
+  /// mostra nenhuma (quem chamou vai avisar de outro jeito).
+  Future<void> _executar(
+    Future<void> Function() acao, {
+    String? Function()? sucesso,
+  }) async {
     setState(() => _isSaving = true);
     try {
       await acao();
-      if (mounted) {
+      final mensagem = sucesso == null ? 'Mensalidade atualizada.' : sucesso();
+      if (mounted && mensagem != null) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Mensalidade atualizada.')));
+        ).showSnackBar(SnackBar(content: Text(mensagem)));
       }
     } catch (_) {
       if (mounted) {
@@ -271,7 +337,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
                     ? null
                     : (widget.proximoVencimento == null
                           ? _escolherVencimentoInicial
-                          : _marcarPagamentoRecebido),
+                          : _receberMensalidade),
                 child: _isSaving
                     ? const SizedBox(
                         width: 18,
@@ -281,7 +347,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
                     : Text(
                         widget.proximoVencimento == null
                             ? 'DEFINIR PRIMEIRO VENCIMENTO'
-                            : 'MARCAR PAGAMENTO RECEBIDO',
+                            : 'RECEBER MENSALIDADE',
                       ),
               ),
             ),
@@ -302,6 +368,86 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Janela do "Receber mensalidade": valor (já com o da matrícula) e forma
+/// de pagamento. Devolve (valor, forma) ou null se cancelar.
+class _DialogoReceberMensalidade extends StatefulWidget {
+  const _DialogoReceberMensalidade({required this.valorSugerido, required this.vencimentoAtual});
+
+  final double? valorSugerido;
+  final DateTime? vencimentoAtual;
+
+  @override
+  State<_DialogoReceberMensalidade> createState() => _DialogoReceberMensalidadeState();
+}
+
+class _DialogoReceberMensalidadeState extends State<_DialogoReceberMensalidade> {
+  final _formKey = GlobalKey<FormState>();
+  late final _valor = TextEditingController(
+    text: widget.valorSugerido == null
+        ? ''
+        : formatarReais(widget.valorSugerido!).replaceFirst('R\$ ', ''),
+  );
+  final _forma = TextEditingController();
+
+  @override
+  void dispose() {
+    _valor.dispose();
+    _forma.dispose();
+    super.dispose();
+  }
+
+  String _data(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  void _confirmar() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop((parseValorReais(_valor.text)!, _forma.text.trim()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hoje = DateTime.now();
+    final atual = widget.vencimentoAtual ?? DateTime(hoje.year, hoje.month, hoje.day);
+    return AlertDialog(
+      title: const Text('Receber mensalidade'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Vencimento atual: ${_data(atual)}\n'
+                'Próximo vencimento: ${_data(adicionarUmMes(atual))}',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _valor,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Valor recebido (R\$)'),
+                validator: (texto) {
+                  final valor = parseValorReais(texto ?? '');
+                  if (valor == null) return 'Informe um valor válido.';
+                  if (valor <= 0) return 'O valor deve ser maior que zero.';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              CampoFormaPagamento(controller: _forma, obrigatorio: true),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CANCELAR')),
+        TextButton(onPressed: _confirmar, child: const Text('CONFIRMAR')),
+      ],
     );
   }
 }

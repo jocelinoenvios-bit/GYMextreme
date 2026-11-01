@@ -70,7 +70,7 @@ void main() {
     await _tocar(tester, find.text('CONFIRMAR RECEBIMENTO'));
     await tester.pump();
 
-    expect(find.text('Informe a forma de pagamento.'), findsOneWidget);
+    expect(find.text('Escolha a forma de pagamento.'), findsOneWidget);
     expect(service.ultimoRecebimentoRegistrado, isNull);
   });
 
@@ -87,10 +87,8 @@ void main() {
     await tester.pumpWidget(_wrap(service, conta));
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Forma de pagamento'),
-      'PIX',
-    );
+    await _tocar(tester, find.text('Pix'));
+    await tester.pump();
 
     await _tocar(tester, find.text('CONFIRMAR RECEBIMENTO'));
     await tester.pump();
@@ -99,7 +97,7 @@ void main() {
     expect(registrado, isNotNull);
     expect(registrado!.status, StatusContaReceber.pago);
     expect(registrado.valorPago, 129.9);
-    expect(registrado.formaPagamento, 'PIX');
+    expect(registrado.formaPagamento, 'Pix');
     expect(registrado.recebidoPorNome, 'Recepção Ana');
     // Cobrança avulsa (sem matrícula vinculada) nunca mexe no vencimento.
     expect(service.proximoVencimentoAvancadoPara, isNull);
@@ -121,10 +119,8 @@ void main() {
       await tester.pumpWidget(_wrap(service, conta));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Forma de pagamento'),
-        'PIX',
-      );
+      await _tocar(tester, find.text('Pix'));
+      await tester.pump();
 
       await _tocar(tester, find.text('CONFIRMAR RECEBIMENTO'));
       await tester.pump();

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gymextreme_app/constants/mensalidade.dart';
 import 'package:gymextreme_app/utils/status_acesso.dart';
 
 void main() {
@@ -21,15 +22,27 @@ void main() {
       expect(status.diasParaVencimento, 7);
     });
 
+    test('regra atual (tolerancia zero): no dia seguinte ao vencimento ja bloqueia', () {
+      expect(toleranciaMensalidadeDias, 0);
+      final status = calcularStatusAcesso(
+        proximoVencimento: vencimento,
+        hoje: DateTime(2026, 8, 11, 6),
+      );
+      expect(status.status, StatusMensalidade.bloqueado);
+      expect(status.podeAcessar, isFalse);
+      expect(status.diasAtraso, 1);
+    });
+
     test('exatamente no dia do vencimento ainda fica em dia', () {
       final status = calcularStatusAcesso(proximoVencimento: vencimento, hoje: vencimento);
       expect(status.status, StatusMensalidade.emDia);
       expect(status.diasParaVencimento, 0);
     });
 
-    test('1o dia de atraso entra em tolerancia com 7 dias restantes', () {
+    test('tolerancia de 7 dias (parametro): 1o dia de atraso, restam 7', () {
       final status = calcularStatusAcesso(
         proximoVencimento: vencimento,
+        toleranciaDias: 7,
         hoje: DateTime(2026, 8, 11),
       );
       expect(status.status, StatusMensalidade.tolerancia);
@@ -38,18 +51,20 @@ void main() {
       expect(status.diasToleranciaRestantes, 7);
     });
 
-    test('2o dia de atraso restam 6 dias de tolerancia', () {
+    test('tolerancia de 7 dias (parametro): 2o dia de atraso, restam 6', () {
       final status = calcularStatusAcesso(
         proximoVencimento: vencimento,
+        toleranciaDias: 7,
         hoje: DateTime(2026, 8, 12),
       );
       expect(status.diasAtraso, 2);
       expect(status.diasToleranciaRestantes, 6);
     });
 
-    test('7o dia de atraso e o ultimo dia de tolerancia, ainda libera acesso', () {
+    test('tolerancia de 7 dias (parametro): 7o dia ainda libera', () {
       final status = calcularStatusAcesso(
         proximoVencimento: vencimento,
+        toleranciaDias: 7,
         hoje: DateTime(2026, 8, 17),
       );
       expect(status.status, StatusMensalidade.tolerancia);
@@ -58,9 +73,10 @@ void main() {
       expect(status.diasToleranciaRestantes, 1);
     });
 
-    test('8o dia de atraso bloqueia o acesso', () {
+    test('tolerancia de 7 dias (parametro): 8o dia bloqueia', () {
       final status = calcularStatusAcesso(
         proximoVencimento: vencimento,
+        toleranciaDias: 7,
         hoje: DateTime(2026, 8, 18),
       );
       expect(status.status, StatusMensalidade.bloqueado);
@@ -127,42 +143,10 @@ void main() {
       expect(mensagemNotificacaoMensalidade(status), isNull);
     });
 
-    test('1o dia de atraso avisa sobre a tolerancia', () {
+    test('primeiro dia bloqueado (dia seguinte ao vencimento) avisa da suspensao', () {
       final status = calcularStatusAcesso(
         proximoVencimento: vencimento,
         hoje: DateTime(2026, 8, 11),
-      );
-      expect(
-        mensagemNotificacaoMensalidade(status),
-        'Sua mensalidade está vencida. Você possui 7 dias de tolerância '
-        'para continuar utilizando normalmente a academia.',
-      );
-    });
-
-    test('dia do meio da tolerancia informa quantos dias restam', () {
-      final status = calcularStatusAcesso(
-        proximoVencimento: vencimento,
-        hoje: DateTime(2026, 8, 14),
-      );
-      expect(mensagemNotificacaoMensalidade(status), 'Restam 4 dias de tolerância.');
-    });
-
-    test('ultimo dia de tolerancia tem mensagem propria', () {
-      final status = calcularStatusAcesso(
-        proximoVencimento: vencimento,
-        hoje: DateTime(2026, 8, 17),
-      );
-      expect(
-        mensagemNotificacaoMensalidade(status),
-        'Hoje é o último dia de tolerância. Regularize sua mensalidade '
-        'para evitar o bloqueio.',
-      );
-    });
-
-    test('primeiro dia bloqueado avisa da suspensao', () {
-      final status = calcularStatusAcesso(
-        proximoVencimento: vencimento,
-        hoje: DateTime(2026, 8, 18),
       );
       expect(
         mensagemNotificacaoMensalidade(status),

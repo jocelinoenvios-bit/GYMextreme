@@ -1,10 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymextreme_app/models/aluno.dart';
 import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/alunos/tabs/dados_tab.dart';
+import 'package:gymextreme_app/services/storage_service.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_storage_service.dart';
@@ -37,6 +42,29 @@ Future<void> _carregar(WidgetTester tester, Widget tela) async {
     await tester.pump(const Duration(milliseconds: 20));
     if (find.byType(CircularProgressIndicator).evaluate().isEmpty) return;
   }
+}
+
+/// Galeria falsa: devolve sempre a mesma "foto" e guarda o que a tela
+/// pediu (tamanho/qualidade).
+class _GaleriaFalsa extends ImagePickerPlatform with MockPlatformInterfaceMixin {
+  ImagePickerOptions? ultimasOpcoes;
+
+  @override
+  Future<XFile?> getImageFromSource({
+    required ImageSource source,
+    ImagePickerOptions options = const ImagePickerOptions(),
+  }) async {
+    ultimasOpcoes = options;
+    // PNG de verdade, 1x1 dourado.
+    return XFile.fromData(Uint8List.fromList(const [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 144, 119, 83, 222, 0, 0, 0, 12, 73, 68, 65, 84, 120, 156, 99, 248, 127, 64, 1, 0, 4, 161, 1, 224, 184, 231, 250, 190, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]), name: 'foto.png');
+  }
+}
+
+Future<void> _escolherFotoDaGaleria(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.camera_alt));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Escolher da galeria'));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -176,6 +204,55 @@ void main() {
       expect(alunoService.aluno!.ativo, isTrue);
       expect(alunoService.aluno!.dataReativacao, isNotNull);
       expect(alunoService.ultimaReativacao, isNotNull);
+    });
+  });
+
+  group('foto do aluno', () {
+    late _GaleriaFalsa galeria;
+
+    setUp(() {
+      galeria = _GaleriaFalsa();
+      ImagePickerPlatform.instance = galeria;
+    });
+
+    testWidgets('a foto escolhida já sai pequena e é salva', (tester) async {
+      usarViewportGrande(tester);
+      final alunoService = FakeAlunoService(aluno: const Aluno(uid: 'aluno-1'));
+      final storage = FakeStorageService();
+      await _carregar(tester, _wrap(alunoService, storage));
+
+      await _escolherFotoDaGaleria(tester);
+      expect(galeria.ultimasOpcoes!.maxWidth, ladoMaximoFoto);
+      expect(galeria.ultimasOpcoes!.maxHeight, ladoMaximoFoto);
+      expect(galeria.ultimasOpcoes!.imageQuality, qualidadeFoto);
+
+      await tester.tap(find.text('SALVAR'));
+      await tester.pumpAndSettle();
+
+      expect(storage.uidDoUltimoUpload, 'aluno-1');
+      expect(alunoService.ultimoAlunoSalvo?.fotoUrl, isNotNull);
+      expect(find.text('Dados atualizados.'), findsOneWidget);
+    });
+
+    testWidgets('se a foto não sobe, avisa e o "carregando" para (antes girava pra sempre)', (
+      tester,
+    ) async {
+      usarViewportGrande(tester);
+      final alunoService = FakeAlunoService(aluno: const Aluno(uid: 'aluno-1'));
+      final storage = FakeStorageService()
+        ..erroAoEnviar = StorageServiceException('Foto grande demais. Escolha outra foto.');
+      await _carregar(tester, _wrap(alunoService, storage));
+
+      await _escolherFotoDaGaleria(tester);
+      await tester.tap(find.text('SALVAR'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Foto grande demais. Escolha outra foto.'), findsOneWidget);
+      expect(alunoService.ultimoAlunoSalvo, isNull);
+      // Nada girando, e dá pra escolher outra foto.
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await _escolherFotoDaGaleria(tester);
+      expect(find.text('Escolher da galeria'), findsNothing);
     });
   });
 }

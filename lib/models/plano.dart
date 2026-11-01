@@ -13,6 +13,7 @@ class Plano {
     required this.valor,
     required this.duracaoDias,
     this.ativo = true,
+    this.excluido = false,
     this.criadoEm,
     this.atualizadoEm,
   });
@@ -30,6 +31,12 @@ class Plano {
   /// já contratadas continuam referenciando o plano original normalmente.
   final bool ativo;
 
+  /// Excluído pelo botão de lixeira: some de todas as listas, mas o
+  /// documento fica (matrículas antigas ainda apontam pra ele). Diferente
+  /// de "inativo" ([ativo] false, chave "Plano ativo"), que continua na
+  /// lista de Planos e pode ser reativado.
+  final bool excluido;
+
   final DateTime? criadoEm;
   final DateTime? atualizadoEm;
 
@@ -43,6 +50,7 @@ class Plano {
       valor: (data['valor'] as num?)?.toDouble() ?? 0,
       duracaoDias: (data['duracaoDias'] as num?)?.toInt() ?? 30,
       ativo: data['ativo'] as bool? ?? true,
+      excluido: data['excluido'] as bool? ?? false,
       criadoEm: criadoEm is Timestamp ? criadoEm.toDate() : null,
       atualizadoEm: atualizadoEm is Timestamp ? atualizadoEm.toDate() : null,
     );
@@ -76,6 +84,7 @@ class Plano {
       valor: valor ?? this.valor,
       duracaoDias: duracaoDias ?? this.duracaoDias,
       ativo: ativo ?? this.ativo,
+      excluido: excluido,
       criadoEm: criadoEm,
       atualizadoEm: atualizadoEm,
     );

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/aluno.dart';
 import '../models/app_user.dart';
@@ -22,6 +23,7 @@ import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/lembrete_vencimento.dart';
 import '../utils/status_acesso.dart';
+import '../widgets/foto_aluno_image.dart';
 import '../widgets/gymextreme_logo.dart';
 import '../widgets/premium.dart';
 import 'alunos/alunos_list_screen.dart';
@@ -236,18 +238,22 @@ class WelcomeScreen extends StatelessWidget {
   Widget _buildHomeAluno(BuildContext context, AppUser user, Aluno? aluno) {
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 64,
+        toolbarHeight: 92,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: Center(
-            child: _AvatarAluno(
-              nome: user.nome,
-              fotoUrl: aluno?.fotoUrl,
-              raio: 21,
+            // Tocar na foto também abre o "trocar foto".
+            child: GestureDetector(
+              onTap: () => _trocarFoto(context),
+              child: _AvatarAluno(
+                nome: user.nome,
+                fotoUrl: aluno?.fotoUrl,
+                raio: 33,
+              ),
             ),
           ),
         ),
-        leadingWidth: 68,
+        leadingWidth: 96,
         title: const GymExtremeLogo(compact: true),
         centerTitle: true,
       ),
@@ -412,6 +418,66 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
+  /// O próprio aluno troca a foto de perfil (Configurações ou tocando na
+  /// foto). Mesmo caminho da recepção: a foto sai pequena da câmera/galeria
+  /// e vai pro Firestore (ver StorageService).
+  Future<void> _trocarFoto(BuildContext context) async {
+    final origem = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_camera_outlined, color: AppColors.gold),
+              title: const Text('Tirar foto'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library_outlined, color: AppColors.gold),
+              title: const Text('Escolher da galeria'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (origem == null || !context.mounted) return;
+
+    final avisos = ScaffoldMessenger.of(context);
+    final arquivo = await ImagePicker().pickImage(
+      source: origem,
+      maxWidth: ladoMaximoFoto,
+      maxHeight: ladoMaximoFoto,
+      imageQuality: qualidadeFoto,
+    );
+    if (arquivo == null) return;
+
+    avisos.showSnackBar(const SnackBar(content: Text('Enviando a foto...')));
+    try {
+      final bytes = await arquivo.readAsBytes();
+      final fotoUrl = await storageService.enviarFotoAluno(uid, bytes);
+      await alunoService.salvarFotoUrl(uid, fotoUrl);
+      avisos
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Foto atualizada.')));
+    } catch (erro) {
+      avisos
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              erro is StorageServiceException
+                  ? erro.message
+                  : 'Não foi possível trocar a foto. Tente novamente.',
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+    }
+  }
+
   /// Painel de configurações (nome completo, e-mail, sair) — aberto pelo
   /// botão de engrenagem da tela inicial do aluno.
   void _abrirConfiguracoes(BuildContext context, AppUser user) {
@@ -452,6 +518,20 @@ class WelcomeScreen extends StatelessWidget {
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 24),
+                if (user.role == UserRole.aluno) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        _trocarFoto(context);
+                      },
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      label: const Text('TROCAR FOTO DE PERFIL'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -739,7 +819,9 @@ class _AvatarAluno extends StatelessWidget {
       child: CircleAvatar(
         radius: raio,
         backgroundColor: const Color(0xFF1A1A1A),
-        backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl!) : null,
+        backgroundImage: imagemDaFotoAluno(fotoUrl),
+        // Foto que não abre (sem internet, apagada): fica a inicial, sem erro.
+        onBackgroundImageError: fotoUrl != null ? (_, _) {} : null,
         child: fotoUrl == null
             ? Text(
                 inicial,

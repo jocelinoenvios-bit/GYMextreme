@@ -427,7 +427,7 @@ class _MatriculaCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            plano?.nome ?? 'Plano não encontrado',
+            !matricula.temPlano ? 'Sem plano' : (plano?.nome ?? 'Plano não encontrado'),
             style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 4),

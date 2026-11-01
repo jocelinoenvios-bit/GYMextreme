@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/app_user.dart';
+import '../models/catraca.dart';
 import '../models/evento_acesso.dart';
 
 /// Leitura (SOMENTE leitura) do histórico de acesso físico do aluno —
@@ -39,4 +41,77 @@ class AcessoService {
               snapshot.docs.map((doc) => EventoAcesso.fromFirestore(doc.id, doc.data())).toList(),
         );
   }
+
+  CollectionReference<Map<String, dynamic>> get _dispositivos =>
+      _firestore.collection('dispositivosAcesso');
+
+  /// Leitores ativos e os códigos deles vinculados a [alunoUid]. Uma
+  /// consulta por leitor (academia tem 1 ou 2) em vez de uma consulta em
+  /// todos de uma vez, que exigiria um índice extra no Firestore.
+  Future<CatracaDoAluno> carregarCatraca(String alunoUid) async {
+    final snap = await _dispositivos.where('ativo', isEqualTo: true).get();
+    final dispositivos = [
+      for (final doc in snap.docs)
+        DispositivoAcesso(
+          id: doc.id,
+          nome: (doc.data()['nome'] as String?)?.trim().isNotEmpty == true
+              ? doc.data()['nome'] as String
+              : 'Leitor',
+        ),
+    ]..sort((a, b) => a.nome.compareTo(b.nome));
+
+    final vinculos = <VinculoCatraca>[];
+    for (final dispositivo in dispositivos) {
+      final credenciais = await _dispositivos
+          .doc(dispositivo.id)
+          .collection('credenciais')
+          .where('alunoUid', isEqualTo: alunoUid)
+          .get();
+      for (final doc in credenciais.docs) {
+        vinculos.add(VinculoCatraca(dispositivo: dispositivo, codigo: doc.id));
+      }
+    }
+    return CatracaDoAluno(dispositivos: dispositivos, vinculos: vinculos);
+  }
+
+  /// Vincula o [codigo] do leitor ao aluno. Recusa se o código já for de
+  /// outro aluno — trocar exige desvincular primeiro, pra ninguém
+  /// "roubar" a entrada de outra pessoa sem querer.
+  Future<void> vincularCodigo({
+    required String dispositivoId,
+    required String codigo,
+    required String alunoUid,
+    required AppUser staff,
+  }) {
+    final ref = _dispositivos.doc(dispositivoId).collection('credenciais').doc(codigo.trim());
+    return _firestore.runTransaction((transaction) async {
+      final atual = await transaction.get(ref);
+      if (atual.exists) {
+        if (atual.data()?['alunoUid'] == alunoUid) return;
+        throw AcessoServiceException(
+          'O código ${codigo.trim()} já está vinculado a outro aluno neste leitor.',
+        );
+      }
+      transaction.set(ref, {
+        'alunoUid': alunoUid,
+        'vinculadoEm': FieldValue.serverTimestamp(),
+        'vinculadoPorUid': staff.uid,
+        'vinculadoPorNome': staff.nome,
+      });
+    });
+  }
+
+  Future<void> desvincularCodigo({required String dispositivoId, required String codigo}) {
+    return _dispositivos.doc(dispositivoId).collection('credenciais').doc(codigo).delete();
+  }
+}
+
+/// Erro com mensagem pronta pra mostrar na tela.
+class AcessoServiceException implements Exception {
+  AcessoServiceException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

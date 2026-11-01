@@ -11,6 +11,7 @@ import '../../../services/storage_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/idade.dart';
 import '../../../utils/validadores.dart';
+import '../../../widgets/foto_aluno_image.dart';
 import '../../../widgets/premium.dart';
 import 'mensalidade_section.dart';
 
@@ -140,8 +141,9 @@ class _DadosTabState extends State<DadosTab> {
     final picker = ImagePicker();
     final arquivo = await picker.pickImage(
       source: origem,
-      maxWidth: 1280,
-      imageQuality: 85,
+      maxWidth: ladoMaximoFoto,
+      maxHeight: ladoMaximoFoto,
+      imageQuality: qualidadeFoto,
     );
     if (arquivo == null) return;
     final bytes = await arquivo.readAsBytes();
@@ -232,17 +234,26 @@ class _DadosTabState extends State<DadosTab> {
           const SnackBar(content: Text('Dados atualizados.')),
         );
       }
-    } catch (_) {
+    } catch (erro) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao salvar. Tente novamente.'),
+            content: Text(
+              erro is StorageServiceException ? erro.message : 'Erro ao salvar. Tente novamente.',
+            ),
             backgroundColor: AppColors.error,
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      // Os dois: se o envio da foto falhava, o "carregando" da foto
+      // ficava girando pra sempre.
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _isUploadingFoto = false;
+        });
+      }
     }
   }
 
@@ -270,8 +281,11 @@ class _DadosTabState extends State<DadosTab> {
                     backgroundColor: AppColors.surfaceHigh,
                     backgroundImage: _fotoNovaBytes != null
                         ? MemoryImage(_fotoNovaBytes!)
-                        : (_fotoUrl != null ? NetworkImage(_fotoUrl!) : null)
-                              as ImageProvider?,
+                        : imagemDaFotoAluno(_fotoUrl),
+                    // Foto que não abre (sem internet, apagada): fica o ícone, sem erro.
+                    onBackgroundImageError: (_fotoNovaBytes != null || _fotoUrl != null)
+                        ? (_, _) {}
+                        : null,
                     child: (_fotoNovaBytes == null && _fotoUrl == null)
                         ? Icon(Icons.person_outline, size: 44, color: AppColors.gold)
                         : null,
@@ -492,6 +506,7 @@ class _DadosTabState extends State<DadosTab> {
             const _SecaoTitulo('Mensalidade'),
             MensalidadeSection(
               alunoUid: widget.aluno.uid,
+              alunoNome: widget.aluno.nome,
               proximoVencimento: snapshot.data?.proximoVencimento,
               dataInicio: snapshot.data?.dataInicio,
               alunoService: widget.alunoService,

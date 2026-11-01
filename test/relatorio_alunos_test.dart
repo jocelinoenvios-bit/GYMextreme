@@ -42,16 +42,15 @@ void main() {
       expect(resumo.semRegistro, 1);
     });
 
-    test('tolerancia conta como ativo, nao como bloqueado', () {
+    test('vencimento ontem ja conta como bloqueado (tolerancia zero)', () {
       final resumo = calcularResumoAlunos(
         alunos: [_aluno('a1')],
-        // vencimento ontem: dentro da tolerancia (nao bloqueado ainda).
         fichasAlunos: [Aluno(uid: 'a1', proximoVencimento: DateTime(2026, 8, 9))],
         hoje: _hoje,
       );
 
-      expect(resumo.ativos, 1);
-      expect(resumo.bloqueados, 0);
+      expect(resumo.ativos, 0);
+      expect(resumo.bloqueados, 1);
     });
 
     test('aluno inativo conta à parte, nunca como ativo/bloqueado/sem registro', () {

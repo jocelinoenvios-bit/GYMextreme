@@ -8,6 +8,7 @@ import '../models/aluno.dart';
 import '../models/anamnese.dart';
 import '../models/app_user.dart';
 import '../models/avaliacao_fisica.dart';
+import '../models/caixa_movimentacao.dart';
 import '../models/conta_receber.dart';
 import '../models/endereco.dart';
 import '../models/historico_treino.dart';
@@ -17,6 +18,7 @@ import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
 import '../models/user_role.dart';
+import 'renovacao_matricula.dart';
 import '../utils/lembrete_vencimento.dart';
 import '../utils/mensalidade_utils.dart';
 
@@ -198,6 +200,13 @@ class AlunoService {
     };
   }
 
+  /// Só a foto de perfil — usado pelo próprio aluno (Configurações →
+  /// Trocar foto de perfil). A regra do Firestore deixa o aluno mexer só
+  /// neste campo do próprio cadastro, e só apontando pra foto dele.
+  Future<void> salvarFotoUrl(String uid, String fotoUrl) {
+    return _alunos.doc(uid).set({'fotoUrl': fotoUrl}, SetOptions(merge: true));
+  }
+
   Future<void> salvarAnamnese(String uid, Anamnese anamnese) {
     return _alunos.doc(uid).set({
       'anamnese': anamnese.toFirestore(),
@@ -343,7 +352,12 @@ class AlunoService {
   /// transferencia — fora do app nesta primeira versao, sem gateway) e
   /// avanca `proximoVencimento` em 1 mes a partir do vencimento atual
   /// (ou de hoje, se ainda nao havia nenhum configurado).
-  Future<void> marcarPagamentoRecebido(
+  ///
+  /// Também renova a matrícula ativa até o novo vencimento (ver
+  /// [renovarMatriculaPorPagamento]). Devolve `false` se o aluno não tem
+  /// matrícula ativa — o pagamento é registrado do mesmo jeito, mas a
+  /// catraca não vai liberar, e a tela avisa a recepção.
+  Future<bool> marcarPagamentoRecebido(
     String uid, {
     required DateTime? vencimentoAtual,
     required String staffUid,
@@ -355,6 +369,7 @@ class AlunoService {
     await _alunos.doc(uid).set({
       'proximoVencimento': Timestamp.fromDate(novoVencimento),
     }, SetOptions(merge: true));
+    final temMatricula = await renovarMatriculaPorPagamento(_firestore, uid, novoVencimento);
 
     await _pagamentos(uid).add(
       Pagamento(
@@ -365,6 +380,131 @@ class AlunoService {
         registradoPorNome: staffNome,
       ).toFirestore(),
     );
+    return temMatricula;
+  }
+
+  /// "Receber mensalidade": num passo só, com tudo registrado.
+  ///
+  /// - cria a cobrança já paga em Contas a receber (é o que o relatório
+  ///   financeiro soma), ligada à matrícula ativa;
+  /// - se houver caixa aberto, lança a entrada no caixa;
+  /// - avança o vencimento 1 mês a partir do vencimento atual (pagar
+  ///   atrasado não muda o dia de vencimento do aluno);
+  /// - renova a matrícula ativa até o novo vencimento (modelo A);
+  /// - guarda o histórico em `pagamentos`, agora com valor e forma.
+  ///
+  /// Tudo numa transação: ou grava tudo, ou nada. O caixa e as matrículas
+  /// são localizados antes (transação só lê documento por documento) e
+  /// relidos dentro dela.
+  Future<RecebimentoMensalidade> receberMensalidade(
+    String uid, {
+    required DateTime? vencimentoAtual,
+    required double valor,
+    required String formaPagamento,
+    required String staffUid,
+    required String staffNome,
+    String? alunoNome,
+  }) async {
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final vencimentoPago = vencimentoAtual ?? hoje;
+    final novoVencimento = adicionarUmMes(vencimentoPago);
+
+    final caixaSnap = await _firestore
+        .collection('caixas')
+        .where('status', isEqualTo: 'aberto')
+        .limit(1)
+        .get();
+    final caixaRef = caixaSnap.docs.isEmpty ? null : caixaSnap.docs.first.reference;
+    final ativasSnap = await _matriculas(uid).where('status', isEqualTo: 'ativa').get();
+
+    final contaRef = _contasReceber(uid).doc();
+    final pagamentoRef = _pagamentos(uid).doc();
+    final movRef = caixaRef?.collection('movimentacoes').doc();
+    final dataTexto =
+        '${vencimentoPago.day.toString().padLeft(2, '0')}/${vencimentoPago.month.toString().padLeft(2, '0')}';
+
+    return _firestore.runTransaction<RecebimentoMensalidade>((transaction) async {
+      // Leituras antes de qualquer escrita (regra do Firestore).
+      final caixa = caixaRef == null ? null : await transaction.get(caixaRef);
+      final matriculas = [for (final doc in ativasSnap.docs) await transaction.get(doc.reference)];
+
+      final caixaAberto = caixa != null && caixa.exists && caixa.data()?['status'] == 'aberto';
+      final ativas = matriculas
+          .where((doc) => doc.exists && doc.data()?['status'] == 'ativa')
+          .toList();
+
+      transaction.set(
+        contaRef,
+        ContaReceber(
+          alunoId: uid,
+          matriculaId: ativas.isEmpty ? null : ativas.first.id,
+          descricao: 'Mensalidade (vencimento $dataTexto)',
+          valorOriginal: valor,
+          valorPago: valor,
+          vencimento: vencimentoPago,
+          dataPagamento: agora,
+          status: StatusContaReceber.pago,
+          formaPagamento: formaPagamento,
+          criadoPorUid: staffUid,
+          criadoPorNome: staffNome,
+          recebidoPorUid: staffUid,
+          recebidoPorNome: staffNome,
+          movimentacaoCaixaId: caixaAberto ? movRef!.id : null,
+        ).toFirestore(),
+      );
+
+      if (caixaAberto) {
+        transaction.set(
+          movRef!,
+          CaixaMovimentacao(
+            tipo: TipoMovimentacaoCaixa.recebimento,
+            valor: valor,
+            formaPagamento: formaPagamento,
+            descricao: alunoNome == null ? 'Mensalidade' : 'Mensalidade — $alunoNome',
+            contaReceberAlunoId: uid,
+            contaReceberId: contaRef.id,
+            staffUid: staffUid,
+            staffNome: staffNome,
+          ).toFirestore(),
+        );
+      }
+
+      transaction.set(_alunos.doc(uid), {
+        'proximoVencimento': Timestamp.fromDate(novoVencimento),
+      }, SetOptions(merge: true));
+
+      for (final matricula in ativas) {
+        final atual = matricula.data()?['dataVencimento'];
+        final vence = atual is Timestamp ? atual.toDate() : null;
+        if (vence != null && !vence.isBefore(novoVencimento)) continue;
+        transaction.update(matricula.reference, {
+          'dataVencimento': Timestamp.fromDate(novoVencimento),
+          'renovadaPorPagamentoEm': FieldValue.serverTimestamp(),
+          'atualizadoEm': FieldValue.serverTimestamp(),
+        });
+      }
+
+      transaction.set(
+        pagamentoRef,
+        Pagamento(
+          registradoEm: agora,
+          vencimentoAnterior: vencimentoAtual,
+          novoVencimento: novoVencimento,
+          registradoPorUid: staffUid,
+          registradoPorNome: staffNome,
+          valor: valor,
+          formaPagamento: formaPagamento,
+          contaReceberId: contaRef.id,
+        ).toFirestore(),
+      );
+
+      return RecebimentoMensalidade(
+        novoVencimento: novoVencimento,
+        temMatricula: ativas.isNotEmpty,
+        lancadoNoCaixa: caixaAberto,
+      );
+    });
   }
 
   /// Define o primeiro vencimento de um aluno que ainda nao tem nenhum
@@ -425,10 +565,14 @@ class AlunoService {
   /// telas dessincronizadas. `CaixaService.registrarRecebimentoContaReceber`
   /// faz o mesmo avanço (mesma função [adicionarUmMes]), só que dentro da
   /// própria transação do caixa em vez de chamar este método privado.
-  Future<void> _avancarProximoVencimento(String uid, DateTime vencimentoOriginal) {
-    return _alunos.doc(uid).set({
-      'proximoVencimento': Timestamp.fromDate(adicionarUmMes(vencimentoOriginal)),
+  Future<void> _avancarProximoVencimento(String uid, DateTime vencimentoOriginal) async {
+    final novoVencimento = adicionarUmMes(vencimentoOriginal);
+    await _alunos.doc(uid).set({
+      'proximoVencimento': Timestamp.fromDate(novoVencimento),
     }, SetOptions(merge: true));
+    // Pagou a mensalidade: a matrícula acompanha (ver
+    // renovarMatriculaPorPagamento).
+    await renovarMatriculaPorPagamento(_firestore, uid, novoVencimento);
   }
 
   /// Histórico de matrículas de UM aluno, mais recente primeiro. Usada
@@ -473,7 +617,7 @@ class AlunoService {
   /// e virou `vencida`), ela fica intacta no histórico, sem ser tocada.
   Future<String> criarMatricula(
     String alunoUid, {
-    required String planoId,
+    String? planoId,
     required DateTime dataInicio,
     required DateTime dataVencimento,
     required double valorContratado,
@@ -507,7 +651,7 @@ class AlunoService {
         novaRef,
         Matricula(
           alunoId: alunoUid,
-          planoId: planoId,
+          planoId: planoId ?? '',
           dataInicio: dataInicio,
           dataVencimento: dataVencimento,
           valorContratado: valorContratado,
@@ -937,4 +1081,19 @@ class AlunoServiceException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// O que aconteceu num [AlunoService.receberMensalidade] — a tela usa pra
+/// avisar a recepção (sem matrícula a catraca não libera; sem caixa
+/// aberto o valor não entra no caixa).
+class RecebimentoMensalidade {
+  const RecebimentoMensalidade({
+    required this.novoVencimento,
+    required this.temMatricula,
+    required this.lancadoNoCaixa,
+  });
+
+  final DateTime novoVencimento;
+  final bool temMatricula;
+  final bool lancadoNoCaixa;
 }

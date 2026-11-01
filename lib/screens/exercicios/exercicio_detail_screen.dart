@@ -7,6 +7,7 @@ import '../../constants/musculos.dart';
 import '../../models/exercise_model.dart';
 import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import '../area_aluno/widgets/exercicio_midia.dart';
 
 /// Ficha de referência de um exercício da Biblioteca Oficial — usada ao
@@ -133,9 +134,10 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Text(
         label,

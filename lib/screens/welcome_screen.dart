@@ -230,156 +230,141 @@ class WelcomeScreen extends StatelessWidget {
         onTap: () => _abrirConfiguracoes(context, user),
       ),
       body: SafeArea(
-        child: Stack(
-          children: [
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: FaixaDouradaRodape(altura: 190),
-            ),
-            Positioned.fill(
-              child: SingleChildScrollView(
-                // Espaço embaixo pra engrenagem não cobrir o último card.
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const DestaquePremium(
-                      desenho: Desenhos.halter,
-                      largura: 214,
-                      altura: 120,
-                    ),
-                    SaudacaoPremium(nome: user.nome, tamanho: 27),
-                    const SizedBox(height: 20),
-                    BotaoOuro(
-                      icone: Icons.fitness_center,
-                      giroIcone: -math.pi / 4,
-                      rotulo: 'BIBLIOTECA DE EXERCÍCIOS',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ExerciciosListScreen(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    BotaoOuro(
-                      icone: Icons.trending_up,
-                      rotulo: 'MEUS TREINOS',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => MeusTreinosScreen(
-                            uid: uid,
-                            alunoService: alunoService,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const _TituloSecao('MEU PERFIL'),
-                    const SizedBox(height: 14),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.94,
-                      children: [
-                        CardPremium(
-                          desenho: Desenhos.cartao,
-                          rotulo: 'Dados\npessoais',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => MeusDadosAlunoScreen(
-                                usuario: user,
-                                uid: uid,
-                                alunoService: alunoService,
-                              ),
-                            ),
-                          ),
-                        ),
-                        CardPremium(
-                          desenho: Desenhos.ficha,
-                          rotulo: 'Minha\nficha',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => MinhaFichaScreen(
-                                uid: uid,
-                                alunoService: alunoService,
-                              ),
-                            ),
-                          ),
-                        ),
-                        CardPremium(
-                          desenho: Desenhos.medidas,
-                          rotulo: 'Minhas\nmedidas',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => MinhasMedidasScreen(
-                                uid: uid,
-                                alunoService: alunoService,
-                              ),
-                            ),
-                          ),
-                        ),
-                        CardPremium(
-                          desenho: Desenhos.anamnese,
-                          rotulo: 'Minha\nanamnese',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => MinhaAnamneseScreen(
-                                uid: uid,
-                                alunoService: alunoService,
-                              ),
-                            ),
-                          ),
-                        ),
-                        CardPremium(
-                          desenho: Desenhos.evolucao,
-                          rotulo: 'Minha\nevolução',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => MinhaEvolucaoScreen(
-                                uid: uid,
-                                alunoService: alunoService,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Reaproveita o mesmo stream que a tela de mensagens
-                        // usa, em vez de uma consulta só de contagem: o
-                        // volume de avisos por aluno é pequeno e assim o selo
-                        // zera junto com a leitura, sem um segundo listener.
-                        StreamBuilder<List<Mensagem>>(
-                          stream: alunoService.watchMensagens(uid),
-                          builder: (context, snapshot) {
-                            final naoLidas =
-                                (snapshot.data ?? const <Mensagem>[])
-                                    .where((mensagem) => !mensagem.lida)
-                                    .length;
-                            return CardPremium(
-                              desenho: Desenhos.mensagens,
-                              rotulo: 'Mensagens',
-                              naoLidas: naoLidas,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => MensagensScreen(
-                                    uid: uid,
-                                    alunoService: alunoService,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+        child: SingleChildScrollView(
+          // Espaço embaixo pra engrenagem não cobrir o último card.
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const DestaquePremium(
+                desenho: Desenhos.halter,
+                largura: 214,
+                altura: 120,
+              ),
+              SaudacaoPremium(nome: user.nome, tamanho: 27),
+              const SizedBox(height: 20),
+              BotaoOuro(
+                icone: Icons.fitness_center,
+                giroIcone: -math.pi / 4,
+                rotulo: 'BIBLIOTECA DE EXERCÍCIOS',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ExerciciosListScreen(),
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              BotaoOuro(
+                icone: Icons.trending_up,
+                rotulo: 'MEUS TREINOS',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        MeusTreinosScreen(uid: uid, alunoService: alunoService),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const _TituloSecao('MEU PERFIL'),
+              const SizedBox(height: 14),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.94,
+                children: [
+                  CardPremium(
+                    desenho: Desenhos.cartao,
+                    rotulo: 'Dados\npessoais',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MeusDadosAlunoScreen(
+                          usuario: user,
+                          uid: uid,
+                          alunoService: alunoService,
+                        ),
+                      ),
+                    ),
+                  ),
+                  CardPremium(
+                    desenho: Desenhos.ficha,
+                    rotulo: 'Minha\nficha',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MinhaFichaScreen(
+                          uid: uid,
+                          alunoService: alunoService,
+                        ),
+                      ),
+                    ),
+                  ),
+                  CardPremium(
+                    desenho: Desenhos.medidas,
+                    rotulo: 'Minhas\nmedidas',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MinhasMedidasScreen(
+                          uid: uid,
+                          alunoService: alunoService,
+                        ),
+                      ),
+                    ),
+                  ),
+                  CardPremium(
+                    desenho: Desenhos.anamnese,
+                    rotulo: 'Minha\nanamnese',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MinhaAnamneseScreen(
+                          uid: uid,
+                          alunoService: alunoService,
+                        ),
+                      ),
+                    ),
+                  ),
+                  CardPremium(
+                    desenho: Desenhos.evolucao,
+                    rotulo: 'Minha\nevolução',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MinhaEvolucaoScreen(
+                          uid: uid,
+                          alunoService: alunoService,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Reaproveita o mesmo stream que a tela de mensagens
+                  // usa, em vez de uma consulta só de contagem: o
+                  // volume de avisos por aluno é pequeno e assim o selo
+                  // zera junto com a leitura, sem um segundo listener.
+                  StreamBuilder<List<Mensagem>>(
+                    stream: alunoService.watchMensagens(uid),
+                    builder: (context, snapshot) {
+                      final naoLidas = (snapshot.data ?? const <Mensagem>[])
+                          .where((mensagem) => !mensagem.lida)
+                          .length;
+                      return CardPremium(
+                        desenho: Desenhos.mensagens,
+                        rotulo: 'Mensagens',
+                        naoLidas: naoLidas,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MensagensScreen(
+                              uid: uid,
+                              alunoService: alunoService,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -454,211 +439,184 @@ class WelcomeScreen extends StatelessWidget {
   /// premium: escudo dourado de destaque, saudação e um card por módulo —
   /// cada card só aparece pra quem tem a permissão daquele módulo.
   Widget _buildConteudoPadrao(BuildContext context, AppUser user) {
-    return Stack(
-      children: [
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: FaixaDouradaRodape(),
-        ),
-        // Rolável porque a quantidade de cards varia com as permissões —
-        // um ADM com tudo liberado não cabe inteiro em muitos aparelhos.
-        Positioned.fill(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-            child: Column(
-              children: [
-                const DestaquePremium(
-                  desenho: Desenhos.escudo,
-                  largura: 112,
-                  altura: 112,
-                  comSilhuetas: true,
-                ),
-                const SizedBox(height: 6),
-                SaudacaoPremium(
-                  nome: user.role.welcomeLabel,
-                  tamanho: 31,
-                  nomeItalico: true,
-                ),
-                const SizedBox(height: 22),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  children: [
-                    if (PermissionService.has(user, Permission.relatorios))
-                      CardPremium(
-                        desenho: Desenhos.painel,
-                        rotulo: 'Painel e\nrelatórios',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => DashboardScreen(
-                              alunoService: alunoService,
-                              caixaService: caixaService,
-                              contaPagarService: contaPagarService,
-                              produtoService: produtoService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(user, Permission.gerenciarAlunos))
-                      CardPremium(
-                        desenho: Desenhos.alunos,
-                        rotulo: 'Gerenciar\nalunos',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => AlunosListScreen(
-                              alunoService: alunoService,
-                              storageService: storageService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(user, Permission.chat))
-                      CardPremium(
-                        desenho: Desenhos.enviarMensagem,
-                        rotulo: 'Enviar\nmensagem',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => EnviarMensagemScreen(
-                              alunoService: alunoService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(user, Permission.acessarPlanos))
-                      CardPremium(
-                        desenho: Desenhos.planos,
-                        rotulo: 'Planos',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => PlanosListScreen(
-                              planoService: planoService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(user, Permission.matriculas))
-                      CardPremium(
-                        desenho: Desenhos.cartao,
-                        rotulo: 'Matrículas',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => MatriculasListScreen(
-                              alunoService: alunoService,
-                              planoService: planoService,
-                              storageService: storageService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(
-                      user,
-                      Permission.acessarContasReceber,
-                    ))
-                      CardPremium(
-                        desenho: Desenhos.contasReceber,
-                        rotulo: 'Contas a\nreceber',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ContasReceberListScreen(
-                              alunoService: alunoService,
-                              caixaService: caixaService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(
-                      user,
-                      Permission.acessarControleCaixa,
-                    ))
-                      CardPremium(
-                        desenho: Desenhos.caixa,
-                        rotulo: 'Controle de\ncaixa',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => CaixaScreen(
-                              caixaService: caixaService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(
-                      user,
-                      Permission.acessarContasPagar,
-                    ))
-                      CardPremium(
-                        desenho: Desenhos.contasPagar,
-                        rotulo: 'Contas a\npagar',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ContasPagarListScreen(
-                              contaPagarService: contaPagarService,
-                              caixaService: caixaService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(user, Permission.acessarProdutos))
-                      CardPremium(
-                        desenho: Desenhos.produtos,
-                        rotulo: 'Produtos',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ProdutosListScreen(
-                              produtoService: produtoService,
-                              staffAtual: user,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(
-                      user,
-                      Permission.bibliotecaExercicios,
-                    ))
-                      CardPremium(
-                        desenho: Desenhos.biblioteca,
-                        rotulo: 'Biblioteca de\nexercícios',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ExerciciosListScreen(),
-                          ),
-                        ),
-                      ),
-                    if (PermissionService.has(
-                      user,
-                      Permission.gerenciarFuncionarios,
-                    ))
-                      CardPremium(
-                        desenho: Desenhos.funcionarios,
-                        rotulo: 'Gerenciar\nfuncionários',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => FuncionariosListScreen(
-                              funcionarioService: funcionarioService,
-                              cargoService: cargoService,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+    // Rolável porque a quantidade de cards varia com as permissões — um
+    // ADM com tudo liberado não cabe inteiro em muitos aparelhos.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+      child: Column(
+        children: [
+          const DestaquePremium(
+            desenho: Desenhos.escudo,
+            largura: 112,
+            altura: 112,
+            comSilhuetas: true,
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          SaudacaoPremium(
+            nome: user.role.welcomeLabel,
+            tamanho: 31,
+            nomeItalico: true,
+          ),
+          const SizedBox(height: 22),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            children: [
+              if (PermissionService.has(user, Permission.relatorios))
+                CardPremium(
+                  desenho: Desenhos.painel,
+                  rotulo: 'Painel e\nrelatórios',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DashboardScreen(
+                        alunoService: alunoService,
+                        caixaService: caixaService,
+                        contaPagarService: contaPagarService,
+                        produtoService: produtoService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.gerenciarAlunos))
+                CardPremium(
+                  desenho: Desenhos.alunos,
+                  rotulo: 'Gerenciar\nalunos',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AlunosListScreen(
+                        alunoService: alunoService,
+                        storageService: storageService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.chat))
+                CardPremium(
+                  desenho: Desenhos.enviarMensagem,
+                  rotulo: 'Enviar\nmensagem',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => EnviarMensagemScreen(
+                        alunoService: alunoService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.acessarPlanos))
+                CardPremium(
+                  desenho: Desenhos.planos,
+                  rotulo: 'Planos',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PlanosListScreen(
+                        planoService: planoService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.matriculas))
+                CardPremium(
+                  desenho: Desenhos.cartao,
+                  rotulo: 'Matrículas',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MatriculasListScreen(
+                        alunoService: alunoService,
+                        planoService: planoService,
+                        storageService: storageService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.acessarContasReceber))
+                CardPremium(
+                  desenho: Desenhos.contasReceber,
+                  rotulo: 'Contas a\nreceber',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ContasReceberListScreen(
+                        alunoService: alunoService,
+                        caixaService: caixaService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.acessarControleCaixa))
+                CardPremium(
+                  desenho: Desenhos.caixa,
+                  rotulo: 'Controle de\ncaixa',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CaixaScreen(
+                        caixaService: caixaService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.acessarContasPagar))
+                CardPremium(
+                  desenho: Desenhos.contasPagar,
+                  rotulo: 'Contas a\npagar',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ContasPagarListScreen(
+                        contaPagarService: contaPagarService,
+                        caixaService: caixaService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.acessarProdutos))
+                CardPremium(
+                  desenho: Desenhos.produtos,
+                  rotulo: 'Produtos',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProdutosListScreen(
+                        produtoService: produtoService,
+                        staffAtual: user,
+                      ),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.bibliotecaExercicios))
+                CardPremium(
+                  desenho: Desenhos.biblioteca,
+                  rotulo: 'Biblioteca de\nexercícios',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ExerciciosListScreen(),
+                    ),
+                  ),
+                ),
+              if (PermissionService.has(user, Permission.gerenciarFuncionarios))
+                CardPremium(
+                  desenho: Desenhos.funcionarios,
+                  rotulo: 'Gerenciar\nfuncionários',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => FuncionariosListScreen(
+                        funcionarioService: funcionarioService,
+                        cargoService: cargoService,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

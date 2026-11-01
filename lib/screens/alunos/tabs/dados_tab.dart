@@ -11,6 +11,7 @@ import '../../../services/storage_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/idade.dart';
 import '../../../utils/validadores.dart';
+import '../../../widgets/premium.dart';
 import 'mensalidade_section.dart';
 
 class DadosTab extends StatefulWidget {
@@ -567,9 +568,10 @@ class _ReadOnlyField extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

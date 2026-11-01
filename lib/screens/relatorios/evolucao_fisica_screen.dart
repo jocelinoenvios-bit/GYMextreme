@@ -5,6 +5,7 @@ import '../../models/app_user.dart';
 import '../../models/avaliacao_fisica.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import '../../widgets/simple_line_chart.dart';
 
 /// Evolução física — escolhe um aluno e mostra o histórico já existente
@@ -173,9 +174,10 @@ class _CartaoAvaliacao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

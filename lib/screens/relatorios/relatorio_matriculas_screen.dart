@@ -4,6 +4,7 @@ import '../../models/matricula.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/relatorio_matriculas.dart';
+import '../../widgets/premium.dart';
 
 /// Relatório de matrículas — ativas, encerradas, vencendo em breve e
 /// novas matrículas por período de criação. Carrega uma vez a partir de
@@ -170,9 +171,10 @@ class _CartaoNumero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

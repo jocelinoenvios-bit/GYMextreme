@@ -4,6 +4,7 @@ import '../../constants/dificuldade_exercicio.dart';
 import '../../models/exercise_model.dart';
 import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import 'exercicio_detail_screen.dart';
 
 /// Exercícios de UMA categoria (ex.: só "Peito") — aberta ao tocar num
@@ -150,9 +151,10 @@ class CartaoExercicio extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          gradient: DecoracaoPremium.gradienteCard,
+          boxShadow: DecoracaoPremium.sombraCard,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.surfaceHigh),
+          border: Border.all(color: DecoracaoPremium.bordaCard),
         ),
         child: Row(
           children: [

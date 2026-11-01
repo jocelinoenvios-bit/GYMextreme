@@ -8,7 +8,9 @@ class AppColors {
   static const Color surface = Color(0xFF1A1A1A);
   static const Color surfaceHigh = Color(0xFF242424);
 
-  static const Color gold = Color(0xFFD4AF37);
+  /// Dourado vivo do visual premium (o mesmo tom do meio do degradê dos
+  /// botões) — antes era um dourado mais fechado, 0xFFD4AF37.
+  static const Color gold = Color(0xFFF5C02A);
   static const Color goldBright = Color(0xFFFFC72C);
 
   static const Color textPrimary = Color(0xFFF5F5F5);

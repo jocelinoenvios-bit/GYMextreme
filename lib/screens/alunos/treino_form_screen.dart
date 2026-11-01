@@ -6,6 +6,7 @@ import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import '../exercicios/exercicios_list_screen.dart';
 
 const _letrasDisponiveis = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -368,9 +369,10 @@ class _ExercicioTreinoTile extends StatelessWidget {
       key: key,
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onEditar,

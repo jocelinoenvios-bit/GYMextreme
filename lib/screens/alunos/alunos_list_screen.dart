@@ -4,6 +4,7 @@ import '../../models/app_user.dart';
 import '../../services/aluno_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import '../../utils/status_operacional_aluno.dart';
 import 'aluno_detail_screen.dart';
 import 'alunos_por_filtro_screen.dart';
@@ -181,16 +182,20 @@ class _CardFiltroAluno extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final corFundo = destaque ? AppColors.gold : AppColors.surfaceHigh;
-    final corIcone = destaque ? AppColors.black : AppColors.gold;
-    final corTexto = destaque ? AppColors.black : AppColors.textPrimary;
+    final corIcone = destaque ? OuroPremium.tinta : AppColors.gold;
+    final corTexto = destaque ? OuroPremium.tinta : AppColors.textPrimary;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-        decoration: BoxDecoration(color: corFundo, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          gradient: destaque ? OuroPremium.degrade : DecoracaoPremium.gradienteCard,
+          borderRadius: BorderRadius.circular(16),
+          border: destaque ? null : Border.all(color: DecoracaoPremium.bordaCard),
+          boxShadow: DecoracaoPremium.sombraCard,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

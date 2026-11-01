@@ -5,6 +5,7 @@ import '../../constants/circunferencia_fields.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/imc.dart';
+import '../../widgets/premium.dart';
 
 /// Histórico de avaliações físicas do próprio aluno — somente leitura
 /// (quem cadastra é o personal/academia, ver `AvaliacoesTab`). Mais
@@ -90,9 +91,10 @@ class _AvaliacaoCardState extends State<_AvaliacaoCard> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

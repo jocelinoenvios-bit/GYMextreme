@@ -748,3 +748,82 @@ class _FaixaPainter extends CustomPainter {
   @override
   bool shouldRepaint(_FaixaPainter oldDelegate) => false;
 }
+
+/// Fundo de toda página do app: preto com a faixa dourada no rodapé.
+///
+/// Aplicado uma vez só, por [TransicaoPremium], em vez de tela por tela.
+/// Por isso o Scaffold do tema é transparente — quem pinta o fundo é
+/// isto aqui, por trás de cada página.
+class FundoPremium extends StatelessWidget {
+  const FundoPremium({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFF0A0A0A),
+      child: Stack(
+        children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FaixaDouradaRodape(altura: 150),
+          ),
+          Positioned.fill(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+/// A transição de tela padrão da plataforma, com [FundoPremium] por trás
+/// de cada página.
+///
+/// O fundo vai DENTRO da transição de propósito: cada página leva o seu,
+/// opaco, então durante a animação a página de baixo nunca aparece
+/// através do Scaffold transparente da de cima.
+class TransicaoPremium extends PageTransitionsBuilder {
+  const TransicaoPremium(this.base);
+
+  final PageTransitionsBuilder base;
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return base.buildTransitions(
+      route,
+      context,
+      animation,
+      secondaryAnimation,
+      FundoPremium(child: child),
+    );
+  }
+}
+
+/// Decoração dos cards desenhados à mão nas telas — o mesmo degradê
+/// escuro e brilho dourado dos cards da tela inicial.
+abstract final class DecoracaoPremium {
+  static const gradienteCard = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF1C1C1C), Color(0xFF111111)],
+  );
+
+  static const bordaCard = Color(0xFF2A2A2A);
+
+  static const sombraCard = [
+    BoxShadow(
+      color: Color(0x40FFBE28),
+      blurRadius: 14,
+      spreadRadius: -6,
+      offset: Offset(0, 6),
+    ),
+  ];
+}

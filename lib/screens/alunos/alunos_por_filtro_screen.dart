@@ -9,6 +9,7 @@ import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/status_acesso.dart';
 import '../../utils/status_operacional_aluno.dart';
+import '../../widgets/premium.dart';
 import 'aluno_detail_screen.dart';
 import 'enviar_mensagem_screen.dart';
 
@@ -199,9 +200,10 @@ class _CartaoAluno extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          gradient: DecoracaoPremium.gradienteCard,
+          boxShadow: DecoracaoPremium.sombraCard,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.surfaceHigh),
+          border: Border.all(color: DecoracaoPremium.bordaCard),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,

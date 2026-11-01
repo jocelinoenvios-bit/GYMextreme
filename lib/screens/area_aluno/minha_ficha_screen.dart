@@ -4,6 +4,7 @@ import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import 'historico_treinos_screen.dart';
 import 'treino_detalhe_aluno_screen.dart';
 
@@ -153,9 +154,10 @@ class _TreinoCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: () => Navigator.of(context).push(

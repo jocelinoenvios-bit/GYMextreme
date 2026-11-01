@@ -124,4 +124,30 @@ void main() {
     // Uma frase só pro leitor de tela, mesmo com o nome em outra cor.
     expect(find.text('Bem-vindo, ADM'), findsOneWidget);
   });
+  testWidgets(
+    'toda página do app ganha o fundo premium, inclusive a de abertura',
+    (tester) async {
+      // O fundo vem do tema (via transição de página), e não de cada tela —
+      // então basta uma página qualquer, sem nada de premium nela, pra
+      // provar que todas recebem.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark,
+          home: const Scaffold(body: Text('uma tela qualquer')),
+        ),
+      );
+      expect(find.byType(FundoPremium), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('uma tela qualquer'))).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('outra tela')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Cada página leva o próprio fundo, opaco — por isso a de baixo nunca
+      // aparece através do Scaffold transparente durante a transição.
+      expect(find.byType(FundoPremium, skipOffstage: false), findsNWidgets(2));
+    },
+  );
 }

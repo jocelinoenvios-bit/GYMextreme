@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/mensagem.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 
 /// Central de avisos do aluno — mostra o que a equipe (ADM/Personal com a
 /// permissão `chat`) enviou pela tela "Mensagens". A comunicação é de mão
@@ -166,10 +167,11 @@ class _CartaoMensagem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: naoLida ? AppColors.gold : AppColors.surfaceHigh,
+          color: naoLida ? AppColors.gold : DecoracaoPremium.bordaCard,
           width: naoLida ? 1.5 : 1,
         ),
       ),

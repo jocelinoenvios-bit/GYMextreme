@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/mensagem.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 
 /// Tudo que a equipe já enviou, de todos os alunos — responde "o que eu
 /// mandei, pra quem e quando", que antes se perdia assim que a mensagem
@@ -155,9 +156,10 @@ class _CartaoEnviada extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

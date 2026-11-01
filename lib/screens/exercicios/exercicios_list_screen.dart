@@ -5,6 +5,7 @@ import '../../models/exercise_model.dart';
 import '../../services/exercise_repository.dart';
 import '../../services/gif_cache_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 import 'exercicio_detail_screen.dart';
 import 'exercicios_da_categoria_screen.dart';
 
@@ -236,8 +237,10 @@ class _CardCategoria extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
+          gradient: DecoracaoPremium.gradienteCard,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DecoracaoPremium.bordaCard),
+          boxShadow: DecoracaoPremium.sombraCard,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

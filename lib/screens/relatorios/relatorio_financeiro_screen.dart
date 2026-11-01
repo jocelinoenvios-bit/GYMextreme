@@ -12,6 +12,7 @@ import '../../utils/moeda.dart';
 import '../../utils/relatorio_financeiro.dart';
 import '../../utils/status_conta_pagar.dart';
 import '../../utils/status_conta_receber.dart';
+import '../../widgets/premium.dart';
 
 /// Relatório financeiro — contas a receber, contas a pagar e as
 /// movimentações do caixa aberto, com filtro por período de vencimento.
@@ -290,9 +291,10 @@ class _CartaoTotais extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,9 +425,10 @@ class _AbaCaixa extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                gradient: DecoracaoPremium.gradienteCard,
+                boxShadow: DecoracaoPremium.sombraCard,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.surfaceHigh),
+                border: Border.all(color: DecoracaoPremium.bordaCard),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

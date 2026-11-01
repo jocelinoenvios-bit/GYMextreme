@@ -7,6 +7,7 @@ import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/imc.dart';
+import '../../../widgets/premium.dart';
 import '../avaliacao_fisica_form_screen.dart';
 
 /// Historico de avaliacoes fisicas do aluno, mais recente primeiro —
@@ -102,9 +103,10 @@ class _AvaliacaoCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

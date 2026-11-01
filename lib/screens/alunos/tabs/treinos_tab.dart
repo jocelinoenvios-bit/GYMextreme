@@ -7,6 +7,7 @@ import '../../../models/treino.dart';
 import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../widgets/premium.dart';
 import '../../area_aluno/treino_execucao_screen.dart';
 import '../treino_form_screen.dart';
 import '../copiar_treino_dialog.dart';
@@ -207,9 +208,10 @@ class _TreinoCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onTap,

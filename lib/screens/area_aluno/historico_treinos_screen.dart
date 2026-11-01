@@ -4,6 +4,7 @@ import '../../models/historico_treino.dart';
 import '../../models/treino.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/premium.dart';
 
 /// Histórico de presença/frequência, semana a semana — sempre separado
 /// da ficha prescrita (`MinhaFichaScreen`): um treino nunca some daqui
@@ -184,9 +185,10 @@ class _DiaLinha extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: Row(
         children: [

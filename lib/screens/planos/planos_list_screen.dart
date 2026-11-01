@@ -7,6 +7,7 @@ import '../../services/permission_service.dart';
 import '../../services/plano_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/premium.dart';
 import 'plano_form_screen.dart';
 
 /// Lista administrativa de planos de mensalidade da academia — cadastrar,
@@ -144,9 +145,10 @@ class _PlanoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: DecoracaoPremium.gradienteCard,
+        boxShadow: DecoracaoPremium.sombraCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceHigh),
+        border: Border.all(color: DecoracaoPremium.bordaCard),
       ),
       child: ListTile(
         onTap: onTap,

@@ -112,7 +112,7 @@ void main() {
 
       expect(find.text('Inativo'), findsOneWidget);
       expect(find.textContaining('Inativo desde 01/03/2026'), findsOneWidget);
-      expect(find.text('MARCAR PAGAMENTO RECEBIDO'), findsNothing);
+      expect(find.text('RECEBER MENSALIDADE'), findsNothing);
     });
 
     testWidgets('staff sem permissão de receber mensalidade não vê o botão de reativar', (
@@ -120,20 +120,43 @@ void main() {
     ) async {
       await tester.pumpWidget(_wrapInativo(staff: _staff, alunoService: FakeAlunoService()));
 
-      expect(find.text('REATIVAR ALUNO'), findsNothing);
+      expect(find.text('REATIVAR E RECEBER'), findsNothing);
     });
 
-    testWidgets('tocar em "Reativar aluno" chama AlunoService.reativarAluno', (tester) async {
+    testWidgets('reativar = receber: só reativa confirmando o pagamento, com ciclo a partir de hoje', (
+      tester,
+    ) async {
       final alunoService = FakeAlunoService();
 
       await tester.pumpWidget(_wrapInativo(staff: _adm, alunoService: alunoService));
-      expect(find.text('REATIVAR ALUNO'), findsOneWidget);
+      expect(find.text('REATIVAR E RECEBER'), findsOneWidget);
 
-      await tester.tap(find.text('REATIVAR ALUNO'));
+      await tester.tap(find.text('REATIVAR E RECEBER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reativar e receber'), findsOneWidget);
+      expect(find.textContaining('volta a ficar ativo ao confirmar o pagamento'), findsOneWidget);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'Valor recebido (R\$)'), '80');
+      await tester.tap(find.text('Pix'));
+      await tester.pump();
+      await tester.tap(find.text('CONFIRMAR'));
       await tester.pumpAndSettle();
 
-      expect(alunoService.ultimaReativacao, isNotNull);
-      expect(alunoService.ultimaReativacao!.staffUid, 'adm-1');
+      final recebido = alunoService.ultimoRecebimentoMensalidade!;
+      expect(recebido.reativar, isTrue);
+      expect(recebido.valor, 80);
+      expect(find.textContaining('Aluno reativado.'), findsOneWidget);
+    });
+
+    testWidgets('cancelar a reativação não reativa nada', (tester) async {
+      final alunoService = FakeAlunoService();
+      await tester.pumpWidget(_wrapInativo(staff: _adm, alunoService: alunoService));
+      await tester.tap(find.text('REATIVAR E RECEBER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CANCELAR'));
+      await tester.pumpAndSettle();
+
+      expect(alunoService.ultimoRecebimentoMensalidade, isNull);
     });
   });
 

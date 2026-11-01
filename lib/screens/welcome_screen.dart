@@ -131,8 +131,30 @@ class WelcomeScreen extends StatelessWidget {
           return StreamBuilder<Aluno?>(
             stream: alunoService.watchAluno(uid),
             builder: (context, alunoSnapshot) {
+              // Inativo ou bloqueado pela recepção: mesmo bloqueio da
+              // catraca, com o motivo certo na tela (vem antes da
+              // mensalidade, que é o motivo menos importante aqui).
+              final ficha = alunoSnapshot.data;
+              if (ficha != null && !ficha.ativo) {
+                return _scaffoldGenerico(
+                  context,
+                  const _AcessoSuspenso(
+                    mensagem: 'Seu cadastro na academia está inativo.',
+                    orientacao: 'Procure a recepção para reativar.',
+                  ),
+                );
+              }
+              if (ficha != null && ficha.bloqueado) {
+                return _scaffoldGenerico(
+                  context,
+                  const _AcessoSuspenso(
+                    mensagem: 'Seu acesso ao aplicativo e à academia foi suspenso pela recepção.',
+                    orientacao: 'Procure a recepção para mais informações.',
+                  ),
+                );
+              }
               final status = calcularStatusAcesso(
-                proximoVencimento: alunoSnapshot.data?.proximoVencimento,
+                proximoVencimento: ficha?.proximoVencimento,
               );
               if (status.status == StatusMensalidade.bloqueado) {
                 return _scaffoldGenerico(context, const _AcessoSuspenso());
@@ -919,7 +941,16 @@ class _TituloSecao extends StatelessWidget {
 /// (`mensagemNotificacaoMensalidade`), sempre visivel enquanto bloqueado
 /// (nao so no primeiro dia).
 class _AcessoSuspenso extends StatelessWidget {
-  const _AcessoSuspenso();
+  const _AcessoSuspenso({
+    this.mensagem =
+        'Sua mensalidade permanece em atraso. Seu acesso ao '
+        'aplicativo e à academia foi bloqueado até a regularização '
+        'do pagamento.',
+    this.orientacao = 'Procure a recepção para regularizar.',
+  });
+
+  final String mensagem;
+  final String orientacao;
 
   @override
   Widget build(BuildContext context) {
@@ -940,15 +971,13 @@ class _AcessoSuspenso extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Sua mensalidade permanece em atraso. Seu acesso ao '
-              'aplicativo e à academia foi bloqueado até a regularização '
-              'do pagamento.',
+              mensagem,
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textPrimary, height: 1.5),
             ),
             const SizedBox(height: 8),
             Text(
-              'Procure a recepção para regularizar.',
+              orientacao,
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),

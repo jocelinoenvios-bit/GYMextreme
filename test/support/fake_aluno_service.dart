@@ -94,7 +94,66 @@ class FakeAlunoService implements AlunoService {
   final _fichasController = StreamController<List<Aluno>>.broadcast();
 
   @override
-  Stream<Aluno?> watchAluno(String uid) => Stream.value(aluno);
+  Stream<Aluno?> watchAluno(String uid) async* {
+    yield aluno;
+    yield* _alunoController.stream;
+  }
+
+  /// Como o Firestore: a ficha emite de novo quando muda (bloquear,
+  /// inativar, reativar...).
+  final _alunoController = StreamController<Aluno?>.broadcast();
+
+  void _fichaMudou(Aluno novo) {
+    aluno = novo;
+    _alunoController.add(novo);
+  }
+
+  String? ultimoMotivoBloqueio;
+
+  @override
+  Future<void> bloquearAluno(
+    String uid, {
+    required String motivo,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    ultimoMotivoBloqueio = motivo;
+    _fichaMudou(
+      Aluno(
+        uid: uid,
+        ativo: aluno?.ativo ?? true,
+        proximoVencimento: aluno?.proximoVencimento,
+        bloqueado: true,
+        motivoBloqueio: motivo,
+        bloqueadoPorNome: staffNome,
+        bloqueadoEm: DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> desbloquearAluno(String uid, {required String staffUid, required String staffNome}) async {
+    _fichaMudou((aluno ?? Aluno(uid: uid)).copyWith(bloqueado: false));
+  }
+
+  @override
+  Future<void> inativarAluno(
+    String uid, {
+    String? motivo,
+    required String staffUid,
+    required String staffNome,
+  }) async {
+    _fichaMudou(
+      Aluno(
+        uid: uid,
+        ativo: false,
+        proximoVencimento: aluno?.proximoVencimento,
+        dataInativacao: DateTime.now(),
+        motivoInativacao: motivo,
+        inativadoPorNome: staffNome,
+      ),
+    );
+  }
 
   @override
   Stream<Anamnese?> watchAnamnese(String uid) => Stream.value(anamnese);
@@ -290,7 +349,8 @@ class FakeAlunoService implements AlunoService {
   Stream<List<Pagamento>> watchPagamentos(String uid) => Stream.value(const []);
 
   /// Último recebimento feito por [receberMensalidade].
-  ({String uid, double valor, String formaPagamento, DateTime? vencimentoAtual})? ultimoRecebimentoMensalidade;
+  ({String uid, double valor, String formaPagamento, DateTime? vencimentoAtual, bool reativar})?
+  ultimoRecebimentoMensalidade;
 
   /// Se [receberMensalidade] deve dizer que lançou no caixa.
   bool caixaAbertoAoReceber = true;
@@ -304,16 +364,29 @@ class FakeAlunoService implements AlunoService {
     required String staffUid,
     required String staffNome,
     String? alunoNome,
+    bool reativar = false,
   }) async {
     ultimoRecebimentoMensalidade = (
       uid: uid,
       valor: valor,
       formaPagamento: formaPagamento,
       vencimentoAtual: vencimentoAtual,
+      reativar: reativar,
     );
-    final hoje = DateTime.now();
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final novo = adicionarUmMes(reativar ? hoje : (vencimentoAtual ?? hoje));
+    if (reativar || aluno != null) {
+      _fichaMudou(
+        (aluno ?? Aluno(uid: uid)).copyWith(
+          proximoVencimento: novo,
+          ativo: reativar ? true : null,
+          dataReativacao: reativar ? agora : null,
+        ),
+      );
+    }
     return RecebimentoMensalidade(
-      novoVencimento: adicionarUmMes(vencimentoAtual ?? DateTime(hoje.year, hoje.month, hoje.day)),
+      novoVencimento: novo,
       temMatricula: temMatriculaAtivaAoReceber,
       lancadoNoCaixa: caixaAbertoAoReceber,
     );

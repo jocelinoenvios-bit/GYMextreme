@@ -102,13 +102,21 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
     );
   }
 
+  /// Reativar = receber: o aluno só volta a ficar ativo com o pagamento
+  /// registrado (mesmo fluxo do "Receber mensalidade", ciclo a partir de
+  /// hoje).
   Future<void> _reativarAluno() async {
-    await _executar(
-      () => widget.alunoService.reativarAluno(
-        widget.alunoUid,
-        staffUid: widget.staffAtual.uid,
-        staffNome: widget.staffAtual.nome,
-      ),
+    await receberMensalidadeFluxo(
+      context,
+      alunoService: widget.alunoService,
+      alunoUid: widget.alunoUid,
+      alunoNome: widget.alunoNome,
+      proximoVencimento: widget.proximoVencimento,
+      staff: widget.staffAtual,
+      reativar: true,
+      onSalvando: (salvando) {
+        if (mounted) setState(() => _isSaving = salvando);
+      },
     );
   }
 
@@ -243,7 +251,7 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('REATIVAR ALUNO'),
+                    : const Text('REATIVAR E RECEBER'),
               ),
             ),
           ],

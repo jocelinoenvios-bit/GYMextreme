@@ -34,16 +34,17 @@ const _semFrequencia = AppUser(
   permissoes: {Permission.gerenciarAlunos},
 );
 
-Widget _tela(AppUser staff, {Aluno? ficha}) => MaterialApp(
-  theme: AppTheme.dark,
-  home: AlunoDetailScreen(
-    aluno: _ana,
-    alunoService: FakeAlunoService(aluno: ficha),
-    storageService: FakeStorageService(),
-    staffAtual: staff,
-    acessoService: FakeAcessoService(),
-  ),
-);
+Widget _tela(AppUser staff, {Aluno? ficha, FakeAlunoService? service}) =>
+    MaterialApp(
+      theme: AppTheme.dark,
+      home: AlunoDetailScreen(
+        aluno: _ana,
+        alunoService: service ?? FakeAlunoService(aluno: ficha),
+        storageService: FakeStorageService(),
+        staffAtual: staff,
+        acessoService: FakeAcessoService(),
+      ),
+    );
 
 void main() {
   testWidgets('abre no cabeçalho com os cards, sem cair direto em Dados', (
@@ -86,7 +87,13 @@ void main() {
       await tester.tap(find.text('Dados\npessoais'));
       await tester.pumpAndSettle();
       expect(find.byType(DadosTab), findsOneWidget);
-      expect(find.descendant(of: find.byType(AppBar), matching: find.text('Dados pessoais')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Dados pessoais'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Ana Lima'), findsWidgets);
 
       await tester.pageBack();
@@ -124,5 +131,103 @@ void main() {
     await tester.pump();
 
     expect(find.text('Bloqueado · mensalidade vencida'), findsOneWidget);
+  });
+
+  group('Gerenciar acesso', () {
+    Future<void> abrir(WidgetTester tester) async {
+      await tester.tap(find.text('GERENCIAR ACESSO'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('bloquear exige motivo; a ficha mostra bloqueado e o motivo', (
+      tester,
+    ) async {
+      usarViewportGrande(tester);
+      final service = FakeAlunoService(
+        aluno: Aluno(
+          uid: 'ana',
+          proximoVencimento: DateTime.now().add(const Duration(days: 9)),
+        ),
+      );
+      await tester.pumpWidget(_tela(_adm, service: service));
+      await tester.pump();
+      await tester.pump();
+
+      await abrir(tester);
+      await tester.tap(find.text('Bloquear acesso'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('BLOQUEAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('Informe o motivo.'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Motivo'),
+        'Indisciplina',
+      );
+      await tester.tap(find.text('BLOQUEAR'));
+      await tester.pumpAndSettle();
+
+      expect(service.ultimoMotivoBloqueio, 'Indisciplina');
+      expect(find.text('Acesso bloqueado pela recepção'), findsOneWidget);
+      expect(find.textContaining('Motivo: Indisciplina'), findsOneWidget);
+
+      // E desbloqueia.
+      await abrir(tester);
+      await tester.tap(find.text('Desbloquear acesso'));
+      await tester.pumpAndSettle();
+      expect(find.text('Em dia'), findsOneWidget);
+    });
+
+    testWidgets('inativar (motivo opcional) e depois reativar recebendo', (
+      tester,
+    ) async {
+      usarViewportGrande(tester);
+      final service = FakeAlunoService(aluno: const Aluno(uid: 'ana'));
+      await tester.pumpWidget(_tela(_adm, service: service));
+      await tester.pump();
+      await tester.pump();
+
+      await abrir(tester);
+      await tester.tap(find.text('Inativar aluno'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('INATIVAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('Inativo'), findsOneWidget);
+
+      await abrir(tester);
+      expect(find.text('Bloquear acesso'), findsNothing);
+      await tester.tap(find.text('Reativar aluno'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reativar e receber'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor recebido (R\$)'),
+        '80',
+      );
+      await tester.tap(find.text('Dinheiro'));
+      await tester.pump();
+      await tester.tap(find.text('CONFIRMAR'));
+      await tester.pumpAndSettle();
+
+      expect(service.ultimoRecebimentoMensalidade!.reativar, isTrue);
+      expect(find.text('Em dia'), findsOneWidget);
+    });
+
+    testWidgets('sem a permissão de gerenciar alunos, o botão não aparece', (
+      tester,
+    ) async {
+      usarViewportGrande(tester);
+      const semGerenciar = AppUser(
+        uid: 'p',
+        nome: 'Personal',
+        email: 'p@exemplo.com',
+        role: UserRole.funcionario,
+        permissoes: {Permission.criarTreinos},
+      );
+      await tester.pumpWidget(
+        _tela(semGerenciar, ficha: const Aluno(uid: 'ana')),
+      );
+      await tester.pump();
+      expect(find.text('GERENCIAR ACESSO'), findsNothing);
+    });
   });
 }

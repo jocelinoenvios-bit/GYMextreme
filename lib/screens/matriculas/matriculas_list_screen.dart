@@ -7,8 +7,10 @@ import '../../models/plano.dart';
 import '../../services/aluno_service.dart';
 import '../../services/permission_service.dart';
 import '../../services/plano_service.dart';
+import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../alunos/novo_aluno_wizard_screen.dart';
 import 'matricula_form_screen.dart';
 
 const _corAtiva = Color(0xFF4CAF6D);
@@ -16,16 +18,25 @@ const _corAtiva = Color(0xFF4CAF6D);
 /// Tela administrativa "Matrículas" — todas as matrículas de todos os
 /// alunos, com filtro por status/aluno/plano. Criar/renovar/cancelar
 /// exigem `Permission.matriculas`; qualquer staff pode visualizar.
+///
+/// É também daqui que se cadastra aluno novo: os dois botões ficam lado a
+/// lado porque são os dois começos de atendimento na recepção — gente
+/// nova (cadastro) e quem já é aluno renovando ou trocando de plano
+/// (matrícula). O cadastro em si não cria matrícula.
 class MatriculasListScreen extends StatefulWidget {
   const MatriculasListScreen({
     super.key,
     required this.alunoService,
     required this.planoService,
+    required this.storageService,
     required this.staffAtual,
   });
 
   final AlunoService alunoService;
   final PlanoService planoService;
+
+  /// Só pro cadastro de aluno novo, que sobe a foto.
+  final StorageService storageService;
   final AppUser staffAtual;
 
   @override
@@ -38,6 +49,57 @@ class _MatriculasListScreenState extends State<MatriculasListScreen> {
   String? _filtroPlanoId;
 
   bool get _podeGerenciar => PermissionService.has(widget.staffAtual, Permission.matriculas);
+
+  bool get _podeCadastrarAluno =>
+      PermissionService.has(widget.staffAtual, Permission.cadastrarAlunos);
+
+  void _abrirNovoAluno(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NovoAlunoWizardScreen(
+          alunoService: widget.alunoService,
+          storageService: widget.storageService,
+          staffAtual: widget.staffAtual,
+        ),
+      ),
+    );
+  }
+
+  /// Cada botão só aparece pra quem tem a permissão dele — quem só
+  /// cadastra vê só "Novo aluno", e vice-versa.
+  Widget? _buildBotoes(BuildContext context) {
+    final botoes = <Widget>[
+      if (_podeCadastrarAluno)
+        FloatingActionButton.extended(
+          // Dois FABs na mesma tela precisam de heroTags diferentes, ou
+          // a animação de troca de rota quebra.
+          heroTag: 'novo-aluno',
+          onPressed: () => _abrirNovoAluno(context),
+          icon: const Icon(Icons.person_add_outlined),
+          label: const Text('Novo aluno'),
+        ),
+      if (_podeGerenciar)
+        FloatingActionButton.extended(
+          heroTag: 'nova-matricula',
+          onPressed: () => _abrirNovaMatricula(context),
+          icon: const Icon(Icons.add),
+          label: const Text('Nova matrícula'),
+        ),
+    ];
+    if (botoes.isEmpty) return null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          for (var i = 0; i < botoes.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            Expanded(child: botoes[i]),
+          ],
+        ],
+      ),
+    );
+  }
 
   AppUser? _acharAluno(List<AppUser> alunos, String uid) {
     for (final aluno in alunos) {
@@ -123,13 +185,8 @@ class _MatriculasListScreenState extends State<MatriculasListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Matrículas')),
-      floatingActionButton: _podeGerenciar
-          ? FloatingActionButton.extended(
-              onPressed: () => _abrirNovaMatricula(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Nova matrícula'),
-            )
-          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _buildBotoes(context),
       body: StreamBuilder<List<AppUser>>(
         stream: widget.alunoService.watchAlunos(),
         builder: (context, alunosSnapshot) {

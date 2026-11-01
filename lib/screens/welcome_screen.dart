@@ -534,6 +534,7 @@ class WelcomeScreen extends StatelessWidget {
                         builder: (_) => MatriculasListScreen(
                           alunoService: alunoService,
                           planoService: planoService,
+                          storageService: storageService,
                           staffAtual: user,
                         ),
                       ),

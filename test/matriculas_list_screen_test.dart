@@ -5,11 +5,13 @@ import 'package:gymextreme_app/models/matricula.dart';
 import 'package:gymextreme_app/models/permission.dart';
 import 'package:gymextreme_app/models/plano.dart';
 import 'package:gymextreme_app/models/user_role.dart';
+import 'package:gymextreme_app/screens/alunos/novo_aluno_wizard_screen.dart';
 import 'package:gymextreme_app/screens/matriculas/matriculas_list_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_plano_service.dart';
+import 'support/fake_storage_service.dart';
 
 const _adm = AppUser(
   uid: 'adm-1',
@@ -41,6 +43,7 @@ Widget _wrap(FakeAlunoService alunoService, FakePlanoService planoService, AppUs
     home: MatriculasListScreen(
       alunoService: alunoService,
       planoService: planoService,
+      storageService: FakeStorageService(),
       staffAtual: staffAtual,
     ),
   );
@@ -127,10 +130,53 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nova matrícula'), findsNothing);
+      expect(find.text('Novo aluno'), findsNothing);
       expect(find.text('RENOVAR'), findsNothing);
       expect(find.text('CANCELAR'), findsNothing);
     },
   );
+
+  group('botões de novo aluno e nova matrícula', () {
+    testWidgets('ADM vê os dois, lado a lado', (tester) async {
+      await tester.pumpWidget(_wrap(FakeAlunoService(), FakePlanoService(), _adm));
+      await tester.pumpAndSettle();
+
+      final novoAluno = tester.getCenter(find.text('Novo aluno'));
+      final novaMatricula = tester.getCenter(find.text('Nova matrícula'));
+
+      // Mesma linha, aluno à esquerda — e não um sobre o outro.
+      expect(novoAluno.dy, closeTo(novaMatricula.dy, 1));
+      expect(novoAluno.dx, lessThan(novaMatricula.dx));
+    });
+
+    testWidgets('quem só pode cadastrar aluno vê só "Novo aluno"', (tester) async {
+      const recepcaoCadastro = AppUser(
+        uid: 'func-2',
+        nome: 'Recepção Bia',
+        email: 'bia@exemplo.com',
+        role: UserRole.funcionario,
+        permissoes: {Permission.cadastrarAlunos},
+      );
+
+      await tester.pumpWidget(
+        _wrap(FakeAlunoService(), FakePlanoService(), recepcaoCadastro),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Novo aluno'), findsOneWidget);
+      expect(find.text('Nova matrícula'), findsNothing);
+    });
+
+    testWidgets('"Novo aluno" abre o cadastro de aluno', (tester) async {
+      await tester.pumpWidget(_wrap(FakeAlunoService(), FakePlanoService(), _adm));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Novo aluno'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NovoAlunoWizardScreen), findsOneWidget);
+    });
+  });
 
   testWidgets('matricula cancelada nao mostra o botao de cancelar', (tester) async {
     final alunoService = FakeAlunoService(

@@ -7,7 +7,6 @@ import '../../theme/app_colors.dart';
 import '../../utils/status_operacional_aluno.dart';
 import 'aluno_detail_screen.dart';
 import 'alunos_por_filtro_screen.dart';
-import 'novo_aluno_wizard_screen.dart';
 
 /// Hub de "Alunos": busca pelo nome + os 6 grupos (`FiltroStatusAluno`)
 /// como cards quadrados — cada card abre `AlunosPorFiltroScreen` já
@@ -43,19 +42,9 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Alunos')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => NovoAlunoWizardScreen(
-              alunoService: widget.alunoService,
-              storageService: widget.storageService,
-              staffAtual: widget.staffAtual,
-            ),
-          ),
-        ),
-        tooltip: 'Novo aluno',
-        child: const Icon(Icons.person_add_outlined),
-      ),
+      // Sem botão de "novo aluno" aqui de propósito: o cadastro fica na
+      // tela Matrículas, ao lado de "Nova matrícula" (ver
+      // MatriculasListScreen) — os dois começos de atendimento juntos.
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),

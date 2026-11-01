@@ -86,7 +86,12 @@ class FakeAlunoService implements AlunoService {
   }
 
   @override
-  Stream<List<Aluno>> watchTodosAlunos() => Stream.value(fichasAlunos);
+  Stream<List<Aluno>> watchTodosAlunos() async* {
+    yield fichasAlunos;
+    yield* _fichasController.stream;
+  }
+
+  final _fichasController = StreamController<List<Aluno>>.broadcast();
 
   @override
   Stream<Aluno?> watchAluno(String uid) => Stream.value(aluno);
@@ -186,6 +191,24 @@ class FakeAlunoService implements AlunoService {
     );
     ultimaMensagemEnviada = mensagem;
     mensagens = [...mensagens, mensagem];
+  }
+
+  /// Último lote passado a [definirVencimentosEmLote].
+  Map<String, DateTime>? ultimoLoteVencimentos;
+
+  @override
+  Future<void> definirVencimentosEmLote(Map<String, DateTime> vencimentoPorUid) async {
+    ultimoLoteVencimentos = vencimentoPorUid;
+    fichasAlunos = [
+      for (final ficha in fichasAlunos)
+        vencimentoPorUid.containsKey(ficha.uid)
+            ? ficha.copyWith(proximoVencimento: vencimentoPorUid[ficha.uid])
+            : ficha,
+      for (final entrada in vencimentoPorUid.entries)
+        if (!fichasAlunos.any((ficha) => ficha.uid == entrada.key))
+          Aluno(uid: entrada.key, proximoVencimento: entrada.value),
+    ];
+    _fichasController.add(fichasAlunos);
   }
 
   /// Vencimentos pedidos a [garantirLembreteVencimento], na ordem.

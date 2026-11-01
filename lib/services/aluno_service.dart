@@ -398,6 +398,24 @@ class AlunoService {
     }, SetOptions(merge: true));
   }
 
+  /// Define o vencimento de vários alunos de uma vez — usado pra preencher
+  /// os alunos antigos, cadastrados antes do vencimento automático (ver
+  /// `vencimentoParaAlunoAntigo`). Não conta como pagamento recebido.
+  Future<void> definirVencimentosEmLote(Map<String, DateTime> vencimentoPorUid) async {
+    final itens = vencimentoPorUid.entries.toList();
+    // Lote do Firestore aceita no máximo 500 escritas.
+    for (var i = 0; i < itens.length; i += 400) {
+      final lote = _firestore.batch();
+      for (final item in itens.skip(i).take(400)) {
+        lote.set(_alunos.doc(item.key), {
+          'proximoVencimento': Timestamp.fromDate(item.value),
+          'diaVencimento': item.value.day,
+        }, SetOptions(merge: true));
+      }
+      await lote.commit();
+    }
+  }
+
   /// Avança `Aluno.proximoVencimento` em 1 mês a partir de [vencimentoOriginal]
   /// (o vencimento da cobrança que acabou de ser paga) — usado por
   /// [registrarRecebimento] só quando a cobrança recebida está vinculada a

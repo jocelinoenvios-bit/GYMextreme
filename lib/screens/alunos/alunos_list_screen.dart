@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
+import '../../models/permission.dart';
 import '../../services/aluno_service.dart';
+import '../../services/permission_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/premium.dart';
 import '../../utils/status_operacional_aluno.dart';
 import 'aluno_detail_screen.dart';
+import 'aviso_sem_vencimento.dart';
 import 'alunos_por_filtro_screen.dart';
 
 /// Hub de "Alunos": busca pelo nome + os 6 grupos (`FiltroStatusAluno`)
@@ -62,6 +65,11 @@ class _AlunosListScreenState extends State<AlunosListScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              // Alunos antigos, de antes do vencimento automático — só pra
+              // quem pode mexer em mensalidade.
+              if (_busca.isEmpty &&
+                  PermissionService.has(widget.staffAtual, Permission.receberMensalidades))
+                AvisoSemVencimento(alunoService: widget.alunoService),
               Expanded(
                 child: _busca.isEmpty ? _buildGradeFiltros(context) : _buildResultadosBusca(),
               ),

@@ -6,7 +6,6 @@ import '../../../models/app_user.dart';
 import '../../../models/termo_aceite.dart';
 import '../../../services/aluno_service.dart';
 import '../../../theme/app_colors.dart';
-import '../../../widgets/texto_contornado.dart';
 
 /// Replica o "REGULAMENTO" / Termo de Responsabilidade em papel, com
 /// aceite digital no lugar da assinatura manuscrita.
@@ -134,10 +133,9 @@ class _TermoTabState extends State<TermoTab> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           children: [
-            TextoContornado(
+            Text(
               'REGULAMENTO',
-              espessura: 1.6,
-              estilo: TextStyle(
+              style: TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -208,10 +206,9 @@ class _AceiteConfirmado extends StatelessWidget {
             children: [
               Icon(Icons.verified_outlined, color: AppColors.gold),
               SizedBox(width: 8),
-              TextoContornado(
+              Text(
                 'Termo aceito',
-                espessura: 1.6,
-                estilo: TextStyle(
+                style: TextStyle(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,

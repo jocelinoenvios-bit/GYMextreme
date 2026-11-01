@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'app/gymextreme_app.dart';
 import 'dev/emulator_config.dart';
 import 'firebase_options.dart';
-import 'theme/tema_controller.dart';
 
 /// Recebe pushes de mensalidade quando o app está em segundo plano/fechado.
 /// Precisa ser uma função de nível superior (fora de qualquer classe) — o
@@ -38,8 +37,5 @@ Future<void> main() async {
     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
     await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
   }
-  // Antes do runApp pra o app já abrir no tema escolhido, sem piscar o
-  // escuro antes de trocar.
-  final tema = await TemaController.carregarPreferencia();
-  runApp(GymExtremeApp(temaInicial: tema));
+  runApp(const GymExtremeApp());
 }

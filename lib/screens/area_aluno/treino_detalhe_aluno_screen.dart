@@ -4,7 +4,6 @@ import '../../models/exercise_model.dart';
 import '../../models/treino.dart';
 import '../../services/exercise_repository.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/texto_contornado.dart';
 import 'treino_execucao_screen.dart';
 
 /// Ficha completa de UM treino prescrito, somente leitura — nome,
@@ -61,10 +60,9 @@ class TreinoDetalheAlunoScreen extends StatelessWidget {
             if (treino.vigenciaAte != null)
               _LinhaInfo('Válido até', _formatarData(treino.vigenciaAte!)),
             const SizedBox(height: 20),
-            TextoContornado(
+            Text(
               'Exercícios',
-              espessura: 1.6,
-              estilo: TextStyle(
+              style: TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,

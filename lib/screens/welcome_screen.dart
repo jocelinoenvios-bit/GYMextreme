@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/aluno.dart';
@@ -19,9 +21,8 @@ import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/status_acesso.dart';
-import '../theme/tema_controller.dart';
 import '../widgets/gymextreme_logo.dart';
-import '../widgets/texto_contornado.dart';
+import '../widgets/premium.dart';
 import 'alunos/alunos_list_screen.dart';
 import 'alunos/enviar_mensagem_screen.dart';
 import 'area_aluno/meus_dados_aluno_screen.dart';
@@ -86,7 +87,10 @@ class WelcomeScreen extends StatelessWidget {
       stream: userService.watchUser(uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return _scaffoldGenerico(context, const Center(child: CircularProgressIndicator()));
+          return _scaffoldGenerico(
+            context,
+            const Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (snapshot.hasError) {
@@ -135,7 +139,11 @@ class WelcomeScreen extends StatelessWidget {
           );
         }
 
-        return _scaffoldGenerico(context, _buildConteudoPadrao(context, user), user: user);
+        return _scaffoldGenerico(
+          context,
+          _buildConteudoPadrao(context, user),
+          user: user,
+        );
       },
     );
   }
@@ -148,14 +156,24 @@ class WelcomeScreen extends StatelessWidget {
   /// mesmo padrão já usado na tela inicial do aluno. Sem [user] (telas de
   /// carregando/erro/bloqueado), não tem o que mostrar nas configurações
   /// ainda, então a engrenagem fica de fora.
-  Scaffold _scaffoldGenerico(BuildContext context, Widget body, {AppUser? user}) {
+  Scaffold _scaffoldGenerico(
+    BuildContext context,
+    Widget body, {
+    AppUser? user,
+  }) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 64,
         leading: user == null
             ? null
             : IconButton(
                 tooltip: 'Configurações',
-                icon: const Icon(Icons.settings_outlined),
+                icon: const Icon(
+                  Icons.settings_outlined,
+                  color: OuroPremium.texto,
+                  size: 28,
+                  shadows: [Shadow(color: Color(0x80FFC72C), blurRadius: 8)],
+                ),
                 onPressed: () => _abrirConfiguracoes(context, user),
               ),
         title: const GymExtremeLogo(compact: true),
@@ -163,7 +181,12 @@ class WelcomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Sair',
-            icon: const Icon(Icons.logout),
+            icon: const Icon(
+              Icons.logout,
+              color: OuroPremium.texto,
+              size: 28,
+              shadows: [Shadow(color: Color(0x80FFC72C), blurRadius: 8)],
+            ),
             onPressed: () => _sair(),
           ),
         ],
@@ -180,171 +203,183 @@ class WelcomeScreen extends StatelessWidget {
     await authService.signOut();
   }
 
-  /// Tela inicial redesenhada do aluno: foto grande no canto superior
-  /// esquerdo da AppBar, saudação com o nome completo, os 2 atalhos
-  /// principais (Biblioteca/Meus treinos) e as funções que antes ficavam
-  /// escondidas atrás de "Meu Perfil" agora como ícones quadrados, estilo
-  /// menu de celular. Nome/e-mail e "Sair" saem da tela principal e vão
-  /// pra dentro do botão de engrenagem (canto inferior direito).
+  /// Tela inicial do aluno, no visual premium: foto com aro dourado no
+  /// canto superior esquerdo, halter dourado de destaque, saudação com o
+  /// nome, os 2 atalhos principais em botões dourados e as funções do
+  /// perfil em cards. Nome/e-mail e "Sair" ficam na engrenagem (canto
+  /// inferior direito).
   Widget _buildHomeAluno(BuildContext context, AppUser user, Aluno? aluno) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
-          child: _AvatarAluno(nome: user.nome, fotoUrl: aluno?.fotoUrl, raio: 20),
+          child: Center(
+            child: _AvatarAluno(
+              nome: user.nome,
+              fotoUrl: aluno?.fotoUrl,
+              raio: 21,
+            ),
+          ),
         ),
-        leadingWidth: 56,
+        leadingWidth: 68,
         title: const GymExtremeLogo(compact: true),
         centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Configurações',
-        backgroundColor: AppColors.gold,
-        foregroundColor: AppColors.black,
-        onPressed: () => _abrirConfiguracoes(context, user),
-        child: const Icon(Icons.settings_outlined),
+      floatingActionButton: _EngrenagemOuro(
+        onTap: () => _abrirConfiguracoes(context, user),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Column(
-                children: [
-                  Icon(_iconFor(user.role), color: AppColors.gold, size: 48),
-                  const SizedBox(height: 14),
-                  TextoContornado(
-                    'Bem-vindo, ${user.nome}',
-                    textAlign: TextAlign.center,
-                    estilo:
-                        Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.bold,
-                        ) ??
-                        const TextStyle(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ExerciciosListScreen()),
-                ),
-                icon: const Icon(Icons.fitness_center_outlined),
-                label: const Text('BIBLIOTECA DE EXERCÍCIOS'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MeusTreinosScreen(uid: uid, alunoService: alunoService),
-                  ),
-                ),
-                icon: const Icon(Icons.assignment_outlined),
-                label: const Text('MEUS TREINOS'),
-              ),
-              const SizedBox(height: 28),
-              TextoContornado(
-                'MEU PERFIL',
-                espessura: 1.4,
-                estilo: TextStyle(
-                  color: AppColors.gold,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const SizedBox(height: 14),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 3,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.85,
-                children: [
-                  _TileMenuPerfil(
-                    icone: Icons.badge_outlined,
-                    rotulo: 'Dados\npessoais',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MeusDadosAlunoScreen(
-                          usuario: user,
-                          uid: uid,
-                          alunoService: alunoService,
+        child: Stack(
+          children: [
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: FaixaDouradaRodape(altura: 190),
+            ),
+            Positioned.fill(
+              child: SingleChildScrollView(
+                // Espaço embaixo pra engrenagem não cobrir o último card.
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const DestaquePremium(
+                      desenho: Desenhos.halter,
+                      largura: 214,
+                      altura: 120,
+                    ),
+                    SaudacaoPremium(nome: user.nome, tamanho: 27),
+                    const SizedBox(height: 20),
+                    BotaoOuro(
+                      icone: Icons.fitness_center,
+                      giroIcone: -math.pi / 4,
+                      rotulo: 'BIBLIOTECA DE EXERCÍCIOS',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ExerciciosListScreen(),
                         ),
                       ),
                     ),
-                  ),
-                  _TileMenuPerfil(
-                    icone: Icons.calendar_view_week_outlined,
-                    rotulo: 'Minha\nficha',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MinhaFichaScreen(uid: uid, alunoService: alunoService),
+                    const SizedBox(height: 12),
+                    BotaoOuro(
+                      icone: Icons.trending_up,
+                      rotulo: 'MEUS TREINOS',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MeusTreinosScreen(
+                            uid: uid,
+                            alunoService: alunoService,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  _TileMenuPerfil(
-                    icone: Icons.straighten_outlined,
-                    rotulo: 'Minhas\nmedidas',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            MinhasMedidasScreen(uid: uid, alunoService: alunoService),
-                      ),
-                    ),
-                  ),
-                  _TileMenuPerfil(
-                    icone: Icons.assignment_outlined,
-                    rotulo: 'Minha\nanamnese',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            MinhaAnamneseScreen(uid: uid, alunoService: alunoService),
-                      ),
-                    ),
-                  ),
-                  _TileMenuPerfil(
-                    icone: Icons.show_chart_outlined,
-                    rotulo: 'Minha\nevolução',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            MinhaEvolucaoScreen(uid: uid, alunoService: alunoService),
-                      ),
-                    ),
-                  ),
-                  // Reaproveita o mesmo stream que a tela de mensagens
-                  // usa, em vez de uma consulta só de contagem: o volume
-                  // de avisos por aluno é pequeno e assim o selo zera
-                  // junto com a leitura, sem um segundo listener.
-                  StreamBuilder<List<Mensagem>>(
-                    stream: alunoService.watchMensagens(uid),
-                    builder: (context, snapshot) {
-                      final naoLidas = (snapshot.data ?? const <Mensagem>[])
-                          .where((mensagem) => !mensagem.lida)
-                          .length;
-                      return _TileMenuPerfil(
-                        icone: Icons.chat_bubble_outline,
-                        rotulo: 'Mensagens',
-                        naoLidas: naoLidas,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => MensagensScreen(
-                              uid: uid,
-                              alunoService: alunoService,
+                    const SizedBox(height: 24),
+                    const _TituloSecao('MEU PERFIL'),
+                    const SizedBox(height: 14),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.94,
+                      children: [
+                        CardPremium(
+                          desenho: Desenhos.cartao,
+                          rotulo: 'Dados\npessoais',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => MeusDadosAlunoScreen(
+                                usuario: user,
+                                uid: uid,
+                                alunoService: alunoService,
+                              ),
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                        CardPremium(
+                          desenho: Desenhos.ficha,
+                          rotulo: 'Minha\nficha',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => MinhaFichaScreen(
+                                uid: uid,
+                                alunoService: alunoService,
+                              ),
+                            ),
+                          ),
+                        ),
+                        CardPremium(
+                          desenho: Desenhos.medidas,
+                          rotulo: 'Minhas\nmedidas',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => MinhasMedidasScreen(
+                                uid: uid,
+                                alunoService: alunoService,
+                              ),
+                            ),
+                          ),
+                        ),
+                        CardPremium(
+                          desenho: Desenhos.anamnese,
+                          rotulo: 'Minha\nanamnese',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => MinhaAnamneseScreen(
+                                uid: uid,
+                                alunoService: alunoService,
+                              ),
+                            ),
+                          ),
+                        ),
+                        CardPremium(
+                          desenho: Desenhos.evolucao,
+                          rotulo: 'Minha\nevolução',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => MinhaEvolucaoScreen(
+                                uid: uid,
+                                alunoService: alunoService,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Reaproveita o mesmo stream que a tela de mensagens
+                        // usa, em vez de uma consulta só de contagem: o
+                        // volume de avisos por aluno é pequeno e assim o selo
+                        // zera junto com a leitura, sem um segundo listener.
+                        StreamBuilder<List<Mensagem>>(
+                          stream: alunoService.watchMensagens(uid),
+                          builder: (context, snapshot) {
+                            final naoLidas =
+                                (snapshot.data ?? const <Mensagem>[])
+                                    .where((mensagem) => !mensagem.lida)
+                                    .length;
+                            return CardPremium(
+                              desenho: Desenhos.mensagens,
+                              rotulo: 'Mensagens',
+                              naoLidas: naoLidas,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => MensagensScreen(
+                                    uid: uid,
+                                    alunoService: alunoService,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -353,11 +388,6 @@ class WelcomeScreen extends StatelessWidget {
   /// Painel de configurações (nome completo, e-mail, sair) — aberto pelo
   /// botão de engrenagem da tela inicial do aluno.
   void _abrirConfiguracoes(BuildContext context, AppUser user) {
-    // Pego aqui, e não lá dentro: o `builder` roda numa rota nova, e
-    // assim o seletor de tema some sozinho num teste que monte a tela
-    // sem o app em volta (onde não existe TemaEscopo).
-    final temaController = TemaEscopo.of(context);
-
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -372,10 +402,9 @@ class WelcomeScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextoContornado(
+                Text(
                   'Configurações',
-                  espessura: 1.6,
-                  estilo: TextStyle(
+                  style: TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -391,31 +420,10 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(user.email, style: TextStyle(color: AppColors.textSecondary)),
-                if (temaController != null) ...[
-                  const SizedBox(height: 24),
-                  Divider(color: AppColors.surfaceHigh, height: 1),
-                  const SizedBox(height: 20),
-                  Text(
-                    'APARÊNCIA',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _SeletorTema(
-                    controller: temaController,
-                    // Fecha o painel junto: o próprio painel foi montado
-                    // com as cores do tema antigo (o fundo dele vem de um
-                    // parâmetro do showModalBottomSheet, não reconstrói),
-                    // e fechando o usuário já vê a tela inteira no tema
-                    // novo.
-                    aoTrocar: () => Navigator.of(sheetContext).pop(),
-                  ),
-                ],
+                Text(
+                  user.email,
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -425,7 +433,10 @@ class WelcomeScreen extends StatelessWidget {
                       _sair();
                     },
                     icon: Icon(Icons.logout, color: AppColors.error),
-                    label: Text('SAIR', style: TextStyle(color: AppColors.error)),
+                    label: Text(
+                      'SAIR',
+                      style: TextStyle(color: AppColors.error),
+                    ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppColors.error),
                     ),
@@ -439,209 +450,228 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
+  /// Tela inicial do staff (ADM, Personal e Funcionário), no visual
+  /// premium: escudo dourado de destaque, saudação e um card por módulo —
+  /// cada card só aparece pra quem tem a permissão daquele módulo.
   Widget _buildConteudoPadrao(BuildContext context, AppUser user) {
-    // SingleChildScrollView (em vez de Center) porque a lista de botões
-    // varia com as permissões do usuário — um ADM com todas as permissões
-    // tem 9 botões, que não cabem na tela em muitos aparelhos. Sem
-    // rolagem aqui, o conteúdo mais embaixo (ex.: "GERENCIAR
-    // FUNCIONÁRIOS") ficava cortado ou disparava overflow.
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(_iconFor(user.role), color: AppColors.gold, size: 56),
-            const SizedBox(height: 16),
-            TextoContornado(
-              'Bem-vindo, ${user.role.welcomeLabel}',
-              textAlign: TextAlign.center,
-              estilo:
-                  Theme.of(context).textTheme.headlineMedium ??
-                  const TextStyle(),
-            ),
-            const SizedBox(height: 28),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.85,
+    return Stack(
+      children: [
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: FaixaDouradaRodape(),
+        ),
+        // Rolável porque a quantidade de cards varia com as permissões —
+        // um ADM com tudo liberado não cabe inteiro em muitos aparelhos.
+        Positioned.fill(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            child: Column(
               children: [
-                if (PermissionService.has(user, Permission.relatorios))
-                  _TileMenuPerfil(
-                    icone: Icons.dashboard_outlined,
-                    rotulo: 'Painel e\nrelatórios',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => DashboardScreen(
-                          alunoService: alunoService,
-                          caixaService: caixaService,
-                          contaPagarService: contaPagarService,
-                          produtoService: produtoService,
-                          staffAtual: user,
+                const DestaquePremium(
+                  desenho: Desenhos.escudo,
+                  largura: 112,
+                  altura: 112,
+                  comSilhuetas: true,
+                ),
+                const SizedBox(height: 6),
+                SaudacaoPremium(
+                  nome: user.role.welcomeLabel,
+                  tamanho: 31,
+                  nomeItalico: true,
+                ),
+                const SizedBox(height: 22),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  children: [
+                    if (PermissionService.has(user, Permission.relatorios))
+                      CardPremium(
+                        desenho: Desenhos.painel,
+                        rotulo: 'Painel e\nrelatórios',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => DashboardScreen(
+                              alunoService: alunoService,
+                              caixaService: caixaService,
+                              contaPagarService: contaPagarService,
+                              produtoService: produtoService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.gerenciarAlunos))
-                  _TileMenuPerfil(
-                    icone: Icons.groups_outlined,
-                    rotulo: 'Gerenciar\nalunos',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => AlunosListScreen(
-                          alunoService: alunoService,
-                          storageService: storageService,
-                          staffAtual: user,
+                    if (PermissionService.has(user, Permission.gerenciarAlunos))
+                      CardPremium(
+                        desenho: Desenhos.alunos,
+                        rotulo: 'Gerenciar\nalunos',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => AlunosListScreen(
+                              alunoService: alunoService,
+                              storageService: storageService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.chat))
-                  _TileMenuPerfil(
-                    icone: Icons.send_outlined,
-                    rotulo: 'Enviar\nmensagem',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => EnviarMensagemScreen(
-                          alunoService: alunoService,
-                          staffAtual: user,
+                    if (PermissionService.has(user, Permission.chat))
+                      CardPremium(
+                        desenho: Desenhos.enviarMensagem,
+                        rotulo: 'Enviar\nmensagem',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => EnviarMensagemScreen(
+                              alunoService: alunoService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.acessarPlanos))
-                  _TileMenuPerfil(
-                    icone: Icons.card_membership_outlined,
-                    rotulo: 'Planos',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => PlanosListScreen(
-                          planoService: planoService,
-                          staffAtual: user,
+                    if (PermissionService.has(user, Permission.acessarPlanos))
+                      CardPremium(
+                        desenho: Desenhos.planos,
+                        rotulo: 'Planos',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PlanosListScreen(
+                              planoService: planoService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.matriculas))
-                  _TileMenuPerfil(
-                    icone: Icons.assignment_ind_outlined,
-                    rotulo: 'Matrículas',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MatriculasListScreen(
-                          alunoService: alunoService,
-                          planoService: planoService,
-                          storageService: storageService,
-                          staffAtual: user,
+                    if (PermissionService.has(user, Permission.matriculas))
+                      CardPremium(
+                        desenho: Desenhos.cartao,
+                        rotulo: 'Matrículas',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MatriculasListScreen(
+                              alunoService: alunoService,
+                              planoService: planoService,
+                              storageService: storageService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.acessarContasReceber))
-                  _TileMenuPerfil(
-                    icone: Icons.receipt_long_outlined,
-                    rotulo: 'Contas a\nreceber',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ContasReceberListScreen(
-                          alunoService: alunoService,
-                          caixaService: caixaService,
-                          staffAtual: user,
+                    if (PermissionService.has(
+                      user,
+                      Permission.acessarContasReceber,
+                    ))
+                      CardPremium(
+                        desenho: Desenhos.contasReceber,
+                        rotulo: 'Contas a\nreceber',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ContasReceberListScreen(
+                              alunoService: alunoService,
+                              caixaService: caixaService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.acessarControleCaixa))
-                  _TileMenuPerfil(
-                    icone: Icons.point_of_sale_outlined,
-                    rotulo: 'Controle de\ncaixa',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => CaixaScreen(
-                          caixaService: caixaService,
-                          staffAtual: user,
+                    if (PermissionService.has(
+                      user,
+                      Permission.acessarControleCaixa,
+                    ))
+                      CardPremium(
+                        desenho: Desenhos.caixa,
+                        rotulo: 'Controle de\ncaixa',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => CaixaScreen(
+                              caixaService: caixaService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.acessarContasPagar))
-                  _TileMenuPerfil(
-                    icone: Icons.request_quote_outlined,
-                    rotulo: 'Contas a\npagar',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ContasPagarListScreen(
-                          contaPagarService: contaPagarService,
-                          caixaService: caixaService,
-                          staffAtual: user,
+                    if (PermissionService.has(
+                      user,
+                      Permission.acessarContasPagar,
+                    ))
+                      CardPremium(
+                        desenho: Desenhos.contasPagar,
+                        rotulo: 'Contas a\npagar',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ContasPagarListScreen(
+                              contaPagarService: contaPagarService,
+                              caixaService: caixaService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.acessarProdutos))
-                  _TileMenuPerfil(
-                    icone: Icons.inventory_2_outlined,
-                    rotulo: 'Produtos',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ProdutosListScreen(
-                          produtoService: produtoService,
-                          staffAtual: user,
+                    if (PermissionService.has(user, Permission.acessarProdutos))
+                      CardPremium(
+                        desenho: Desenhos.produtos,
+                        rotulo: 'Produtos',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ProdutosListScreen(
+                              produtoService: produtoService,
+                              staffAtual: user,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.bibliotecaExercicios))
-                  _TileMenuPerfil(
-                    icone: Icons.fitness_center_outlined,
-                    rotulo: 'Biblioteca de\nexercícios',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ExerciciosListScreen()),
-                    ),
-                  ),
-                if (PermissionService.has(user, Permission.gerenciarFuncionarios))
-                  _TileMenuPerfil(
-                    icone: Icons.badge_outlined,
-                    rotulo: 'Gerenciar\nfuncionários',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => FuncionariosListScreen(
-                          funcionarioService: funcionarioService,
-                          cargoService: cargoService,
+                    if (PermissionService.has(
+                      user,
+                      Permission.bibliotecaExercicios,
+                    ))
+                      CardPremium(
+                        desenho: Desenhos.biblioteca,
+                        rotulo: 'Biblioteca de\nexercícios',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ExerciciosListScreen(),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    if (PermissionService.has(
+                      user,
+                      Permission.gerenciarFuncionarios,
+                    ))
+                      CardPremium(
+                        desenho: Desenhos.funcionarios,
+                        rotulo: 'Gerenciar\nfuncionários',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => FuncionariosListScreen(
+                              funcionarioService: funcionarioService,
+                              cargoService: cargoService,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
-  }
-
-  IconData _iconFor(UserRole role) {
-    switch (role) {
-      case UserRole.adm:
-        return Icons.admin_panel_settings_outlined;
-      case UserRole.personal:
-        return Icons.sports_gymnastics_outlined;
-      case UserRole.funcionario:
-        return Icons.badge_outlined;
-      case UserRole.aluno:
-        return Icons.fitness_center_outlined;
-    }
   }
 }
 
 /// Foto do aluno (ou círculo com a inicial do nome, se não tiver foto
-/// cadastrada) — usada no canto superior esquerdo da AppBar da tela
+/// cadastrada), com aro dourado — canto superior esquerdo da tela
 /// inicial do aluno.
 class _AvatarAluno extends StatelessWidget {
-  const _AvatarAluno({required this.nome, required this.fotoUrl, required this.raio});
+  const _AvatarAluno({
+    required this.nome,
+    required this.fotoUrl,
+    required this.raio,
+  });
 
   final String nome;
   final String? fotoUrl;
@@ -650,108 +680,105 @@ class _AvatarAluno extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inicial = nome.trim().isEmpty ? '?' : nome.trim()[0].toUpperCase();
-    return CircleAvatar(
-      radius: raio,
-      backgroundColor: AppColors.surfaceHigh,
-      backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl!) : null,
-      child: fotoUrl == null
-          ? Text(
-              inicial,
-              style: TextStyle(
-                color: AppColors.gold,
-                fontWeight: FontWeight.bold,
-                fontSize: raio * 0.8,
-              ),
-            )
-          : null,
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFC9941A), width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x59FFBE28), blurRadius: 12)],
+      ),
+      child: CircleAvatar(
+        radius: raio,
+        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl!) : null,
+        child: fotoUrl == null
+            ? Text(
+                inicial,
+                style: TextStyle(
+                  color: OuroPremium.texto,
+                  fontWeight: FontWeight.bold,
+                  fontSize: raio * 0.95,
+                ),
+              )
+            : null,
+      ),
     );
   }
 }
 
-/// Um ícone quadrado de cantos arredondados + rótulo — estilo menu de
-/// celular, substitui o antigo card único "MEU PERFIL" (ver
-/// `MeuPerfilScreen`, cujos 5 destinos agora são acessados direto daqui).
-class _TileMenuPerfil extends StatelessWidget {
-  const _TileMenuPerfil({
-    required this.icone,
-    required this.rotulo,
-    required this.onTap,
-    this.naoLidas = 0,
-  });
+/// Botão redondo dourado da engrenagem de configurações do aluno.
+class _EngrenagemOuro extends StatelessWidget {
+  const _EngrenagemOuro({required this.onTap});
 
-  final IconData icone;
-  final String rotulo;
   final VoidCallback onTap;
-
-  /// Quantidade no selo do canto. Zero esconde o selo.
-  final int naoLidas;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Column(
-        children: [
-          // Expanded (não AspectRatio) de propósito: a célula do
-          // GridView tem altura FIXA (childAspectRatio), então insistir
-          // num quadrado perfeito baseado na largura da célula podia
-          // sobrar pouco espaço pra legenda de 2 linhas e estourar por
-          // baixo (bug real, visto em aparelho físico) — Expanded
-          // sempre ocupa só o espaço que sobra depois da legenda, nunca
-          // estoura, não importa o tamanho da tela ou da fonte.
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceHigh,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Icon(icone, color: AppColors.gold, size: 26),
+    return Container(
+      width: 62,
+      height: 62,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: Color(0x8CFFBE28), blurRadius: 22)],
+      ),
+      child: Material(
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        color: Colors.transparent,
+        child: Ink(
+          decoration: const BoxDecoration(gradient: OuroPremium.degrade),
+          child: InkWell(
+            onTap: onTap,
+            child: const Tooltip(
+              message: 'Configurações',
+              child: Center(
+                child: Icon(
+                  Icons.settings_outlined,
+                  color: OuroPremium.tinta,
+                  size: 30,
                 ),
-                if (naoLidas > 0)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 18),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: AppColors.surfaceHigh, width: 2),
-                      ),
-                      child: Text(
-                        naoLidas > 9 ? '9+' : '$naoLidas',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            rotulo,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 11.5, height: 1.2),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+}
+
+/// Título de seção em dourado com uma linha que some à direita.
+class _TituloSecao extends StatelessWidget {
+  const _TituloSecao(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          texto,
+          style: const TextStyle(
+            color: OuroPremium.texto,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: SizedBox(
+            height: 1.5,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFC9941A), Color(0x00C9941A)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -795,168 +822,6 @@ class _AcessoSuspenso extends StatelessWidget {
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// As duas opções de tema, cada uma com uma miniatura da tela — mais
-/// direto que um interruptor "modo escuro", que não diz como o claro vai
-/// ficar.
-class _SeletorTema extends StatelessWidget {
-  const _SeletorTema({required this.controller, required this.aoTrocar});
-
-  final TemaController controller;
-  final VoidCallback aoTrocar;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _OpcaoTema(
-            rotulo: 'Escuro',
-            icone: Icons.dark_mode_outlined,
-            tema: TemaApp.escuro,
-            selecionado: controller.tema == TemaApp.escuro,
-            fundoMiniatura: PaletaApp.escura.black,
-            traco: PaletaApp.escura.surfaceHigh,
-            controller: controller,
-            aoTrocar: aoTrocar,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _OpcaoTema(
-            rotulo: 'Claro',
-            icone: Icons.light_mode_outlined,
-            tema: TemaApp.claro,
-            selecionado: controller.tema == TemaApp.claro,
-            fundoMiniatura: PaletaApp.clara.black,
-            traco: PaletaApp.clara.surfaceHigh,
-            controller: controller,
-            aoTrocar: aoTrocar,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _OpcaoTema extends StatelessWidget {
-  const _OpcaoTema({
-    required this.rotulo,
-    required this.icone,
-    required this.tema,
-    required this.selecionado,
-    required this.fundoMiniatura,
-    required this.traco,
-    required this.controller,
-    required this.aoTrocar,
-  });
-
-  final String rotulo;
-  final IconData icone;
-  final TemaApp tema;
-  final bool selecionado;
-
-  /// Cores fixas da paleta que a opção representa, não da paleta ativa —
-  /// é uma amostra do tema, tem que se parecer com ele mesmo quando o
-  /// outro está ligado.
-  final Color fundoMiniatura;
-  final Color traco;
-
-  final TemaController controller;
-  final VoidCallback aoTrocar;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: selecionado
-          ? null
-          : () {
-              aoTrocar();
-              controller.trocar(tema);
-            },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selecionado ? AppColors.gold : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: fundoMiniatura,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _LinhaMiniatura(cor: AppColors.gold, largura: 0.6),
-                  const SizedBox(height: 5),
-                  _LinhaMiniatura(cor: traco, largura: 0.95),
-                  const SizedBox(height: 4),
-                  _LinhaMiniatura(cor: traco, largura: 0.75),
-                ],
-              ),
-            ),
-            const SizedBox(height: 9),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icone,
-                  size: 15,
-                  color: selecionado ? AppColors.gold : AppColors.textSecondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  rotulo,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selecionado
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LinhaMiniatura extends StatelessWidget {
-  const _LinhaMiniatura({required this.cor, required this.largura});
-
-  final Color cor;
-
-  /// Fração da largura disponível, pra miniatura parecer um texto.
-  final double largura;
-
-  @override
-  Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      widthFactor: largura,
-      child: Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: cor,
-          borderRadius: BorderRadius.circular(99),
         ),
       ),
     );

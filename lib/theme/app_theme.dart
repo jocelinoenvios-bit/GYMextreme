@@ -2,78 +2,68 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Tema visual do GymExtreme: detalhes em dourado sobre fundo preto
-/// (tema escuro) ou sobre fundo claro (tema claro). Os dois saem da
-/// mesma montagem — só muda a paleta, ver [PaletaApp].
+/// Tema visual do GymExtreme: fundo preto com detalhes em dourado.
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get dark => _montar(PaletaApp.escura);
-
-  static ThemeData get light => _montar(PaletaApp.clara);
-
-  static ThemeData de(TemaApp tema) => _montar(PaletaApp.de(tema));
-
-  /// Lê as cores da [paleta] recebida, e não de [AppColors], pra poder
-  /// montar um tema sem depender de qual está ativo no momento.
-  static ThemeData _montar(PaletaApp paleta) {
+  static ThemeData get dark {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: paleta.gold,
-      brightness: paleta.brilho,
-      primary: paleta.gold,
-      onPrimary: const Color(0xFF0A0A0A),
-      secondary: paleta.goldBright,
-      onSecondary: const Color(0xFF0A0A0A),
-      surface: paleta.surface,
-      onSurface: paleta.textPrimary,
-      error: paleta.error,
+      seedColor: AppColors.gold,
+      brightness: Brightness.dark,
+      primary: AppColors.gold,
+      onPrimary: AppColors.black,
+      secondary: AppColors.goldBright,
+      onSecondary: AppColors.black,
+      surface: AppColors.surface,
+      onSurface: AppColors.textPrimary,
+      error: AppColors.error,
     );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: paleta.brilho,
+      brightness: Brightness.dark,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: paleta.black,
-      appBarTheme: AppBarTheme(
-        backgroundColor: paleta.black,
-        foregroundColor: paleta.gold,
+      scaffoldBackgroundColor: AppColors.black,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.black,
+        foregroundColor: AppColors.gold,
         elevation: 0,
         centerTitle: true,
       ),
-      textTheme: TextTheme(
+      textTheme: const TextTheme(
         headlineMedium: TextStyle(
-          color: paleta.gold,
+          color: AppColors.gold,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.2,
         ),
-        titleLarge: TextStyle(color: paleta.textPrimary),
-        bodyMedium: TextStyle(color: paleta.textSecondary),
+        titleLarge: TextStyle(color: AppColors.textPrimary),
+        bodyMedium: TextStyle(color: AppColors.textSecondary),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: paleta.surface,
-        labelStyle: TextStyle(color: paleta.textSecondary),
+        fillColor: AppColors.surface,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: paleta.surfaceHigh),
+          borderSide: const BorderSide(color: AppColors.surfaceHigh),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: paleta.gold, width: 2),
+          borderSide: const BorderSide(color: AppColors.gold, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: paleta.error, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: paleta.gold,
-          foregroundColor: const Color(0xFF0A0A0A),
+          backgroundColor: AppColors.gold,
+          foregroundColor: AppColors.black,
           minimumSize: const Size.fromHeight(50),
           textStyle: const TextStyle(
             fontWeight: FontWeight.bold,
@@ -86,14 +76,16 @@ class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: paleta.goldBright),
+        style: TextButton.styleFrom(foregroundColor: AppColors.goldBright),
       ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: paleta.surfaceHigh,
-        contentTextStyle: TextStyle(color: paleta.textPrimary),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: AppColors.surfaceHigh,
+        contentTextStyle: TextStyle(color: AppColors.textPrimary),
         behavior: SnackBarBehavior.floating,
       ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(color: paleta.gold),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.gold,
+      ),
     );
   }
 }

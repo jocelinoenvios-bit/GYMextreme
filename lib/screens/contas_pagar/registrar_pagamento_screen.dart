@@ -9,6 +9,7 @@ import '../../services/caixa_service.dart';
 import '../../services/conta_pagar_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/campo_forma_pagamento.dart';
 
 /// Registra o pagamento de uma despesa — valor pago, desconto, juros/multa,
 /// forma de pagamento, data e observação. Não apaga nada: a própria
@@ -232,12 +233,9 @@ class _RegistrarPagamentoScreenState extends State<RegistrarPagamentoScreen> {
                   onTap: _escolherData,
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
+                CampoFormaPagamento(
                   controller: _formaPagamentoController,
-                  decoration: const InputDecoration(labelText: 'Forma de pagamento'),
-                  validator: (value) => (value == null || value.trim().isEmpty)
-                      ? 'Informe a forma de pagamento.'
-                      : null,
+                  obrigatorio: true,
                 ),
                 const SizedBox(height: 14),
                 TextFormField(

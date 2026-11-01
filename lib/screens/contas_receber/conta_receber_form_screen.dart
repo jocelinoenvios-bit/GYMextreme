@@ -6,6 +6,7 @@ import '../../models/matricula.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/campo_forma_pagamento.dart';
 
 /// Cria uma cobrança nova ou edita uma existente (passe [conta] para
 /// entrar no modo edição). [alunoPreSelecionado] é sempre obrigatório —
@@ -305,10 +306,9 @@ class _ContaReceberFormScreenState extends State<ContaReceberFormScreen> {
                   onTap: _podeEditar ? _escolherVencimento : null,
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
+                CampoFormaPagamento(
                   controller: _formaPagamentoController,
                   enabled: _podeEditar,
-                  decoration: const InputDecoration(labelText: 'Forma de pagamento (opcional)'),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(

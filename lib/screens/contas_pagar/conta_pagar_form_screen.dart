@@ -5,6 +5,7 @@ import '../../models/conta_pagar.dart';
 import '../../services/conta_pagar_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/campo_forma_pagamento.dart';
 
 /// Cria uma despesa nova ou edita uma existente (passe [conta] para entrar
 /// no modo edição) — mesmo padrão de `ContaReceberFormScreen`, sem a
@@ -234,10 +235,9 @@ class _ContaPagarFormScreenState extends State<ContaPagarFormScreen> {
                   onTap: _podeEditar ? _escolherVencimento : null,
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
+                CampoFormaPagamento(
                   controller: _formaPagamentoController,
                   enabled: _podeEditar,
-                  decoration: const InputDecoration(labelText: 'Forma de pagamento (opcional)'),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(

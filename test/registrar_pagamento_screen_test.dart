@@ -80,7 +80,7 @@ void main() {
     await _tocar(tester, find.text('CONFIRMAR PAGAMENTO'));
     await tester.pump();
 
-    expect(find.text('Informe a forma de pagamento.'), findsOneWidget);
+    expect(find.text('Escolha a forma de pagamento.'), findsOneWidget);
     expect(service.ultimaContaPagaId, isNull);
   });
 
@@ -100,10 +100,8 @@ void main() {
       await tester.pumpWidget(_wrap(service, conta));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Forma de pagamento'),
-        'PIX',
-      );
+      await _tocar(tester, find.text('Pix'));
+      await tester.pump();
       await _tocar(tester, find.text('CONFIRMAR PAGAMENTO'));
       await tester.pump();
 
@@ -138,10 +136,8 @@ void main() {
       await tester.pumpWidget(_wrap(service, conta, caixaService: caixaService));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Forma de pagamento'),
-        'PIX',
-      );
+      await _tocar(tester, find.text('Pix'));
+      await tester.pump();
       await _tocar(tester, find.text('CONFIRMAR PAGAMENTO'));
       await tester.pump();
 
@@ -170,10 +166,8 @@ void main() {
     await tester.pumpWidget(_wrap(service, conta));
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Forma de pagamento'),
-      'PIX',
-    );
+    await _tocar(tester, find.text('Pix'));
+    await tester.pump();
     await _tocar(tester, find.text('CONFIRMAR PAGAMENTO'));
     await tester.pump();
 

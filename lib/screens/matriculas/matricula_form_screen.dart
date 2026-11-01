@@ -7,6 +7,7 @@ import '../../services/plano_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
 import '../../widgets/escolher_aluno.dart';
+import '../../widgets/campo_forma_pagamento.dart';
 
 /// Cria uma matrícula nova. Também usada pro fluxo de "renovar" — nesse
 /// caso o chamador já resolveu o aluno/plano/valor atuais (a lista de
@@ -306,12 +307,7 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                   },
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
-                  controller: _formaPagamentoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Forma de pagamento (opcional)',
-                  ),
-                ),
+                CampoFormaPagamento(controller: _formaPagamentoController),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _observacaoController,

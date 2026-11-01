@@ -27,6 +27,19 @@ Future<void> _tocar(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
 }
 
+/// Como o Firestore de verdade: cada leitura devolve objetos Plano NOVOS,
+/// e não os mesmos de antes. O FakePlanoService comum devolve sempre a
+/// mesma instância, e com ele o bug do dropdown de plano nunca aparecia.
+class _PlanoServiceComInstanciasNovas extends FakePlanoService {
+  _PlanoServiceComInstanciasNovas() : super(planos: const [_planoMensal]);
+
+  @override
+  Stream<List<Plano>> watchPlanos() => Stream.value([
+        for (final p in planos)
+          Plano(id: p.id, nome: p.nome, valor: p.valor, duracaoDias: p.duracaoDias),
+      ]);
+}
+
 Widget _wrap(
   FakeAlunoService alunoService,
   FakePlanoService planoService, {
@@ -59,7 +72,7 @@ void main() {
     await tester.tap(find.text('Carlos Souza').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<Plano>, 'Plano'));
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Plano'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mensal').last);
     await tester.pumpAndSettle();
@@ -75,6 +88,54 @@ void main() {
     expect(matricula.planoId, _planoMensal.id);
     expect(matricula.valorContratado, 129.9);
     expect(matricula.dataVencimento.difference(matricula.dataInicio).inDays, 30);
+  });
+
+  testWidgets('escolher o aluno depois do plano nao quebra o dropdown de plano (bug real)', (
+    tester,
+  ) async {
+    // Reproduz o erro visto no aparelho: escolher o aluno redesenha a tela,
+    // a lista de planos chega de novo com instancias novas, e o plano ja
+    // escolhido deixava de "bater" com elas.
+    final alunoService = FakeAlunoService(alunos: const [_carlos]);
+
+    await tester.pumpWidget(_wrap(alunoService, _PlanoServiceComInstanciasNovas()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Plano'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mensal').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carlos Souza').last);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // E a matricula sai com os dois — o plano nao se perdeu no caminho.
+    await _tocar(tester, find.text('CRIAR MATRÍCULA'));
+    await tester.pump();
+
+    final matricula = alunoService.matriculas.single;
+    expect(matricula.alunoId, _carlos.uid);
+    expect(matricula.planoId, _planoMensal.id);
+  });
+
+  testWidgets('renovacao com plano pre-selecionado abre sem quebrar mesmo com instancias novas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        FakeAlunoService(alunos: const [_carlos]),
+        _PlanoServiceComInstanciasNovas(),
+        alunoPreSelecionado: _carlos,
+        planoPreSelecionado: _planoMensal,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Mensal'), findsOneWidget);
   });
 
   testWidgets('nao salva sem selecionar aluno e plano', (tester) async {
@@ -103,7 +164,9 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, planoService));
 
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    // O de aluno especificamente: o de plano também é <String> (o valor
+    // dele passou a ser o id), então procurar só pelo tipo acharia ele.
+    expect(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'), findsNothing);
 
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -207,7 +270,9 @@ void main() {
 
     expect(find.text('Renovar matrícula'), findsOneWidget);
     expect(find.text('Carlos Souza'), findsOneWidget);
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    // O de aluno especificamente: o de plano também é <String> (o valor
+    // dele passou a ser o id), então procurar só pelo tipo acharia ele.
+    expect(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'), findsNothing);
 
     await _tocar(tester, find.text('CONFIRMAR RENOVAÇÃO'));
     await tester.pump();

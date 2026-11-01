@@ -260,20 +260,36 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                 StreamBuilder<List<Plano>>(
                   stream: widget.planoService.watchPlanos(),
                   builder: (context, snapshot) {
-                    final planos = (snapshot.data ?? [])
-                        .where(
-                          (plano) =>
-                              plano.ativo || plano.id == _planoSelecionado?.id,
-                        )
-                        .toList();
-                    return DropdownButtonFormField<Plano>(
-                      initialValue: _planoSelecionado,
+                    // Mesmo motivo do dropdown de aluno acima: o valor é o
+                    // id (String), e não o Plano. Plano não tem == própria,
+                    // então quando a lista chegava de novo (o que acontece
+                    // a cada rebuild — escolher o aluno depois do plano já
+                    // bastava) o plano selecionado era outra instância e o
+                    // dropdown quebrava com "Either zero or 2 or more
+                    // DropdownMenuItems". Também é o que deixa a renovação
+                    // abrir com o plano pré-selecionado sem quebrar.
+                    final planosPorId = <String, Plano>{};
+                    for (final plano in snapshot.data ?? const <Plano>[]) {
+                      final id = plano.id;
+                      if (id == null) continue;
+                      if (plano.ativo || id == _planoSelecionado?.id) {
+                        planosPorId[id] = plano;
+                      }
+                    }
+                    final planos = planosPorId.values.toList();
+                    final idSelecionado =
+                        planosPorId.containsKey(_planoSelecionado?.id)
+                        ? _planoSelecionado?.id
+                        : null;
+
+                    return DropdownButtonFormField<String>(
+                      initialValue: idSelecionado,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Plano'),
                       items: planos
                           .map(
                             (plano) => DropdownMenuItem(
-                              value: plano,
+                              value: plano.id,
                               child: Text(
                                 plano.nome,
                                 overflow: TextOverflow.ellipsis,
@@ -281,7 +297,8 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                             ),
                           )
                           .toList(),
-                      onChanged: (plano) {
+                      onChanged: (id) {
+                        final plano = planosPorId[id];
                         if (plano != null) _selecionarPlano(plano);
                       },
                     );

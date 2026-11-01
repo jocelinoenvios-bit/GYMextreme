@@ -383,6 +383,55 @@ class AlunoService {
     return temMatricula;
   }
 
+  /// Bloqueio manual de acesso (ficha → Gerenciar acesso): o aluno fica
+  /// barrado na catraca e no app até desbloquear, mesmo com a mensalidade
+  /// em dia. Guarda o motivo e quem bloqueou.
+  Future<void> bloquearAluno(
+    String uid, {
+    required String motivo,
+    required String staffUid,
+    required String staffNome,
+  }) {
+    return _alunos.doc(uid).set({
+      'bloqueado': true,
+      'motivoBloqueio': motivo.trim(),
+      'bloqueadoEm': FieldValue.serverTimestamp(),
+      'bloqueadoPorUid': staffUid,
+      'bloqueadoPorNome': staffNome,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> desbloquearAluno(
+    String uid, {
+    required String staffUid,
+    required String staffNome,
+  }) {
+    return _alunos.doc(uid).set({
+      'bloqueado': false,
+      'desbloqueadoEm': FieldValue.serverTimestamp(),
+      'desbloqueadoPorUid': staffUid,
+      'desbloqueadoPorNome': staffNome,
+    }, SetOptions(merge: true));
+  }
+
+  /// Inativação manual (aluno saiu da academia): vai pra lista de
+  /// Inativos e fica barrado na catraca e no app. Volta com
+  /// [receberMensalidade] usando `reativar: true` (reativar = receber).
+  Future<void> inativarAluno(
+    String uid, {
+    String? motivo,
+    required String staffUid,
+    required String staffNome,
+  }) {
+    return _alunos.doc(uid).set({
+      'ativo': false,
+      'dataInativacao': FieldValue.serverTimestamp(),
+      'motivoInativacao': (motivo == null || motivo.trim().isEmpty) ? null : motivo.trim(),
+      'inativadoPorUid': staffUid,
+      'inativadoPorNome': staffNome,
+    }, SetOptions(merge: true));
+  }
+
   /// "Receber mensalidade": num passo só, com tudo registrado.
   ///
   /// - cria a cobrança já paga em Contas a receber (é o que o relatório
@@ -404,10 +453,13 @@ class AlunoService {
     required String staffUid,
     required String staffNome,
     String? alunoNome,
+    bool reativar = false,
   }) async {
     final agora = DateTime.now();
     final hoje = DateTime(agora.year, agora.month, agora.day);
-    final vencimentoPago = vencimentoAtual ?? hoje;
+    // Reativando, o novo ciclo começa hoje (nada de cobrar o tempo em que
+    // ficou inativo); senão, a partir do vencimento atual.
+    final vencimentoPago = reativar ? hoje : (vencimentoAtual ?? hoje);
     final novoVencimento = adicionarUmMes(vencimentoPago);
 
     final caixaSnap = await _firestore
@@ -472,6 +524,12 @@ class AlunoService {
 
       transaction.set(_alunos.doc(uid), {
         'proximoVencimento': Timestamp.fromDate(novoVencimento),
+        if (reativar) ...{
+          'ativo': true,
+          'dataReativacao': Timestamp.fromDate(agora),
+          'reativadoPorUid': staffUid,
+          'reativadoPorNome': staffNome,
+        },
       }, SetOptions(merge: true));
 
       for (final matricula in ativas) {

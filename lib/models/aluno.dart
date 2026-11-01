@@ -55,6 +55,11 @@ class Aluno {
     this.reativadoPorUid,
     this.reativadoPorNome,
     this.whatsappOptIn,
+    this.motivoBloqueio,
+    this.bloqueadoPorNome,
+    this.bloqueadoEm,
+    this.motivoInativacao,
+    this.inativadoPorNome,
   });
 
   final String uid;
@@ -134,6 +139,16 @@ class Aluno {
   /// enviar" em qualquer envio automático, nunca como autorização.
   final bool? whatsappOptIn;
 
+  /// Bloqueio manual (botão "Gerenciar acesso" da ficha): por quê, quem e
+  /// quando. Só leitura aqui — gravados por `AlunoService.bloquearAluno`.
+  final String? motivoBloqueio;
+  final String? bloqueadoPorNome;
+  final DateTime? bloqueadoEm;
+
+  /// Inativação manual (`AlunoService.inativarAluno`): por quê e quem.
+  final String? motivoInativacao;
+  final String? inativadoPorNome;
+
   /// Idade calculada a partir de [dataNascimento]; cai para
   /// [idadeInformada] em cadastros antigos que ainda não têm data de
   /// nascimento preenchida.
@@ -175,6 +190,11 @@ class Aluno {
       reativadoPorUid: data['reativadoPorUid'] as String?,
       reativadoPorNome: data['reativadoPorNome'] as String?,
       whatsappOptIn: data['whatsappOptIn'] as bool?,
+      motivoBloqueio: data['motivoBloqueio'] as String?,
+      bloqueadoPorNome: data['bloqueadoPorNome'] as String?,
+      bloqueadoEm: data['bloqueadoEm'] is Timestamp ? (data['bloqueadoEm'] as Timestamp).toDate() : null,
+      motivoInativacao: data['motivoInativacao'] as String?,
+      inativadoPorNome: data['inativadoPorNome'] as String?,
     );
   }
 
@@ -267,6 +287,11 @@ class Aluno {
       reativadoPorUid: reativadoPorUid ?? this.reativadoPorUid,
       reativadoPorNome: reativadoPorNome ?? this.reativadoPorNome,
       whatsappOptIn: whatsappOptIn ?? this.whatsappOptIn,
+      motivoBloqueio: motivoBloqueio,
+      bloqueadoPorNome: bloqueadoPorNome,
+      bloqueadoEm: bloqueadoEm,
+      motivoInativacao: motivoInativacao,
+      inativadoPorNome: inativadoPorNome,
     );
   }
 }

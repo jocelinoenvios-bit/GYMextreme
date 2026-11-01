@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gymextreme_app/models/aluno.dart';
 import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/conta_receber.dart';
+import 'package:gymextreme_app/models/matricula.dart';
 import 'package:gymextreme_app/models/permission.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/contas_receber/contas_receber_list_screen.dart';
@@ -256,5 +258,69 @@ void main() {
 
     expect(find.text('Mensalidade pendente'), findsNothing);
     expect(find.text('Mensalidade paga'), findsOneWidget);
+  });
+
+  group('Receber mensalidade em Contas a receber', () {
+    const recepcaoMensalidade = AppUser(
+      uid: 'func-3',
+      nome: 'Recepção Cris',
+      email: 'cris@exemplo.com',
+      role: UserRole.funcionario,
+      permissoes: {Permission.acessarContasReceber, Permission.receberMensalidades},
+    );
+
+    testWidgets('escolhe o aluno pela pesquisa e recebe com valor da matrícula e forma', (tester) async {
+      final vence = DateTime(2026, 11, 10);
+      final service = FakeAlunoService(
+        alunos: const [_carlos],
+        aluno: Aluno(uid: _carlos.uid, proximoVencimento: vence),
+        matriculas: [
+          Matricula(
+            id: 'm1',
+            alunoId: _carlos.uid,
+            planoId: '',
+            dataInicio: DateTime(2026, 1, 10),
+            dataVencimento: vence,
+            valorContratado: 90,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_wrap(service, recepcaoMensalidade));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('RECEBER MENSALIDADE'));
+      await tester.pumpAndSettle();
+      expect(find.text('Receber mensalidade de'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'carlos');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Carlos Souza').last);
+      await tester.pumpAndSettle();
+
+      // Janela com o nome do aluno, o valor da matrícula e os vencimentos.
+      expect(find.text('Receber mensalidade'), findsOneWidget);
+      expect(find.text('90,00'), findsOneWidget);
+      expect(find.textContaining('Vencimento atual: 10/11/2026'), findsOneWidget);
+      await tester.tap(find.text('Dinheiro'));
+      await tester.pump();
+      await tester.tap(find.text('CONFIRMAR'));
+      await tester.pumpAndSettle();
+
+      final recebido = service.ultimoRecebimentoMensalidade!;
+      expect(recebido.uid, _carlos.uid);
+      expect(recebido.valor, 90);
+      expect(recebido.formaPagamento, 'Dinheiro');
+      expect(recebido.vencimentoAtual, vence);
+      expect(find.textContaining('Mensalidade recebida de Carlos Souza'), findsOneWidget);
+    });
+
+    testWidgets('só aparece pra quem pode receber mensalidade', (tester) async {
+      await tester.pumpWidget(_wrap(FakeAlunoService(alunos: const [_carlos]), _recepcaoSoAcesso));
+      await tester.pumpAndSettle();
+      expect(find.text('RECEBER MENSALIDADE'), findsNothing);
+
+      await tester.pumpWidget(_wrap(FakeAlunoService(alunos: const [_carlos]), _adm));
+      await tester.pumpAndSettle();
+      expect(find.text('RECEBER MENSALIDADE'), findsOneWidget);
+    });
   });
 }

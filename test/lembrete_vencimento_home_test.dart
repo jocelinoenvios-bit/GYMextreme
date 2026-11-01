@@ -113,4 +113,28 @@ void main() {
     expect(alunoService.mensagens, isEmpty);
     expect(find.textContaining('Sua mensalidade vence'), findsNothing);
   });
+
+  testWidgets('aluno bloqueado pela recepção vê acesso suspenso', (tester) async {
+    final alunoService = FakeAlunoService(
+      aluno: Aluno(uid: _uid, proximoVencimento: _hoje().add(const Duration(days: 20)), bloqueado: true),
+    );
+    await tester.pumpWidget(_tela(alunoService));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Acesso suspenso'), findsOneWidget);
+    expect(find.textContaining('suspenso pela recepção'), findsOneWidget);
+  });
+
+  testWidgets('aluno inativo vê acesso suspenso com orientação de reativar', (tester) async {
+    final alunoService = FakeAlunoService(
+      aluno: Aluno(uid: _uid, proximoVencimento: _hoje().add(const Duration(days: 20)), ativo: false),
+    );
+    await tester.pumpWidget(_tela(alunoService));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Acesso suspenso'), findsOneWidget);
+    expect(find.text('Procure a recepção para reativar.'), findsOneWidget);
+  });
 }

@@ -22,6 +22,7 @@ import '../services/user_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/lembrete_vencimento.dart';
 import '../utils/status_acesso.dart';
+import '../widgets/foto_aluno_image.dart';
 import '../widgets/gymextreme_logo.dart';
 import '../widgets/premium.dart';
 import 'alunos/alunos_list_screen.dart';
@@ -739,7 +740,9 @@ class _AvatarAluno extends StatelessWidget {
       child: CircleAvatar(
         radius: raio,
         backgroundColor: const Color(0xFF1A1A1A),
-        backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl!) : null,
+        backgroundImage: imagemDaFotoAluno(fotoUrl),
+        // Foto que não abre (sem internet, apagada): fica a inicial, sem erro.
+        onBackgroundImageError: fotoUrl != null ? (_, _) {} : null,
         child: fotoUrl == null
             ? Text(
                 inicial,

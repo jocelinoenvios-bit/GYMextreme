@@ -481,8 +481,9 @@ class _PassoDadosState extends State<_PassoDados> {
   Future<void> _escolherFoto() async {
     final arquivo = await ImagePicker().pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1280,
-      imageQuality: 85,
+      maxWidth: ladoMaximoFoto,
+      maxHeight: ladoMaximoFoto,
+      imageQuality: qualidadeFoto,
     );
     if (arquivo == null) return;
     final bytes = await arquivo.readAsBytes();
@@ -538,38 +539,56 @@ class _PassoDadosState extends State<_PassoDados> {
         cadastradoPorNome: widget.staffAtual.nome,
       );
 
+      // A conta já existe a partir daqui: se a foto falhar, o cadastro não
+      // pode virar "erro" (tentar de novo daria "e-mail já em uso"). Só
+      // avisa — a foto pode ser posta depois, na ficha do aluno.
+      var fotoFalhou = false;
       if (_fotoBytes != null) {
-        final fotoUrl = await widget.storageService.enviarFotoAluno(
-          uid,
-          _fotoBytes!,
-        );
-        await widget.alunoService.salvarDadosAluno(
-          Aluno(
-            uid: uid,
-            sexo: _sexo,
-            dataNascimento: _dataNascimento,
-            fotoUrl: fotoUrl,
-            cpf: _textOrNull(_cpfController.text),
-            rg: _textOrNull(_rgController.text),
-            telefone: _textOrNull(_telefoneController.text),
-            whatsapp: _textOrNull(_whatsappController.text),
-            endereco: endereco,
-            contatoEmergenciaNome: _textOrNull(
-              _contatoEmergenciaNomeController.text,
+        try {
+          final fotoUrl = await widget.storageService.enviarFotoAluno(
+            uid,
+            _fotoBytes!,
+          );
+          await widget.alunoService.salvarDadosAluno(
+            Aluno(
+              uid: uid,
+              sexo: _sexo,
+              dataNascimento: _dataNascimento,
+              fotoUrl: fotoUrl,
+              cpf: _textOrNull(_cpfController.text),
+              rg: _textOrNull(_rgController.text),
+              telefone: _textOrNull(_telefoneController.text),
+              whatsapp: _textOrNull(_whatsappController.text),
+              endereco: endereco,
+              contatoEmergenciaNome: _textOrNull(
+                _contatoEmergenciaNomeController.text,
+              ),
+              contatoEmergenciaTelefone: _textOrNull(
+                _contatoEmergenciaTelefoneController.text,
+              ),
+              observacoes: _textOrNull(_observacoesController.text),
+              dataInicio: _dataInicio,
+              diaVencimento: primeiroVencimento(_dataInicio).day,
+              cadastradoPorUid: widget.staffAtual.uid,
+              cadastradoPorNome: widget.staffAtual.nome,
             ),
-            contatoEmergenciaTelefone: _textOrNull(
-              _contatoEmergenciaTelefoneController.text,
-            ),
-            observacoes: _textOrNull(_observacoesController.text),
-            dataInicio: _dataInicio,
-            diaVencimento: primeiroVencimento(_dataInicio).day,
-            cadastradoPorUid: widget.staffAtual.uid,
-            cadastradoPorNome: widget.staffAtual.nome,
-          ),
-        );
+          );
+        } catch (_) {
+          fotoFalhou = true;
+        }
       }
 
       if (mounted) {
+        if (fotoFalhou) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Aluno cadastrado, mas a foto não foi salva. '
+                'Você pode colocar a foto depois, na ficha do aluno.',
+              ),
+            ),
+          );
+        }
         setState(() => _concluido = true);
         widget.onCriado(
           uid,

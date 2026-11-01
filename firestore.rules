@@ -538,6 +538,20 @@ service cloud.firestore {
       allow write: if temPermissao('gerenciarFuncionarios');
     }
 
+    // Foto de perfil do aluno, guardada no proprio Firestore (o projeto
+    // nao tem Firebase Storage — exige plano pago). Um documento por
+    // aluno, so com a imagem ja reduzida pelo app (StorageService). Mesma
+    // permissao da foto antiga no Storage: o aluno ve a propria, staff ve
+    // e troca a de qualquer aluno.
+    match /fotosAlunos/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || ehStaff());
+      allow create, update: if ehStaff() &&
+        request.resource.data.keys().hasOnly(['imagem', 'tamanhoBytes', 'atualizadoEm']) &&
+        request.resource.data.imagem is bytes &&
+        request.resource.data.imagem.size() <= 700 * 1024;
+      allow delete: if ehStaff();
+    }
+
     match /dispositivosAcesso/{dispositivoId} {
       allow read: if ehStaff();
       allow write: if false;

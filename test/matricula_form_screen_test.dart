@@ -6,6 +6,7 @@ import 'package:gymextreme_app/models/plano.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/matriculas/matricula_form_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
+import 'package:gymextreme_app/widgets/escolher_aluno.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_plano_service.dart';
@@ -67,7 +68,7 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, planoService));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.tap(find.byType(CampoAluno));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Carlos Souza').last);
     await tester.pumpAndSettle();
@@ -106,7 +107,7 @@ void main() {
     await tester.tap(find.text('Mensal').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.tap(find.byType(CampoAluno));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Carlos Souza').last);
     await tester.pumpAndSettle();
@@ -164,9 +165,7 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, planoService));
 
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    // O de aluno especificamente: o de plano também é <String> (o valor
-    // dele passou a ser o id), então procurar só pelo tipo acharia ele.
-    expect(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'), findsNothing);
+    expect(find.byType(CampoAluno), findsNothing);
 
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -182,10 +181,10 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Nenhum aluno cadastrado'), findsOneWidget);
 
-    final dropdown = tester.widget<DropdownButtonFormField<String>>(
-      find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'),
+    final campo = tester.widget<InkWell>(
+      find.descendant(of: find.byType(CampoAluno), matching: find.byType(InkWell)).first,
     );
-    expect(dropdown.onChanged, isNull);
+    expect(campo.onTap, isNull);
   });
 
   testWidgets('lista de alunos com uid duplicado nao quebra o dropdown', (tester) async {
@@ -201,12 +200,11 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, planoService));
     await tester.pumpAndSettle();
 
-    // O ponto do teste: isto não pode lançar "Either zero or 2 or more
-    // DropdownMenuItems were detected with the same value" (a lista foi
-    // deduplicada por uid antes de virar os itens do dropdown).
+    // O ponto do teste: o mesmo aluno não pode aparecer duas vezes na
+    // janela de escolha (a lista é deduplicada por uid).
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.tap(find.byType(CampoAluno));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('Carlos Souza'), findsOneWidget);
@@ -219,7 +217,7 @@ void main() {
     await tester.pumpWidget(_wrap(alunoService, planoService));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'));
+    await tester.tap(find.byType(CampoAluno));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Carlos Souza').last);
     await tester.pumpAndSettle();
@@ -270,9 +268,7 @@ void main() {
 
     expect(find.text('Renovar matrícula'), findsOneWidget);
     expect(find.text('Carlos Souza'), findsOneWidget);
-    // O de aluno especificamente: o de plano também é <String> (o valor
-    // dele passou a ser o id), então procurar só pelo tipo acharia ele.
-    expect(find.widgetWithText(DropdownButtonFormField<String>, 'Aluno'), findsNothing);
+    expect(find.byType(CampoAluno), findsNothing);
 
     await _tocar(tester, find.text('CONFIRMAR RENOVAÇÃO'));
     await tester.pump();

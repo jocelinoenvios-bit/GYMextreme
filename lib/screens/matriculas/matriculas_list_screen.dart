@@ -10,6 +10,7 @@ import '../../services/plano_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/escolher_aluno.dart';
 import '../alunos/novo_aluno_wizard_screen.dart';
 import 'matricula_form_screen.dart';
 
@@ -337,20 +338,12 @@ class _FiltrosMatricula extends StatelessWidget {
           const SizedBox(width: 12),
           SizedBox(
             width: 180,
-            child: DropdownButtonFormField<String?>(
-              initialValue: filtroAlunoUid,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Aluno', isDense: true),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Todos')),
-                ...alunos.map(
-                  (aluno) => DropdownMenuItem(
-                    value: aluno.uid,
-                    child: Text(aluno.nome, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: onAlunoChanged,
+            child: CampoAluno(
+              alunos: alunos,
+              uidSelecionado: filtroAlunoUid,
+              textoNenhum: 'Todos',
+              isDense: true,
+              onChanged: (aluno) => onAlunoChanged(aluno?.uid),
             ),
           ),
           const SizedBox(width: 12),

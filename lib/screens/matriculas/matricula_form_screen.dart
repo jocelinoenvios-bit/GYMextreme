@@ -6,6 +6,7 @@ import '../../services/aluno_service.dart';
 import '../../services/plano_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/escolher_aluno.dart';
 
 /// Cria uma matrícula nova. Também usada pro fluxo de "renovar" — nesse
 /// caso o chamador já resolveu o aluno/plano/valor atuais (a lista de
@@ -205,53 +206,16 @@ class _MatriculaFormScreenState extends State<MatriculaFormScreen> {
                         );
                       }
 
-                      // Deduplica por uid e usa o uid (String, com
-                      // igualdade de valor natural) como valor do
-                      // dropdown — comparar o AppUser inteiro quebrava
-                      // ("Either zero or 2 or more DropdownMenuItems...")
-                      // toda vez que o stream emitia uma nova instância do
-                      // mesmo aluno, já que AppUser não tem == própria e a
-                      // instância antiga selecionada parava de "bater" com
-                      // a nova lista.
-                      final alunosPorUid = <String, AppUser>{};
-                      for (final aluno in snapshot.data ?? const <AppUser>[]) {
-                        alunosPorUid[aluno.uid] = aluno;
-                      }
-                      final alunos = alunosPorUid.values.toList();
-                      // Se o aluno selecionado não existir mais na lista
-                      // atual (removido/renomeado uid, ou stream ainda não
-                      // trouxe os dados), cai pra null em vez de manter um
-                      // valor órfão — outro jeito de disparar o mesmo erro.
-                      final uidSelecionado =
-                          alunosPorUid.containsKey(_alunoSelecionado?.uid)
-                          ? _alunoSelecionado?.uid
-                          : null;
-
-                      return DropdownButtonFormField<String>(
-                        initialValue: uidSelecionado,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          labelText: 'Aluno',
-                          helperText: alunos.isEmpty
-                              ? 'Nenhum aluno cadastrado'
-                              : null,
-                        ),
-                        items: alunos
-                            .map(
-                              (aluno) => DropdownMenuItem(
-                                value: aluno.uid,
-                                child: Text(
-                                  aluno.nome,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: alunos.isEmpty
-                            ? null
-                            : (uid) => setState(
-                                () => _alunoSelecionado = alunosPorUid[uid],
-                              ),
+                      // Escolha com pesquisa (CampoAluno), e não dropdown:
+                      // com muita gente cadastrada a lista corrida fica
+                      // inutilizável. O campo trabalha pelo uid — se o
+                      // aluno escolhido sumir da lista (excluído com a tela
+                      // aberta), ele só volta a ficar vazio.
+                      return CampoAluno(
+                        alunos: snapshot.data ?? const <AppUser>[],
+                        uidSelecionado: _alunoSelecionado?.uid,
+                        onChanged: (aluno) =>
+                            setState(() => _alunoSelecionado = aluno),
                       );
                     },
                   ),

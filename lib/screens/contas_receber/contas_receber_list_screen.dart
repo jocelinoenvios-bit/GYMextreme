@@ -8,6 +8,7 @@ import '../../services/caixa_service.dart';
 import '../../services/permission_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/moeda.dart';
+import '../../widgets/escolher_aluno.dart';
 import '../../utils/status_conta_receber.dart';
 import 'conta_receber_form_screen.dart';
 import 'registrar_recebimento_screen.dart';
@@ -55,10 +56,7 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
   }
 
   Future<void> _abrirNovaCobranca(BuildContext context, List<AppUser> alunos) async {
-    final aluno = await showDialog<AppUser>(
-      context: context,
-      builder: (context) => _EscolherAlunoDialog(alunos: alunos),
-    );
+    final aluno = await escolherAluno(context, alunos: alunos);
     if (aluno == null || !context.mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -253,33 +251,6 @@ class _ContasReceberListScreenState extends State<ContasReceberListScreen> {
   }
 }
 
-class _EscolherAlunoDialog extends StatelessWidget {
-  const _EscolherAlunoDialog({required this.alunos});
-
-  final List<AppUser> alunos;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Escolha o aluno'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: alunos.length,
-          itemBuilder: (context, index) {
-            final aluno = alunos[index];
-            return ListTile(
-              title: Text(aluno.nome),
-              onTap: () => Navigator.of(context).pop(aluno),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
 class _FiltrosContaReceber extends StatelessWidget {
   const _FiltrosContaReceber({
     required this.alunos,
@@ -320,20 +291,12 @@ class _FiltrosContaReceber extends StatelessWidget {
           const SizedBox(width: 12),
           SizedBox(
             width: 180,
-            child: DropdownButtonFormField<String?>(
-              initialValue: filtroAlunoUid,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Aluno', isDense: true),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Todos')),
-                ...alunos.map(
-                  (aluno) => DropdownMenuItem(
-                    value: aluno.uid,
-                    child: Text(aluno.nome, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: onAlunoChanged,
+            child: CampoAluno(
+              alunos: alunos,
+              uidSelecionado: filtroAlunoUid,
+              textoNenhum: 'Todos',
+              isDense: true,
+              onChanged: (aluno) => onAlunoChanged(aluno?.uid),
             ),
           ),
         ],

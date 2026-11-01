@@ -5,6 +5,7 @@ import '../../models/app_user.dart';
 import '../../models/avaliacao_fisica.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/escolher_aluno.dart';
 import '../../widgets/premium.dart';
 import '../../widgets/simple_line_chart.dart';
 
@@ -71,17 +72,10 @@ class _EvolucaoFisicaScreenState extends State<EvolucaoFisicaScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              DropdownButtonFormField<String?>(
-                initialValue: _alunoSelecionadoUid,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  hintText: 'Selecione um aluno',
-                ),
-                items: alunos
-                    .map((a) => DropdownMenuItem(value: a.uid, child: Text(a.nome)))
-                    .toList(),
-                onChanged: _selecionarAluno,
+              CampoAluno(
+                alunos: alunos,
+                uidSelecionado: _alunoSelecionadoUid,
+                onChanged: (aluno) => _selecionarAluno(aluno?.uid),
               ),
               const SizedBox(height: 16),
               if (_avaliacoesFuture == null)

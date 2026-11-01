@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../services/aluno_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/escolher_aluno.dart';
 import 'mensagens_enviadas_lista.dart';
 
 /// Envia uma mensagem avulsa pra um aluno específico — só pra quem tem a
@@ -129,45 +130,11 @@ class _EnviarMensagemScreenState extends State<EnviarMensagemScreen> {
                   );
                 }
 
-                // Deduplica por uid e usa o uid como valor do dropdown —
-                // mesmo motivo documentado em MatriculaFormScreen
-                // (AppUser não tem == própria, comparar a instância
-                // inteira quebra o dropdown quando o stream reemite).
-                final alunosPorUid = <String, AppUser>{};
-                for (final aluno in snapshot.data ?? const <AppUser>[]) {
-                  alunosPorUid[aluno.uid] = aluno;
-                }
-                final alunos = alunosPorUid.values.toList();
-                final uidSelecionado =
-                    alunosPorUid.containsKey(_alunoSelecionado?.uid)
-                    ? _alunoSelecionado?.uid
-                    : null;
-
-                return DropdownButtonFormField<String>(
-                  initialValue: uidSelecionado,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Aluno',
-                    helperText: alunos.isEmpty
-                        ? 'Nenhum aluno cadastrado'
-                        : null,
-                  ),
-                  items: alunos
-                      .map(
-                        (aluno) => DropdownMenuItem(
-                          value: aluno.uid,
-                          child: Text(
-                            aluno.nome,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: alunos.isEmpty
-                      ? null
-                      : (uid) => setState(
-                          () => _alunoSelecionado = alunosPorUid[uid],
-                        ),
+                return CampoAluno(
+                  alunos: snapshot.data ?? const <AppUser>[],
+                  uidSelecionado: _alunoSelecionado?.uid,
+                  onChanged: (aluno) =>
+                      setState(() => _alunoSelecionado = aluno),
                 );
               },
             ),

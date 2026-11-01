@@ -193,6 +193,15 @@ class FakeAlunoService implements AlunoService {
     mensagens = [...mensagens, mensagem];
   }
 
+  /// Última foto gravada por [salvarFotoUrl].
+  String? ultimaFotoUrlSalva;
+
+  @override
+  Future<void> salvarFotoUrl(String uid, String fotoUrl) async {
+    ultimaFotoUrlSalva = fotoUrl;
+    aluno = (aluno ?? Aluno(uid: uid)).copyWith(fotoUrl: fotoUrl);
+  }
+
   /// Último lote passado a [definirVencimentosEmLote].
   Map<String, DateTime>? ultimoLoteVencimentos;
 

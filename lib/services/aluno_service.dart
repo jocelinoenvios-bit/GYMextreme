@@ -200,6 +200,13 @@ class AlunoService {
     };
   }
 
+  /// Só a foto de perfil — usado pelo próprio aluno (Configurações →
+  /// Trocar foto de perfil). A regra do Firestore deixa o aluno mexer só
+  /// neste campo do próprio cadastro, e só apontando pra foto dele.
+  Future<void> salvarFotoUrl(String uid, String fotoUrl) {
+    return _alunos.doc(uid).set({'fotoUrl': fotoUrl}, SetOptions(merge: true));
+  }
+
   Future<void> salvarAnamnese(String uid, Anamnese anamnese) {
     return _alunos.doc(uid).set({
       'anamnese': anamnese.toFirestore(),

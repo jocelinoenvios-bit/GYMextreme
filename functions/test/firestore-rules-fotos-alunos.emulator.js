@@ -72,10 +72,28 @@ test('foto acima de 700 KB ou com outros campos é recusada', async () => {
   await assertFails(db('recep').doc('fotosAlunos/ana').set({ imagem: 'nao e imagem' }));
 });
 
-test('aluno lê a própria foto, não a de outro, e não grava', async () => {
+test('aluno lê a própria foto, não a de outro', async () => {
   await assertSucceeds(db('bia').doc('fotosAlunos/bia').get());
   await assertFails(db('ana').doc('fotosAlunos/bia').get());
-  await assertFails(db('ana').doc('fotosAlunos/ana').set(foto(1024)));
+});
+
+test('aluno troca a própria foto (Configurações), nunca a de outro', async () => {
+  await assertSucceeds(db('ana').doc('fotosAlunos/ana').set(foto(30 * 1024)));
+  await assertFails(db('ana').doc('fotosAlunos/bia').set(foto(1024)));
+  await assertFails(db('ana').doc('fotosAlunos/ana').set(foto(701 * 1024)));
+});
+
+test('no cadastro, o aluno só muda fotoUrl, e só pra foto dele', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc('alunos/ana').set({ ativo: true, proximoVencimento: null, bloqueado: false });
+  });
+  const ana = db('ana').doc('alunos/ana');
+  await assertSucceeds(ana.set({ fotoUrl: 'firestore://fotosAlunos/ana?v=1730000000000' }, { merge: true }));
+  await assertFails(ana.set({ fotoUrl: 'firestore://fotosAlunos/bia?v=1' }, { merge: true }));
+  await assertFails(ana.set({ fotoUrl: 'https://qualquer.coisa/foto.jpg' }, { merge: true }));
+  await assertFails(ana.set({ fotoUrl: 'firestore://fotosAlunos/ana?v=2', bloqueado: false, ativo: true, proximoVencimento: '2099' }, { merge: true }));
+  await assertFails(ana.set({ proximoVencimento: null, bloqueado: true }, { merge: true }));
+  await assertFails(db('ana').doc('alunos/bia').set({ fotoUrl: 'firestore://fotosAlunos/bia?v=1' }, { merge: true }));
 });
 
 test('staff lê qualquer foto; deslogado não lê', async () => {

@@ -20,6 +20,7 @@ import '../services/produto_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/lembrete_vencimento.dart';
 import '../utils/status_acesso.dart';
 import '../widgets/gymextreme_logo.dart';
 import '../widgets/premium.dart';
@@ -134,6 +135,7 @@ class WelcomeScreen extends StatelessWidget {
               if (status.status == StatusMensalidade.bloqueado) {
                 return _scaffoldGenerico(context, const _AcessoSuspenso());
               }
+              _garantirLembreteVencimento(user, alunoSnapshot.data);
               return _buildHomeAluno(context, user, alunoSnapshot.data);
             },
           );
@@ -203,6 +205,29 @@ class WelcomeScreen extends StatelessWidget {
     await authService.signOut();
   }
 
+  /// Põe o lembrete de vencimento na caixa de mensagens do aluno quando
+  /// faltam 3 dias ou menos (ver `utils/lembrete_vencimento.dart`). O
+  /// serviço não duplica (id fixo por vencimento); o conjunto
+  /// [_lembretesTentados] só evita repetir a consulta a cada rebuild.
+  void _garantirLembreteVencimento(AppUser user, Aluno? aluno) {
+    final vencimento = aluno?.proximoVencimento;
+    if (aluno == null || !aluno.ativo || vencimento == null) return;
+    if (!deveLembrarVencimento(vencimento, DateTime.now())) return;
+    final chave = '$uid/${idLembreteVencimento(vencimento)}';
+    if (!_lembretesTentados.add(chave)) return;
+    alunoService
+        .garantirLembreteVencimento(
+          uid,
+          vencimento: vencimento,
+          alunoNome: user.nome,
+        )
+        .catchError((Object _) {
+          // Sem rede agora: tenta de novo na próxima vez que a tela montar.
+          _lembretesTentados.remove(chave);
+          return false;
+        });
+  }
+
   /// Tela inicial do aluno, no visual premium: foto com aro dourado no
   /// canto superior esquerdo, halter dourado de destaque, saudação com o
   /// nome, os 2 atalhos principais em botões dourados e as funções do
@@ -242,6 +267,23 @@ class WelcomeScreen extends StatelessWidget {
                 altura: 120,
               ),
               SaudacaoPremium(nome: user.nome, tamanho: 27),
+              if (aluno?.proximoVencimento != null &&
+                  deveLembrarVencimento(
+                    aluno!.proximoVencimento,
+                    DateTime.now(),
+                  ))
+                _AvisoVencimento(
+                  texto: avisoCurtoVencimento(
+                    aluno.proximoVencimento!,
+                    DateTime.now(),
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          MensagensScreen(uid: uid, alunoService: alunoService),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 20),
               BotaoOuro(
                 icone: Icons.fitness_center,
@@ -624,6 +666,55 @@ class WelcomeScreen extends StatelessWidget {
 /// Foto do aluno (ou círculo com a inicial do nome, se não tiver foto
 /// cadastrada), com aro dourado — canto superior esquerdo da tela
 /// inicial do aluno.
+/// Lembretes de vencimento já pedidos nesta abertura do app (ver
+/// `WelcomeScreen._garantirLembreteVencimento`).
+final _lembretesTentados = <String>{};
+
+/// Aviso discreto de vencimento próximo, logo abaixo da saudação — uma
+/// linha só, sem cor de alerta. O detalhe fica na mensagem.
+class _AvisoVencimento extends StatelessWidget {
+  const _AvisoVencimento({required this.texto, required this.onTap});
+
+  final String texto;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Center(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.notifications_none_rounded,
+                  size: 16,
+                  color: AppColors.gold.withValues(alpha: 0.85),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    texto,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AvatarAluno extends StatelessWidget {
   const _AvatarAluno({
     required this.nome,

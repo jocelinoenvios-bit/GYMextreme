@@ -12,3 +12,10 @@ DateTime adicionarUmMes(DateTime data) {
   final dia = data.day > ultimoDiaDoNovoMes ? ultimoDiaDoNovoMes : data.day;
   return DateTime(novoAno, novoMes, dia);
 }
+
+/// Primeiro vencimento de um aluno recém-cadastrado: 1 mês depois do dia
+/// do cadastro (cadastrou em 10/03, vence em 10/04). Sem horário — vence o
+/// dia inteiro.
+DateTime primeiroVencimento(DateTime cadastro) {
+  return adicionarUmMes(DateTime(cadastro.year, cadastro.month, cadastro.day));
+}

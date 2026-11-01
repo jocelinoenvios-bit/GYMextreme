@@ -5,9 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// do Aluno. A comunicação é de mão única por decisão de produto: o aluno
 /// lê, marca como lida e pode tirar da lista dele, mas não responde.
 ///
-/// Só envio manual por enquanto; os avisos automáticos (vencimento de
-/// mensalidade, reengajamento depois de 45 dias sem vir) ficam pra uma
-/// etapa futura, com sua própria lógica de disparo.
+/// Além do envio manual, existe o lembrete automático de vencimento da
+/// mensalidade ([automatica], ver `utils/lembrete_vencimento.dart`).
 class Mensagem {
   const Mensagem({
     this.id,
@@ -19,6 +18,7 @@ class Mensagem {
     this.criadoEm,
     this.lidaEm,
     this.arquivadaPeloAluno = false,
+    this.automatica = false,
   });
 
   final String? id;
@@ -48,6 +48,10 @@ class Mensagem {
   /// provar que o aviso foi dado. Quem apaga de verdade é o staff.
   final bool arquivadaPeloAluno;
 
+  /// Gerada pelo próprio app (lembrete de vencimento), não escrita por
+  /// alguém da equipe.
+  final bool automatica;
+
   bool get lida => lidaEm != null;
 
   factory Mensagem.fromFirestore(String id, Map<String, dynamic> data) {
@@ -64,6 +68,7 @@ class Mensagem {
       criadoEm: paraData(data['criadoEm']),
       lidaEm: paraData(data['lidaEm']),
       arquivadaPeloAluno: data['arquivadaPeloAluno'] as bool? ?? false,
+      automatica: data['automatica'] as bool? ?? false,
     );
   }
 
@@ -77,6 +82,7 @@ class Mensagem {
       'criadoEm': FieldValue.serverTimestamp(),
       'lidaEm': null,
       'arquivadaPeloAluno': false,
+      'automatica': automatica,
     };
   }
 }

@@ -11,6 +11,7 @@ import '../../models/user_role.dart';
 import '../../services/aluno_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/mensalidade_utils.dart';
 import '../../utils/validadores.dart';
 import 'avaliacao_fisica_form_screen.dart';
 import 'tabs/anamnese_tab.dart';
@@ -445,14 +446,6 @@ class _PassoDadosState extends State<_PassoDados> {
   final _contatoEmergenciaNomeController = TextEditingController();
   final _contatoEmergenciaTelefoneController = TextEditingController();
   final _observacoesController = TextEditingController();
-  // Pré-preenchido com o dia de hoje: aluno novo começa hoje, então a
-  // cobrança seguinte (1 mês depois) cai no mesmo dia do mês — evita ter
-  // que digitar isso manualmente a cada cadastro. Continua editável pra
-  // quem precisar ajustar.
-  final _diaVencimentoController = TextEditingController(
-    text: '${DateTime.now().day}',
-  );
-
   Sexo? _sexo;
   DateTime? _dataNascimento;
   final DateTime _dataInicio = DateTime.now();
@@ -479,7 +472,6 @@ class _PassoDadosState extends State<_PassoDados> {
     _contatoEmergenciaNomeController.dispose();
     _contatoEmergenciaTelefoneController.dispose();
     _observacoesController.dispose();
-    _diaVencimentoController.dispose();
     super.dispose();
   }
 
@@ -542,7 +534,6 @@ class _PassoDadosState extends State<_PassoDados> {
         ),
         observacoes: _textOrNull(_observacoesController.text),
         dataInicio: _dataInicio,
-        diaVencimento: int.tryParse(_diaVencimentoController.text),
         cadastradoPorUid: widget.staffAtual.uid,
         cadastradoPorNome: widget.staffAtual.nome,
       );
@@ -571,7 +562,7 @@ class _PassoDadosState extends State<_PassoDados> {
             ),
             observacoes: _textOrNull(_observacoesController.text),
             dataInicio: _dataInicio,
-            diaVencimento: int.tryParse(_diaVencimentoController.text),
+            diaVencimento: primeiroVencimento(_dataInicio).day,
             cadastradoPorUid: widget.staffAtual.uid,
             cadastradoPorNome: widget.staffAtual.nome,
           ),
@@ -878,18 +869,7 @@ class _PassoDadosState extends State<_PassoDados> {
               validator: validarTelefone,
             ),
             const SizedBox(height: 20),
-            TextFormField(
-              controller: _diaVencimentoController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [digitsOnlyFormatter],
-              decoration: const InputDecoration(
-                labelText: 'Dia de vencimento',
-                helperText:
-                    'Calculado automaticamente (próxima cobrança, 1 mês a '
-                    'partir de hoje) — pode editar se precisar.',
-              ),
-              validator: validarDiaVencimento,
-            ),
+            _AvisoVencimentoAutomatico(vencimento: primeiroVencimento(_dataInicio)),
             const SizedBox(height: 14),
             TextFormField(
               controller: _observacoesController,
@@ -912,6 +892,57 @@ class _PassoDadosState extends State<_PassoDados> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Só informa — o vencimento não se digita mais: é sempre 1 mês depois do
+/// cadastro (ver `primeiroVencimento`).
+class _AvisoVencimentoAutomatico extends StatelessWidget {
+  const _AvisoVencimentoAutomatico({required this.vencimento});
+
+  final DateTime vencimento;
+
+  @override
+  Widget build(BuildContext context) {
+    final data =
+        '${vencimento.day.toString().padLeft(2, '0')}/'
+        '${vencimento.month.toString().padLeft(2, '0')}/${vencimento.year}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.event_available_outlined, color: AppColors.gold),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Primeiro vencimento: $data',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Calculado automaticamente: 1 mês após o cadastro.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

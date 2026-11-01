@@ -6,6 +6,7 @@ import '../../../models/permission.dart';
 import '../../../services/aluno_service.dart';
 import '../../../services/permission_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/mensalidade_utils.dart';
 import '../../../utils/status_acesso.dart';
 import '../../../utils/whatsapp.dart';
 
@@ -17,6 +18,7 @@ class MensalidadeSection extends StatefulWidget {
     super.key,
     required this.alunoUid,
     required this.proximoVencimento,
+    this.dataInicio,
     required this.alunoService,
     required this.staffAtual,
     this.whatsapp,
@@ -27,6 +29,11 @@ class MensalidadeSection extends StatefulWidget {
 
   final String alunoUid;
   final DateTime? proximoVencimento;
+
+  /// Base da sugestão de vencimento pra aluno antigo, cadastrado antes do
+  /// vencimento automático: 1 mês depois do início (ver
+  /// [_escolherVencimentoInicial]).
+  final DateTime? dataInicio;
   final AlunoService alunoService;
   final AppUser staffAtual;
 
@@ -55,11 +62,19 @@ class _MensalidadeSectionState extends State<MensalidadeSection> {
 
   Future<void> _escolherVencimentoInicial() async {
     final agora = DateTime.now();
+    final primeiro = DateTime(agora.year - 1);
+    final ultimo = DateTime(agora.year + 2);
+    // Já vem sugerido do mesmo jeito que no cadastro novo: 1 mês depois
+    // do início — é só confirmar.
+    var sugerido = primeiroVencimento(widget.dataInicio ?? agora);
+    if (sugerido.isBefore(primeiro) || sugerido.isAfter(ultimo)) {
+      sugerido = primeiroVencimento(agora);
+    }
     final picked = await showDatePicker(
       context: context,
-      initialDate: agora,
-      firstDate: DateTime(agora.year - 1),
-      lastDate: DateTime(agora.year + 2),
+      initialDate: sugerido,
+      firstDate: primeiro,
+      lastDate: ultimo,
       helpText: 'Primeiro vencimento',
     );
     if (picked == null) return;

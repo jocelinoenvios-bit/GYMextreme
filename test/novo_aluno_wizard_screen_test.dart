@@ -4,6 +4,7 @@ import 'package:gymextreme_app/models/app_user.dart';
 import 'package:gymextreme_app/models/user_role.dart';
 import 'package:gymextreme_app/screens/alunos/novo_aluno_wizard_screen.dart';
 import 'package:gymextreme_app/theme/app_theme.dart';
+import 'package:gymextreme_app/utils/mensalidade_utils.dart';
 
 import 'support/fake_aluno_service.dart';
 import 'support/fake_storage_service.dart';
@@ -178,6 +179,33 @@ void main() {
       // cadastro foi criado) — prova que a tela voltou da rota cheia de
       // "Dados" pro wizard com o passo atualizado.
       expect(find.text('PREENCHER ANAMNESE'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'vencimento nao se digita: mostra o primeiro vencimento, 1 mes depois do cadastro',
+    semanticsEnabled: false,
+    (tester) async {
+      final alunoService = FakeAlunoService();
+      await tester.pumpWidget(_wrap(alunoService, FakeStorageService()));
+
+      await _abrirEPreencherDados(tester);
+
+      final hoje = DateTime.now();
+      final vencimento = primeiroVencimento(hoje);
+      final data =
+          '${vencimento.day.toString().padLeft(2, '0')}/'
+          '${vencimento.month.toString().padLeft(2, '0')}/${vencimento.year}';
+      expect(find.widgetWithText(TextFormField, 'Dia de vencimento'), findsNothing);
+      expect(find.text('Primeiro vencimento: $data'), findsOneWidget);
+
+      await _tocar(tester, find.text('CADASTRAR E CONTINUAR'));
+      await tester.pumpAndSettle();
+
+      final inicio = alunoService.aluno!.dataInicio!;
+      expect(DateTime(inicio.year, inicio.month, inicio.day),
+          DateTime(hoje.year, hoje.month, hoje.day));
+      expect(alunoService.aluno!.proximoVencimento, vencimento);
     },
   );
 

@@ -17,6 +17,7 @@ import '../models/pagamento.dart';
 import '../models/termo_aceite.dart';
 import '../models/treino.dart';
 import '../models/user_role.dart';
+import '../utils/lembrete_vencimento.dart';
 import '../utils/mensalidade_utils.dart';
 
 /// Cadastro e ficha completa do aluno: dados de cadastro (colecao
@@ -268,6 +269,34 @@ class AlunoService {
         alunoNome: alunoNome,
       ).toFirestore(),
     );
+  }
+
+  /// Garante que o lembrete de vencimento ([idLembreteVencimento]) esteja
+  /// na caixa do aluno — chamado pelo app do próprio aluno ao abrir, dentro
+  /// da janela de 3 dias antes do vencimento ([deveLembrarVencimento]).
+  ///
+  /// Um documento por vencimento, com id fixo: se já existe (o aluno abriu
+  /// o app ontem, ou tirou o aviso da lista), não faz nada. Devolve se
+  /// criou agora.
+  Future<bool> garantirLembreteVencimento(
+    String uid, {
+    required DateTime vencimento,
+    required String alunoNome,
+  }) async {
+    final ref = _mensagens(uid).doc(idLembreteVencimento(vencimento));
+    final existente = await ref.get();
+    if (existente.exists) return false;
+    await ref.set(
+      Mensagem(
+        texto: textoLembreteVencimento(vencimento),
+        remetenteUid: remetenteLembreteAutomatico,
+        remetenteNome: 'GYM XTREME',
+        alunoUid: uid,
+        alunoNome: alunoNome,
+        automatica: true,
+      ).toFirestore(),
+    );
+    return true;
   }
 
   /// Marca como lidas as mensagens que o aluno acabou de ver. Recebe a
@@ -797,7 +826,6 @@ class AlunoService {
     String? contatoEmergenciaTelefone,
     String? observacoes,
     DateTime? dataInicio,
-    int? diaVencimento,
     required String cadastradoPorUid,
     required String cadastradoPorNome,
   }) async {
@@ -823,6 +851,10 @@ class AlunoService {
       } finally {
         await secondaryAuth.signOut();
       }
+
+      // Vencimento automático: 1 mês depois do dia do cadastro (ver
+      // [primeiroVencimento]).
+      final vencimento = primeiroVencimento(dataInicio ?? DateTime.now());
 
       final batch = _firestore.batch();
       batch.set(
@@ -850,7 +882,8 @@ class AlunoService {
           contatoEmergenciaTelefone: contatoEmergenciaTelefone,
           observacoes: observacoes,
           dataInicio: dataInicio,
-          diaVencimento: diaVencimento,
+          diaVencimento: vencimento.day,
+          proximoVencimento: vencimento,
           cadastradoPorUid: cadastradoPorUid,
           cadastradoPorNome: cadastradoPorNome,
         ).toFirestore(),

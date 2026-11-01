@@ -326,6 +326,27 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['lidaEm', 'arquivadaPeloAluno']);
         allow write: if temPermissao('chat');
+
+        // Lembrete automatico de vencimento da mensalidade: quem cria e o
+        // app do PROPRIO aluno, ao abrir nos 3 dias antes do vencimento
+        // (AlunoService.garantirLembreteVencimento). So esse formato
+        // exato: id fixo por vencimento (um lembrete por vencimento, nunca
+        // duplicado — e create, nao sobrescreve), remetente "sistema",
+        // marcado como automatico e ainda nao lido.
+        allow create: if request.auth != null &&
+          request.auth.uid == uid &&
+          mensagemId.matches('lembrete-vencimento-[0-9]{4}-[0-9]{2}-[0-9]{2}') &&
+          request.resource.data.keys().hasOnly(['texto', 'remetenteUid',
+            'remetenteNome', 'alunoUid', 'alunoNome', 'criadoEm', 'lidaEm',
+            'arquivadaPeloAluno', 'automatica']) &&
+          request.resource.data.automatica == true &&
+          request.resource.data.remetenteUid == 'sistema' &&
+          request.resource.data.alunoUid == uid &&
+          request.resource.data.texto is string &&
+          request.resource.data.texto.size() <= 300 &&
+          request.resource.data.criadoEm == request.time &&
+          request.resource.data.lidaEm == null &&
+          request.resource.data.arquivadaPeloAluno == false;
       }
 
       // Historico de pagamentos de mensalidade — so quem tem a permissao

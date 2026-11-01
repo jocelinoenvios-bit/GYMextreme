@@ -41,7 +41,6 @@ class _DadosTabState extends State<DadosTab> {
 
   final _formKey = GlobalKey<FormState>();
   final _idadeController = TextEditingController();
-  final _diaVencimentoController = TextEditingController();
   final _cpfController = TextEditingController();
   final _rgController = TextEditingController();
   final _telefoneController = TextEditingController();
@@ -58,6 +57,9 @@ class _DadosTabState extends State<DadosTab> {
   final _observacoesController = TextEditingController();
 
   DateTime? _dataInicio;
+  // Não é mais editável na tela (o vencimento é calculado sozinho), só
+  // preservado ao salvar os outros dados.
+  int? _diaVencimento;
   DateTime? _dataNascimento;
   Sexo? _sexo;
   String? _fotoUrl;
@@ -69,7 +71,6 @@ class _DadosTabState extends State<DadosTab> {
   @override
   void dispose() {
     _idadeController.dispose();
-    _diaVencimentoController.dispose();
     _cpfController.dispose();
     _rgController.dispose();
     _telefoneController.dispose();
@@ -91,7 +92,7 @@ class _DadosTabState extends State<DadosTab> {
     if (_isLoaded) return;
     _isLoaded = true;
     _idadeController.text = aluno?.idadeInformada?.toString() ?? '';
-    _diaVencimentoController.text = aluno?.diaVencimento?.toString() ?? '';
+    _diaVencimento = aluno?.diaVencimento;
     _cpfController.text = aluno?.cpf ?? '';
     _rgController.text = aluno?.rg ?? '';
     _telefoneController.text = aluno?.telefone ?? '';
@@ -219,7 +220,7 @@ class _DadosTabState extends State<DadosTab> {
               _textOrNull(_contatoEmergenciaTelefoneController.text),
           observacoes: _textOrNull(_observacoesController.text),
           dataInicio: _dataInicio,
-          diaVencimento: int.tryParse(_diaVencimentoController.text),
+          diaVencimento: _diaVencimento,
         ),
       );
       if (mounted) {
@@ -472,17 +473,6 @@ class _DadosTabState extends State<DadosTab> {
             ),
             const SizedBox(height: 20),
             const _SecaoTitulo('Academia'),
-            TextFormField(
-              controller: _diaVencimentoController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [digitsOnlyFormatter],
-              decoration: const InputDecoration(
-                labelText: 'Dia de vencimento',
-                helperText: 'Dia do mês em que a mensalidade vence (1-31), não uma data',
-              ),
-              validator: validarDiaVencimento,
-            ),
-            const SizedBox(height: 14),
             InkWell(
               onTap: () => _pickData(
                 atual: _dataInicio,
@@ -503,6 +493,7 @@ class _DadosTabState extends State<DadosTab> {
             MensalidadeSection(
               alunoUid: widget.aluno.uid,
               proximoVencimento: snapshot.data?.proximoVencimento,
+              dataInicio: snapshot.data?.dataInicio,
               alunoService: widget.alunoService,
               staffAtual: widget.staffAtual,
               whatsapp: snapshot.data?.whatsapp,

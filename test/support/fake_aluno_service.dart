@@ -13,6 +13,7 @@ import 'package:gymextreme_app/models/pagamento.dart';
 import 'package:gymextreme_app/models/termo_aceite.dart';
 import 'package:gymextreme_app/models/treino.dart';
 import 'package:gymextreme_app/services/aluno_service.dart';
+import 'package:gymextreme_app/utils/lembrete_vencimento.dart';
 import 'package:gymextreme_app/utils/mensalidade_utils.dart';
 
 /// Dublê de teste do [AlunoService] — implementa a mesma interface pública
@@ -185,6 +186,34 @@ class FakeAlunoService implements AlunoService {
     );
     ultimaMensagemEnviada = mensagem;
     mensagens = [...mensagens, mensagem];
+  }
+
+  /// Vencimentos pedidos a [garantirLembreteVencimento], na ordem.
+  List<DateTime> lembretesPedidos = [];
+
+  @override
+  Future<bool> garantirLembreteVencimento(
+    String uid, {
+    required DateTime vencimento,
+    required String alunoNome,
+  }) async {
+    lembretesPedidos = [...lembretesPedidos, vencimento];
+    final id = idLembreteVencimento(vencimento);
+    if (mensagens.any((mensagem) => mensagem.id == id)) return false;
+    mensagens = [
+      Mensagem(
+        id: id,
+        texto: textoLembreteVencimento(vencimento),
+        remetenteUid: remetenteLembreteAutomatico,
+        remetenteNome: 'GYM XTREME',
+        alunoUid: uid,
+        alunoNome: alunoNome,
+        criadoEm: DateTime.now(),
+        automatica: true,
+      ),
+      ...mensagens,
+    ];
+    return true;
   }
 
   /// Ids passados pra [marcarMensagensComoLidas], na ordem das chamadas.
@@ -575,11 +604,11 @@ class FakeAlunoService implements AlunoService {
     String? contatoEmergenciaTelefone,
     String? observacoes,
     DateTime? dataInicio,
-    int? diaVencimento,
     required String cadastradoPorUid,
     required String cadastradoPorNome,
   }) async {
     const uid = 'aluno-novo';
+    final vencimento = primeiroVencimento(dataInicio ?? DateTime.now());
     aluno = Aluno(
       uid: uid,
       sexo: sexo,
@@ -594,7 +623,8 @@ class FakeAlunoService implements AlunoService {
       contatoEmergenciaTelefone: contatoEmergenciaTelefone,
       observacoes: observacoes,
       dataInicio: dataInicio,
-      diaVencimento: diaVencimento,
+      diaVencimento: vencimento.day,
+      proximoVencimento: vencimento,
       cadastradoPorUid: cadastradoPorUid,
       cadastradoPorNome: cadastradoPorNome,
     );

@@ -14,6 +14,7 @@
     "test:rules": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-admin.emulator.js\"",
     "test:rules:historico-treinos": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-historico-treinos.emulator.js\"",
     "test:rules:mensagens-whatsapp": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-mensagens-whatsapp.emulator.js\"",
+    "test:rules:lembrete-vencimento": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-lembrete-vencimento.emulator.js\"",
     "test:rules:usuarios-escalonamento": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-usuarios-escalonamento.emulator.js\"",
     "test:rules:avaliacoes-anamnese": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/firestore-rules-avaliacoes-anamnese.emulator.js\"",
     "test:emulator:access": "firebase emulators:exec --project demo-gymextreme-test --only firestore \"node test/access/controlid-new-user-identified.emulator.js && node test/access/device-sync-service.emulator.js && node test/access/offline-access-policy.emulator.js\"",

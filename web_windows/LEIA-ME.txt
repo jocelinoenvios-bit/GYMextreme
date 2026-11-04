@@ -1,0 +1,15 @@
+GYM XTREME - versao para computador (Windows)
+=============================================
+
+1. Extraia este .zip numa pasta (ex.: Documentos\GymXtreme).
+   Nao abra direto de dentro do .zip.
+2. De dois cliques em "abrir-gymextreme.bat".
+3. O app abre no navegador. Entre com o e-mail e a senha de ADM.
+
+Deixe a janela preta aberta enquanto usa o app. Feche-a para encerrar.
+
+Se o Windows mostrar "O Windows protegeu o computador", clique em
+"Mais informacoes" e depois em "Executar assim mesmo".
+
+O app usa os mesmos dados do celular (mesmo Firebase): o que voce
+fizer aqui vale de verdade.
